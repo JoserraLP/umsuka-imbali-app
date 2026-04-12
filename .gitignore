@@ -4,6 +4,7 @@
 *~
 *.sw[mnpcod]
 .tmp
+.env
 *.tmp
 *.tmp.*
 *.sublime-project
