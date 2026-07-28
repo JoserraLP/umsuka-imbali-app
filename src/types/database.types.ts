@@ -7,7 +7,7 @@
 export type Json = string | number | boolean | null | { [key: string]: Json } | Json[];
 
 export type ComponentType = "music" | "dance" | "member";
-export type EventType = "general" | "meeting" | "carnival";
+export type EventType = "general" | "meeting" | "carnival" | "work_shift";
 export type Workgroup = "telas" | "barra" | "estandarte" | "limpieza" | "ninguno";
 export type AppRole =
   | "super_admin"

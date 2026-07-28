@@ -52,20 +52,23 @@ Rediseñar la interfaz gráfica actual para adoptar un estilo visual moderno ins
 **Rama:** `feature/sprint-02-workgroup-roles`
 
 ### Descripción
-Añadir roles específicos de responsable para grupos de trabajo (telas, barra, estandarte, limpieza). Solo estos responsables podrán registrar si una persona ha participado o no en su turno de trabajo.
+Añadir roles específicos de responsable para grupos de trabajo (telas, barra, estandarte, limpieza). Solo estos responsables podrán registrar si una persona ha participado o no en su turno de trabajo. Además, los responsables pueden crear eventos de tipo "asistencia a turno de trabajo" donde se marca quién cumplió su turno.
 
 ### Pasos
 
 | # | Paso | Detalle |
 |---|---|---|
-| 1 | Migración de BD | Añadir columna `workgroup` a `umsuka.profiles` (enum: `telas`, `barra`, `estandarte`, `limpieza`, `ninguno`). Añadir columna `is_workgroup_lead` booleana. Crear índices. |
+| 1 | Migración de BD | Añadir columna `workgroup` a `umsuka.profiles` (tipo ENUM: `telas`, `barra`, `estandarte`, `limpieza`, `ninguno`). Añadir columna `is_workgroup_lead` booleana. Crear índices. |
 | 2 | Migración de BD — tabla workgroup_attendance | Crear `umsuka.workgroup_attendance` (id, shift_id, user_id, workgroup, attended, marked_by, timestamps) con RLS. |
-| 3 | Helper functions | Añadir `umsuka.is_workgroup_lead(workgroup text)` y `umsuka.current_user_workgroup()` en SQL. |
-| 4 | Actualizar tipos | Regenerar `src/types/database.types.ts` con `supabase gen types`. |
-| 5 | Capa de negocio `lib/workgroups/` | Crear schemas Zod, queries y mutations para la gestión de asistencia por grupo de trabajo. |
-| 6 | Server actions | Acciones para marcar/desmarcar asistencia de miembros en un turno, validando que el actor sea el lead del grupo correspondiente. |
-| 7 | UI de gestión | Panel en la página de evento/detalle de turno donde el responsable pueda ver los miembros de su grupo y marcar asistencia. |
-| 8 | Actualizar políticas RLS | Asegurar que `workgroup_attendance` solo sea visible/editable por el lead del grupo correspondiente + super_admin. |
+| 3 | Migración ENUM workgroup | Crear tipo ENUM `umsuka.workgroup` reemplazando el CHECK constraint en profiles. |
+| 4 | Migración event_type work_shift | Añadir `'work_shift'` como tipo de evento válido. Políticas RLS para que los responsables de grupo puedan crear/editar/eliminar sus propios eventos de tipo trabajo. |
+| 5 | Helper functions | Añadir `umsuka.is_workgroup_lead(workgroup text)`, `umsuka.current_user_workgroup()` y `umsuka.is_super_admin()` en SQL. |
+| 6 | Actualizar tipos | Regenerar `src/types/database.types.ts` con `supabase gen types`. |
+| 7 | Capa de negocio `lib/workgroups/` | Crear schemas Zod, queries y mutations para la gestión de asistencia por grupo de trabajo. |
+| 8 | Server actions | Acciones para marcar/desmarcar asistencia de miembros en un turno, validando que el actor sea el lead del grupo correspondiente. |
+| 9 | UI de gestión de asistencia | Panel en la página de evento/detalle de turno donde el responsable pueda ver los miembros de su grupo y marcar asistencia. |
+| 10 | Evento de tipo work_shift | Los responsables de grupo pueden crear eventos de tipo "asistencia a turno de trabajo". Al crearlos se auto-genera un turno. La página de detalle del evento muestra el panel de asistencia por grupo de trabajo. |
+| 11 | Actualizar políticas RLS | Asegurar que `workgroup_attendance` solo sea visible/editable por el lead del grupo correspondiente + super_admin. |
 
 ### Dependencias
 - Sprint 1 (UI/UX para los nuevos paneles)
@@ -75,6 +78,9 @@ Añadir roles específicos de responsable para grupos de trabajo (telas, barra, 
 - Solo el responsable de un grupo puede marcar asistencia para los miembros de su grupo.
 - Un responsable no puede marcar asistencia para miembros de otros grupos.
 - Super admin puede ver y gestionar todos los grupos.
+- Los responsables de grupo pueden crear eventos de tipo "asistencia a turno de trabajo".
+- Al crear un evento de tipo trabajo, se genera automáticamente un turno asociado.
+- La página de detalle del evento de trabajo muestra el panel de asistencia por grupo.
 
 ---
 

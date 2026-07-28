@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const EVENT_TYPES = ["general", "meeting", "carnival"] as const;
+export const EVENT_TYPES = ["general", "meeting", "carnival", "work_shift"] as const;
 export type EventTypeValue = (typeof EVENT_TYPES)[number];
 
 const baseEventFields = {
@@ -16,7 +16,7 @@ const baseEventFields = {
     .optional()
     .transform((value) => (value ? value : null)),
   eventType: z.enum(EVENT_TYPES, {
-    errorMap: () => ({ message: "Event type must be general, meeting or carnival." }),
+    errorMap: () => ({ message: "Event type must be general, meeting, carnival or work_shift." }),
   }),
   eventDate: z
     .string()

@@ -30,6 +30,7 @@ const EVENT_TYPE_LABELS: Record<EventTypeValue, string> = {
   general: "General",
   meeting: "Reunión",
   carnival: "Carnaval",
+  work_shift: "Turno de trabajo",
 };
 
 const DATE_FORMATTER = new Intl.DateTimeFormat("es-ES", {
@@ -63,7 +64,8 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     notFound();
   }
 
-  const canManage = isManagementRole(profile.role);
+  const isWorkShift = event.eventType === "work_shift";
+  const canManage = isManagementRole(profile.role) || (isWorkShift && profile.isWorkgroupLead);
   const registrationSummary = await getEventRegistrationSummary(event.id, profile.id);
 
   const [attendanceRecords, attendanceSummary, absences] = await Promise.all([
@@ -76,7 +78,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   const firstShift = shifts[0] ?? null;
 
   const canViewWorkgroupPanel =
-    profile.role === "super_admin" || profile.isWorkgroupLead;
+    profile.role === "super_admin" || profile.isWorkgroupLead || isWorkShift;
 
   let workgroupMembers: Awaited<ReturnType<typeof getAllWorkgroupMembers>> = [];
   let workgroupAttendanceRecords: Awaited<
@@ -145,24 +147,26 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           </Card>
         )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Inscripción</CardTitle>
-            <CardDescription>Apúntate o date de baja de este evento.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <RegistrationPanel
-              eventId={event.id}
-              isViewerRegistered={registrationSummary.isViewerRegistered}
-              count={registrationSummary.count}
-              capacity={registrationSummary.capacity}
-              attendees={registrationSummary.attendees}
-              canManageAttendees={canManage}
-            />
-          </CardContent>
-        </Card>
+        {!isWorkShift && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Inscripción</CardTitle>
+              <CardDescription>Apúntate o date de baja de este evento.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RegistrationPanel
+                eventId={event.id}
+                isViewerRegistered={registrationSummary.isViewerRegistered}
+                count={registrationSummary.count}
+                capacity={registrationSummary.capacity}
+                attendees={registrationSummary.attendees}
+                canManageAttendees={canManage}
+              />
+            </CardContent>
+          </Card>
+        )}
 
-        {canManage && (
+        {canManage && !isWorkShift && (
           <Card>
             <CardHeader>
               <CardTitle>Asistencia</CardTitle>
@@ -205,23 +209,25 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           </Card>
         )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Ausencias</CardTitle>
-            <CardDescription>
-              Solicita tu ausencia o gestiona las solicitudes.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <AbsencePanel
-              eventId={event.id}
-              viewerId={profile.id}
-              absences={absences}
-              canManage={canManage}
-              viewerAbsenceId={viewerAbsence?.id ?? null}
-            />
-          </CardContent>
-        </Card>
+        {!isWorkShift && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Ausencias</CardTitle>
+              <CardDescription>
+                Solicita tu ausencia o gestiona las solicitudes.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AbsencePanel
+                eventId={event.id}
+                viewerId={profile.id}
+                absences={absences}
+                canManage={canManage}
+                viewerAbsenceId={viewerAbsence?.id ?? null}
+              />
+            </CardContent>
+          </Card>
+        )}
       </div>
     </AppShell>
   );

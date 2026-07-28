@@ -25,6 +25,7 @@ const EVENT_TYPE_LABELS: Record<EventTypeValue, string> = {
   general: "General",
   meeting: "Reunión",
   carnival: "Carnaval",
+  work_shift: "Turno de trabajo",
 };
 
 const DATE_FORMATTER = new Intl.DateTimeFormat("es-ES", {
@@ -39,7 +40,7 @@ export default async function EventsPage() {
     redirect("/auth/login");
   }
 
-  const canManage = isManagementRole(profile.role);
+  const canManage = isManagementRole(profile.role) || profile.isWorkgroupLead;
   const events = await listEvents();
 
   return (

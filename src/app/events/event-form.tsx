@@ -15,6 +15,7 @@ const EVENT_TYPE_LABELS: Record<EventTypeValue, string> = {
   general: "General",
   meeting: "Reunión",
   carnival: "Carnaval",
+  work_shift: "Asistencia a turno de trabajo",
 };
 
 interface EventFormProps {

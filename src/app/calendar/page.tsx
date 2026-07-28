@@ -24,18 +24,21 @@ const EVENT_TYPE_LABELS: Record<EventTypeValue, string> = {
   general: "General",
   meeting: "Reunión",
   carnival: "Carnaval",
+  work_shift: "Turno de trabajo",
 };
 
 const EVENT_TYPE_DOT_STYLES: Record<EventTypeValue, string> = {
   general: "bg-blue-500",
   meeting: "bg-amber-500",
   carnival: "bg-fuchsia-500",
+  work_shift: "bg-emerald-500",
 };
 
 const EVENT_TYPE_CHIP_STYLES: Record<EventTypeValue, string> = {
   general: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300",
   meeting: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
   carnival: "bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-950 dark:text-fuchsia-300",
+  work_shift: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
 };
 
 interface CalendarPageProps {
