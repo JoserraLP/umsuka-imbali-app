@@ -3,7 +3,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -12,8 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { DashboardNav } from "@/components/layout/dashboard-nav";
-import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { AppShell } from "@/components/layout/app-shell";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { isManagementRole } from "@/lib/auth/roles";
 import { listEvents } from "@/lib/events/queries";
@@ -45,34 +43,28 @@ export default async function EventsPage() {
   const events = await listEvents();
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-6 p-4 sm:p-8">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Eventos</h1>
-          <p className="text-sm text-muted-foreground">Actividades, reuniones y carnaval.</p>
-        </div>
-        <ThemeToggle />
-      </header>
-
-      <DashboardNav currentRole={profile.role} />
-
-      <Card>
-        <CardHeader className="flex flex-row items-start justify-between gap-4">
+    <AppShell profile={profile}>
+      <div className="animate-fade-in space-y-4">
+        <div className="flex items-center justify-between border-b border-border pb-4">
           <div>
-            <CardTitle>Todos los eventos</CardTitle>
-            <CardDescription>
-              <Link href="/calendar" className="hover:text-foreground">
-                Ver en calendario →
-              </Link>
-            </CardDescription>
+            <h1 className="text-xl font-bold tracking-tight">Eventos</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Actividades, reuniones y carnaval.
+            </p>
           </div>
-          {canManage && (
-            <Button asChild size="sm">
-              <Link href="/events/new">Nuevo evento</Link>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="ghost" size="sm">
+              <Link href="/calendar">Calendario</Link>
             </Button>
-          )}
-        </CardHeader>
-        <CardContent>
+            {canManage && (
+              <Button asChild size="sm">
+                <Link href="/events/new">Nuevo evento</Link>
+              </Button>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-xl border bg-card">
           <Table>
             <TableHeader>
               <TableRow>
@@ -108,8 +100,8 @@ export default async function EventsPage() {
               )}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
-    </main>
+        </div>
+      </div>
+    </AppShell>
   );
 }

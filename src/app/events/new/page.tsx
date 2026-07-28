@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DashboardNav } from "@/components/layout/dashboard-nav";
-import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { AppShell } from "@/components/layout/app-shell";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { isManagementRole } from "@/lib/auth/roles";
 import { EventForm } from "@/app/events/event-form";
@@ -18,44 +18,42 @@ export default async function NewEventPage() {
     redirect("/auth/login");
   }
 
-  // Server-side authorization gate (layer 2 of 3 — RLS on umsuka.events
-  // is the authoritative layer regardless of this check).
   if (!isManagementRole(profile.role)) {
     redirect("/events");
   }
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-6 p-4 sm:p-8">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Nuevo evento</h1>
-          <p className="text-sm text-muted-foreground">
+    <AppShell profile={profile}>
+      <div className="animate-fade-in space-y-4">
+        <div className="border-b border-border pb-4">
+          <h1 className="text-xl font-bold tracking-tight">Nuevo evento</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Crea una actividad, reunión o fecha de carnaval.
           </p>
+          <Link href="/events" className="mt-2 inline-block text-sm text-muted-foreground hover:text-foreground">
+            ← Volver a eventos
+          </Link>
         </div>
-        <ThemeToggle />
-      </header>
 
-      <DashboardNav currentRole={profile.role} />
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Detalles del evento</CardTitle>
-          <CardDescription>Visible para todos los miembros en cuanto se cree.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <EventForm
-            mode="create"
-            defaultValues={{
-              title: "",
-              description: "",
-              eventType: "general",
-              eventDate: "",
-              capacity: null,
-            }}
-          />
-        </CardContent>
-      </Card>
-    </main>
+        <Card>
+          <CardHeader>
+            <CardTitle>Detalles del evento</CardTitle>
+            <CardDescription>Visible para todos los miembros en cuanto se cree.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <EventForm
+              mode="create"
+              defaultValues={{
+                title: "",
+                description: "",
+                eventType: "general",
+                eventDate: "",
+                capacity: null,
+              }}
+            />
+          </CardContent>
+        </Card>
+      </div>
+    </AppShell>
   );
 }
