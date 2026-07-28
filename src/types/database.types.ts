@@ -389,7 +389,9 @@ export interface Database {
         Returns: boolean;
       };
     };
-    Enums: Record<string, never>;
+    Enums: {
+      workgroup: Workgroup;
+    };
     CompositeTypes: Record<string, never>;
   };
 }

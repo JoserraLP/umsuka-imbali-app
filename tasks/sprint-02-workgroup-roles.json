@@ -1,7 +1,7 @@
 {
   "title": "Sprint 2 — Roles de Responsables de Grupos de Trabajo",
   "description": "Añadir roles específicos de responsable para grupos de trabajo (telas, barra, estandarte, limpieza). Solo estos responsables podrán registrar si una persona ha participado o no en su turno de trabajo.",
-  "status": "documented",
+  "status": "published",
   "acceptance_criteria": [
     "Existe el rol de 'responsable de telas', 'responsable de barra', 'responsable de estandarte', 'responsable de limpieza'.",
     "Solo el responsable de un grupo puede marcar asistencia para los miembros de su grupo.",
