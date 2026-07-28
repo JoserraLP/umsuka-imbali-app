@@ -31,7 +31,7 @@ interface AbsencePanelProps {
 
 export function AbsencePanel({
   eventId,
-  viewerId,
+  viewerId: _viewerId,
   absences,
   canManage,
   viewerAbsenceId,

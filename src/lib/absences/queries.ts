@@ -34,14 +34,6 @@ interface AbsenceRow {
  * Enriches absence rows with user profile names using the two-query +
  * in-memory-join pattern (same as registrations/queries.ts).
  */
-function enrichAbsencesWithProfiles(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  rows: AbsenceRow[],
-  defaultEventId: string,
-): Promise<AbsenceRecord[]> {
-  return resolveProfiles(supabase, rows, defaultEventId);
-}
-
 async function resolveProfiles(
   supabase: Awaited<ReturnType<typeof createClient>>,
   rows: AbsenceRow[],

@@ -1,9 +1,9 @@
 import { loadEnvConfig } from "@next/env";
 
-const projectDir = process.cwd();
+const _projectDir = process.cwd();
 
 // Carga .env, .env.local, .env.development, etc. como lo hace Next.js
-loadEnvConfig(projectDir);
+loadEnvConfig(_projectDir);
 
 const requiredVars = [
   "NEXT_PUBLIC_SUPABASE_URL",
@@ -19,7 +19,7 @@ function maskValue(value: string) {
 
 let hasError = false;
 
-console.log("\nComprobando variables de entorno...\n");
+console.warn("\nComprobando variables de entorno...\n");
 
 for (const key of requiredVars) {
   const value = process.env[key];
@@ -28,7 +28,7 @@ for (const key of requiredVars) {
     console.error(`❌ ${key}: NO definida`);
     hasError = true;
   } else {
-    console.log(`✅ ${key}: ${maskValue(value)}`);
+    console.warn(`✅ ${key}: ${maskValue(value)}`);
   }
 }
 
@@ -37,4 +37,4 @@ if (hasError) {
   process.exit(1);
 }
 
-console.log("\n✅ Todas las variables requeridas están cargadas correctamente.\n");
+console.warn("\n✅ Todas las variables requeridas están cargadas correctamente.\n");

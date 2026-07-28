@@ -90,7 +90,7 @@ async function fetchProfileRow(userId: string) {
 
 function buildAuthenticatedProfile(
   profile: NonNullable<Awaited<ReturnType<typeof fetchProfileRow>>>,
-  user: { email: string | null | undefined; user_metadata?: Record<string, unknown> },
+  user: { email?: string | null; user_metadata?: Record<string, unknown> },
 ): AuthenticatedProfile {
   const role = isValidRole(profile.role) ? profile.role : DEFAULT_ROLE;
 

@@ -25,14 +25,6 @@ export interface AttendanceSummary {
   total: number;
 }
 
-interface AttendanceRow {
-  id: string;
-  event_id: string | null;
-  user_id: string | null;
-  attended: boolean;
-  created_at: string;
-}
-
 /**
  * Returns all attendance records for a given event, enriched with
  * attendee profile names using the two-query + in-memory-join pattern
