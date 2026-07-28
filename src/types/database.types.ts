@@ -339,6 +339,8 @@ export interface Database {
           user_id: string;
           workgroup: Workgroup;
           attended: boolean;
+          hours_worked: number | null;
+          barra_task: string | null;
           marked_by: string | null;
           created_at: string;
           updated_at: string;
@@ -349,6 +351,8 @@ export interface Database {
           user_id: string;
           workgroup: Workgroup;
           attended: boolean;
+          hours_worked?: number | null;
+          barra_task?: string | null;
           marked_by?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -359,6 +363,8 @@ export interface Database {
           user_id?: string;
           workgroup?: Workgroup;
           attended?: boolean;
+          hours_worked?: number | null;
+          barra_task?: string | null;
           marked_by?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -391,6 +397,7 @@ export interface Database {
     };
     Enums: {
       workgroup: Workgroup;
+      event_type: EventType;
     };
     CompositeTypes: Record<string, never>;
   };

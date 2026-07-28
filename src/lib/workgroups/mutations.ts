@@ -68,16 +68,33 @@ export async function markWorkgroupAttendance(
 
   const supabase = await createClient();
 
-  const { error } = await supabase.from("workgroup_attendance").upsert(
-    {
-      shift_id: parsed.data.shiftId,
-      user_id: parsed.data.userId,
-      workgroup: parsed.data.workgroup,
-      attended: parsed.data.attended,
-      marked_by: actor.id,
-    },
-    { onConflict: "shift_id, user_id, workgroup" },
-  );
+  let error;
+
+  if (parsed.data.workgroup === "barra") {
+    ({ error } = await supabase
+      .from("workgroup_attendance")
+      .upsert({
+        shift_id: parsed.data.shiftId,
+        user_id: parsed.data.userId,
+        workgroup: parsed.data.workgroup,
+        attended: parsed.data.attended,
+        marked_by: actor.id,
+        barra_task: parsed.data.barraTask,
+        hours_worked: null,
+      }, { onConflict: "shift_id, user_id, workgroup" }));
+  } else {
+    ({ error } = await supabase
+      .from("workgroup_attendance")
+      .upsert({
+        shift_id: parsed.data.shiftId,
+        user_id: parsed.data.userId,
+        workgroup: parsed.data.workgroup,
+        attended: parsed.data.attended,
+        marked_by: actor.id,
+        hours_worked: parsed.data.hoursWorked,
+        barra_task: null,
+      }, { onConflict: "shift_id, user_id, workgroup" }));
+  }
 
   if (error) {
     return { success: false, error: error.message };
@@ -128,11 +145,17 @@ export async function updateWorkgroupAttendance(
     throw err;
   }
 
+  const baseUpdate = {
+    attended: parsed.data.attended,
+    marked_by: actor.id,
+  } as const;
+
   const { error } = await supabase
     .from("workgroup_attendance")
     .update({
-      attended: parsed.data.attended,
-      marked_by: actor.id,
+      ...baseUpdate,
+      ...(parsed.data.hoursWorked !== undefined ? { hours_worked: parsed.data.hoursWorked } : {}),
+      ...(parsed.data.barraTask !== undefined ? { barra_task: parsed.data.barraTask } : {}),
     })
     .eq("id", parsed.data.id);
 

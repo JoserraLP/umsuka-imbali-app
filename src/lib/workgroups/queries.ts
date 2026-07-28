@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAuthenticatedProfile } from "@/lib/auth/session";
 import type {
   ActiveWorkgroup,
+  BarraTask,
   WorkgroupLeadInfo,
   WorkgroupAttendanceRecord,
   WorkgroupAttendanceSummary,
@@ -19,7 +20,7 @@ export async function getWorkgroupAttendanceByShift(
 
   const { data: records, error } = await supabase
     .from("workgroup_attendance")
-    .select("id, shift_id, user_id, workgroup, attended, marked_by, created_at, updated_at")
+    .select("id, shift_id, user_id, workgroup, attended, hours_worked, barra_task, marked_by, created_at, updated_at")
     .eq("shift_id", shiftId)
     .order("created_at", { ascending: true });
 
@@ -61,6 +62,8 @@ export async function getWorkgroupAttendanceByShift(
       userId: row.user_id ?? "",
       workgroup: row.workgroup as ActiveWorkgroup,
       attended: row.attended,
+      hoursWorked: row.hours_worked,
+      barraTask: row.barra_task as BarraTask | null,
       markedBy: row.marked_by,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
