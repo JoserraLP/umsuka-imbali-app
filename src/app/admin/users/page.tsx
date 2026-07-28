@@ -12,8 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { DashboardNav } from "@/components/layout/dashboard-nav";
-import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { AppShell } from "@/components/layout/app-shell";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { isManagementRole, isAdminRole } from "@/lib/auth/roles";
 import { listProfiles } from "@/lib/profiles/queries";
@@ -31,8 +30,6 @@ export default async function AdminUsersPage() {
     redirect("/auth/login");
   }
 
-  // Server-side authorization gate (layer 2 of 3 — RLS on umsuka.profiles
-  // is the authoritative layer regardless of this check).
   if (!isManagementRole(profile.role)) {
     redirect("/dashboard");
   }
@@ -41,89 +38,86 @@ export default async function AdminUsersPage() {
   const canManage = isAdminRole(profile.role);
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-6 p-4 sm:p-8">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Miembros</h1>
-          <p className="text-sm text-muted-foreground">
+    <AppShell profile={profile}>
+      <div className="animate-fade-in space-y-4">
+        <div className="border-b border-border pb-4">
+          <h1 className="text-xl font-bold tracking-tight">Miembros</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Directorio de la asociación, roles (RBAC) y estado de alta/baja.
           </p>
         </div>
-        <ThemeToggle />
-      </header>
 
-      <DashboardNav currentRole={profile.role} />
+        <Card>
+          <CardHeader>
+            <CardTitle>Directorio</CardTitle>
+            <CardDescription>
+              {canManage
+                ? "Puedes editar, cambiar el rol y dar de alta/baja a cualquier miembro salvo a ti mismo."
+                : "Solo los administradores pueden modificar miembros. Tienes acceso de solo lectura."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Componente</TableHead>
+                  <TableHead>Rol</TableHead>
+                  <TableHead>Estado</TableHead>
+                  {canManage && <TableHead>Acciones</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {members.map((member) => {
+                  const isSelf = member.id === profile.id;
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Directorio</CardTitle>
-          <CardDescription>
-            {canManage
-              ? "Puedes editar, cambiar el rol y dar de alta/baja a cualquier miembro salvo a ti mismo."
-              : "Solo los administradores pueden modificar miembros. Tienes acceso de solo lectura."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Componente</TableHead>
-                <TableHead>Rol</TableHead>
-                <TableHead>Estado</TableHead>
-                {canManage && <TableHead>Acciones</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {members.map((member) => {
-                const isSelf = member.id === profile.id;
-
-                return (
-                  <TableRow key={member.id}>
-                    <TableCell className="font-medium">
-                      {member.firstName} {member.lastName}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{member.componentType}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      {canManage ? (
-                        <UserRoleSelect
-                          userId={member.id}
-                          currentRole={member.role}
-                          actorRole={profile.role}
-                          disableSelf={isSelf}
-                        />
-                      ) : (
-                        <Badge variant="secondary">{member.role}</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={member.isActive ? "default" : "destructive"}>
-                        {member.isActive ? "Activo" : "Dado de baja"}
-                      </Badge>
-                    </TableCell>
-                    {canManage && (
+                  return (
+                    <TableRow key={member.id}>
+                      <TableCell className="font-medium">
+                        {member.firstName} {member.lastName}
+                      </TableCell>
                       <TableCell>
-                        <div className="flex flex-col gap-2 sm:flex-row">
-                          <Button asChild variant="outline" size="sm">
-                            <Link href={`/admin/users/${member.id}`}>Editar</Link>
-                          </Button>
-                          <MemberActiveToggle
+                        <Badge variant="outline">{member.componentType}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        {canManage ? (
+                          <UserRoleSelect
                             userId={member.id}
-                            isActive={member.isActive}
+                            currentRole={member.role}
+                            actorRole={profile.role}
                             disableSelf={isSelf}
                           />
-                        </div>
+                        ) : (
+                          <Badge variant="secondary">{member.role}</Badge>
+                        )}
                       </TableCell>
-                    )}
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </main>
+                      <TableCell>
+                        <Badge variant={member.isActive ? "default" : "destructive"}>
+                          {member.isActive ? "Activo" : "Dado de baja"}
+                        </Badge>
+                      </TableCell>
+                      {canManage && (
+                        <TableCell>
+                          <div className="flex flex-col gap-2 sm:flex-row">
+                            <Button asChild variant="outline" size="sm">
+                              <Link href={`/admin/users/${member.id}`}>Editar</Link>
+                            </Button>
+                            <MemberActiveToggle
+                              userId={member.id}
+                              isActive={member.isActive}
+                              disableSelf={isSelf}
+                            />
+                          </div>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    </AppShell>
   );
 }

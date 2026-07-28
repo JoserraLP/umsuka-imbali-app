@@ -1,0 +1,24 @@
+{
+  "title": "Sprint 1 — Mejora de Interfaz Gráfica (UI/UX)",
+  "description": "Rediseñar la interfaz gráfica actual para adoptar un estilo visual moderno inspirado en X/Twitter y redes sociales actuales. Incluye sistema de temas, tipografía, espaciado, componentes visuales y experiencia de navegación mobile-first.",
+  "status": "documented",
+  "acceptance_criteria": [
+    "El layout principal imita la estructura de una red social moderna (sidebar de navegación, feed central, panel de tendencias/notificaciones).",
+    "Todos los componentes de ShadCN/UI están consistentemente estilizados.",
+    "La navegación funciona correctamente en mobile (bottom nav) y desktop (sidebar).",
+    "El modo oscuro/claro funciona sin errores.",
+    "No hay regresiones visuales en páginas existentes."
+  ],
+  "definition_of_done": [
+    "Design Tokens actualizados (tailwind.config.ts, globals.css)",
+    "Layout base con sidebar + bottom-nav + app-shell creado",
+    "Componentes de feed (Avatar, PostCard, FeedList, FollowButton) creados",
+    "Todas las páginas refactorizadas para usar AppShell",
+    "Build exitoso (npm run build)",
+    "95 tests pasan (npm run test)",
+    "Colores actualizados: primary #0369b4, secondary #efdb03",
+    "Logo y favicon configurados",
+    "Enlace activo en navegación corregido (bug fix)"
+  ],
+  "branch": "feature/sprint-01-ui-redesign"
+}

@@ -11,6 +11,13 @@ export const metadata: Metadata = {
   description:
     "Plataforma de gestión de la asociación de comparsas Umsuka Imbali: miembros, eventos, asistencia, turnos, noticias, votaciones y documentos.",
   manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icons/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: "/logo.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -22,8 +29,8 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b1220" },
+    { media: "(prefers-color-scheme: light)", color: "#0369b4" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a1628" },
   ],
 };
 
