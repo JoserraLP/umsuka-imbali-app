@@ -88,3 +88,34 @@ export async function getEventById(id: string): Promise<EventListItem | null> {
 
   return data ? mapRow(data) : null;
 }
+
+export interface ShiftInfo {
+  id: string;
+  name: string;
+  startTime: string;
+  endTime: string;
+}
+
+/**
+ * Returns all shifts for a given event, ordered by start time.
+ */
+export async function getEventShifts(eventId: string): Promise<ShiftInfo[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("shifts")
+    .select("id, name, start_time, end_time")
+    .eq("event_id", eventId)
+    .order("start_time", { ascending: true });
+
+  if (error) {
+    throw new Error(`Failed to fetch shifts for event ${eventId}: ${error.message}`);
+  }
+
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    name: row.name,
+    startTime: row.start_time,
+    endTime: row.end_time,
+  }));
+}

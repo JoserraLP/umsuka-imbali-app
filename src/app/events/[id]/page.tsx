@@ -6,15 +6,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { AppShell } from "@/components/layout/app-shell";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { isManagementRole } from "@/lib/auth/roles";
-import { getEventById } from "@/lib/events/queries";
+import { getEventById, getEventShifts } from "@/lib/events/queries";
 import { getEventRegistrationSummary } from "@/lib/registrations/queries";
 import { getEventAttendance, getEventAttendanceSummary } from "@/lib/attendance/queries";
 import { getEventAbsences } from "@/lib/absences/queries";
+import {
+  getAllWorkgroupMembers,
+  getWorkgroupAttendanceByShift,
+} from "@/lib/workgroups/queries";
 import { EventForm } from "@/app/events/event-form";
 import { DeleteEventButton } from "@/app/events/[id]/delete-event-button";
 import { RegistrationPanel } from "@/app/events/[id]/registration-panel";
 import { AttendancePanel } from "@/app/events/[id]/attendance-panel";
 import { AbsencePanel } from "@/app/events/[id]/absence-panel";
+import { WorkgroupAttendancePanel } from "@/app/events/[id]/workgroup-panel";
 import type { EventTypeValue } from "@/lib/events/schema";
 
 export const metadata: Metadata = {
@@ -66,6 +71,24 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     canManage ? getEventAttendanceSummary(event.id) : null,
     getEventAbsences(event.id),
   ]);
+
+  const shifts = await getEventShifts(event.id);
+  const firstShift = shifts[0] ?? null;
+
+  const canViewWorkgroupPanel =
+    profile.role === "super_admin" || profile.isWorkgroupLead;
+
+  let workgroupMembers: Awaited<ReturnType<typeof getAllWorkgroupMembers>> = [];
+  let workgroupAttendanceRecords: Awaited<
+    ReturnType<typeof getWorkgroupAttendanceByShift>
+  > = [];
+
+  if (canViewWorkgroupPanel && firstShift) {
+    [workgroupMembers, workgroupAttendanceRecords] = await Promise.all([
+      getAllWorkgroupMembers(),
+      getWorkgroupAttendanceByShift(firstShift.id),
+    ]);
+  }
 
   const viewerAbsence = absences.find((a) => a.userId === profile.id);
 
@@ -154,6 +177,29 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                 eventId={event.id}
                 attendees={registrationSummary.attendees}
                 attendanceRecords={attendanceRecords}
+              />
+            </CardContent>
+          </Card>
+        )}
+
+        {canViewWorkgroupPanel && firstShift && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Asistencia por grupo de trabajo</CardTitle>
+              <CardDescription>
+                Marca quién asistió a su grupo de trabajo en el turno &laquo;
+                {firstShift.name}&raquo;.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <WorkgroupAttendancePanel
+                shiftId={firstShift.id}
+                shiftName={firstShift.name}
+                members={workgroupMembers}
+                attendanceRecords={workgroupAttendanceRecords}
+                currentUserWorkgroup={profile.workgroup}
+                isLead={profile.isWorkgroupLead}
+                isSuperAdmin={profile.role === "super_admin"}
               />
             </CardContent>
           </Card>
