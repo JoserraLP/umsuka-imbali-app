@@ -1,33 +1,46 @@
-# Specifies intentionally untracked files to ignore when using Git
-# http://git-scm.com/docs/gitignore
-
-*~
-*.sw[mnpcod]
-.tmp
-.env
-*.tmp
-*.tmp.*
-*.sublime-project
-*.sublime-workspace
-.DS_Store
-Thumbs.db
-UserInterfaceState.xcuserstate
-$RECYCLE.BIN/
-
-*.log
-log.txt
-npm-debug.log*
-
-/.idea
-/.ionic
-/.sass-cache
-/.sourcemaps
-/.versions
-/.vscode/*
-!/.vscode/extensions.json
-/coverage
-/dist
+# dependencies
 /node_modules
-/platforms
-/plugins
-/www
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+/playwright-report
+/test-results
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files
+.env
+.env*.local
+googleauth_secret.json
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# supabase
+supabase/.branches
+supabase/.temp
+
+# PWA generated files
+public/sw.js
+public/workbox-*.js
+public/fallback-*.js

@@ -1,0 +1,28 @@
+{
+  "title": "Sprint 5 – Asistencia y Ausencias",
+  "description": "Implementar la gestión de asistencia a eventos, el historial de asistencia y las solicitudes de ausencia justificadas. Incluye: marcar/desmarcar asistencia por parte de gestión, solicitar ausencia justificada por parte del miembro, aprobar/rechazar ausencias por parte de gestión, y visualizar el historial completo de asistencia/ausencias.",
+  "status": "documented",
+  "acceptance_criteria": [
+    "Los miembros de gestión pueden marcar asistencia (presente/ausente) para cualquier miembro en un evento.",
+    "Los miembros de gestión pueden ver el listado de asistentes y no asistentes de un evento.",
+    "Los miembros pueden solicitar una ausencia justificada para un evento, indicando el motivo.",
+    "Los miembros de gestión pueden aprobar/rechazar (justificar/no justificar) solicitudes de ausencia.",
+    "Cada miembro puede ver su propio historial de asistencia y ausencias.",
+    "Los miembros de gestión pueden ver el historial de asistencia/ausencias de todos los miembros.",
+    "Las operaciones respetan las políticas RLS existentes (select own or management, insert own, update/delete management).",
+    "Se incluyen pruebas unitarias para schemas de validación.",
+    "Se incluye cobertura de pruebas para los nuevos módulos (attendance, absences)."
+  ],
+  "definition_of_done": [
+    "Módulo lib/attendance con schema, queries y mutations implementados y tipados.",
+    "Módulo lib/absences con schema, queries y mutations implementados y tipados.",
+    "Server actions para attendance (marcar/desmarcar) y absences (solicitar/justificar).",
+    "Panel de gestión de asistencia en la página de detalle del evento.",
+    "Panel de solicitud de ausencia en la página de detalle del evento.",
+    "Página de historial de asistencia/ausencias para el perfil del miembro.",
+    "Enlace de navegación a la nueva página de historial.",
+    "Pruebas unitarias para schemas de attendance y absences.",
+    "TypeScript strict, sin errores de compilación.",
+    "Escaneo de seguridad superado sin hallazgos HIGH."
+  ]
+}
