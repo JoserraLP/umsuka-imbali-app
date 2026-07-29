@@ -1,7 +1,7 @@
 {
   "title": "Sprint 4 — Página Principal: Feed de Instagram, Notificaciones y Calendario",
   "description": "Rediseñar la página principal (/dashboard) para mostrar: feed de los últimos posts de Instagram de la cuenta oficial de Umsuka, notificaciones del usuario y eventos próximos del calendario.",
-  "status": "documented",
+  "status": "published",
   "branch": "feature/sprint-04-home-feed",
   "dependencies": ["Sprint 1 (UI/UX)"],
   "steps": [

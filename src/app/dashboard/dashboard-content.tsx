@@ -1,18 +1,18 @@
 "use client";
 
+import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { NotificationsWidget } from "@/components/dashboard/notifications-widget";
-import { InstagramPostCard } from "@/components/dashboard/instagram-post-card";
 import { SectionHeader } from "@/components/dashboard/section-header";
-import { Instagram, CalendarDays } from "lucide-react";
+import { Instagram, CalendarDays, ExternalLink, Users, Image as ImageIcon, Heart } from "lucide-react";
 import type { AuthenticatedProfile } from "@/types/auth";
-import type { InstagramPost } from "@/lib/social/instagram";
+import type { InstagramProfile } from "@/lib/social/instagram";
 import type { EventListItem } from "@/lib/events/queries";
 
 interface DashboardContentProps {
   profile: AuthenticatedProfile;
-  posts: InstagramPost[];
+  instagramProfile: InstagramProfile;
   events: EventListItem[];
   signOutAction: () => void;
 }
@@ -58,7 +58,13 @@ function formatEventDate(dateStr: string): string {
   return `${prefix} · ${time}`;
 }
 
-export function DashboardContent({ profile, posts, events, signOutAction }: DashboardContentProps) {
+function compactNumber(n: number): string {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(".0", "") + "M";
+  if (n >= 1_000) return (n / 1_000).toFixed(1).replace(".0", "") + "K";
+  return String(n);
+}
+
+export function DashboardContent({ profile, instagramProfile, events, signOutAction }: DashboardContentProps) {
   return (
     <div className="animate-fade-in space-y-6">
       {/* ── Welcome Banner ──────────────────────────────── */}
@@ -75,46 +81,96 @@ export function DashboardContent({ profile, posts, events, signOutAction }: Dash
         </div>
       </div>
 
-      {/* ── Main Grid: 2 columns on desktop ─────────────── */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_380px]">
-        {/* Left: Instagram Feed */}
-        <section className="rounded-xl border bg-card p-5">
-          <SectionHeader title="Instagram" icon={Instagram} />
+      {/* ── Instagram Profile — full width above the grid ── */}
+      <section className="rounded-xl border bg-card p-5">
+        <SectionHeader title="Instagram" icon={Instagram} />
 
-          {posts.length === 0 ? (
-            <div className="mt-4 flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-12 text-center">
-              <Instagram className="mb-3 h-10 w-10 text-muted-foreground/50" />
-              <p className="text-sm text-muted-foreground">
-                No hay publicaciones de Instagram disponibles.
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground/60">
-                Vuelve más tarde o sigue a @umsuka en Instagram.
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {posts.slice(0, 9).map((post) => (
-                  <InstagramPostCard key={post.id} post={post} />
-                ))}
+        <div className="mt-4 flex flex-col items-center gap-3 sm:flex-row sm:items-start">
+          {/* Avatar */}
+          <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 p-[3px]">
+            {instagramProfile.profilePictureUrl ? (
+              <Image
+                src={instagramProfile.profilePictureUrl}
+                alt={instagramProfile.fullName}
+                width={80}
+                height={80}
+                className="h-full w-full rounded-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center rounded-full bg-card text-xl font-bold text-foreground">
+                {instagramProfile.fullName
+                  .split(" ")
+                  .map((w) => w[0])
+                  .join("")
+                  .slice(0, 2)}
               </div>
-              <p className="mt-4 text-center text-xs text-muted-foreground/60">
-                Síguenos en{" "}
-                <a
-                  href="https://www.instagram.com/umsuka"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline"
-                >
-                  @umsuka
-                </a>
-              </p>
-            </>
-          )}
-        </section>
+            )}
+          </div>
 
-        {/* Right sidebar: Notifications + Calendar */}
-        <div className="flex flex-col gap-6">
+          {/* Info */}
+          <div className="flex flex-col items-center text-center sm:items-start sm:text-left">
+            <h3 className="text-base font-semibold">{instagramProfile.fullName}</h3>
+            <a
+              href={instagramProfile.externalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
+              @{instagramProfile.username}
+            </a>
+
+            {/* Biography — only when real data */}
+            {instagramProfile.biography && (
+              <p className="mt-1 max-w-md text-xs text-muted-foreground/80 whitespace-pre-line leading-relaxed">
+                {instagramProfile.biography}
+              </p>
+            )}
+
+            {/* Stats — only when real data (count > 0) */}
+            {(instagramProfile.postsCount > 0 ||
+              instagramProfile.followersCount > 0 ||
+              instagramProfile.followingCount > 0) && (
+              <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
+                {instagramProfile.postsCount > 0 && (
+                  <span className="flex items-center gap-1">
+                    <ImageIcon className="h-3.5 w-3.5" />
+                    <strong className="text-foreground">{compactNumber(instagramProfile.postsCount)}</strong> posts
+                  </span>
+                )}
+                {instagramProfile.followersCount > 0 && (
+                  <span className="flex items-center gap-1">
+                    <Users className="h-3.5 w-3.5" />
+                    <strong className="text-foreground">{compactNumber(instagramProfile.followersCount)}</strong>{" "}
+                    seguidores
+                  </span>
+                )}
+                {instagramProfile.followingCount > 0 && (
+                  <span className="flex items-center gap-1">
+                    <Heart className="h-3.5 w-3.5" />
+                    <strong className="text-foreground">{compactNumber(instagramProfile.followingCount)}</strong>{" "}
+                    siguiendo
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Follow button */}
+            <a
+              href={instagramProfile.externalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-1.5 text-xs font-medium text-white hover:from-purple-500 hover:to-pink-500 transition-all"
+            >
+              <Instagram className="h-3.5 w-3.5" />
+              Seguir en Instagram
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Notifications + Calendar ──────────────────────── */}
+      <div className="flex flex-col gap-6">
           {/* Notifications */}
           <section className="rounded-xl border bg-card p-5">
             <NotificationsWidget />
@@ -184,7 +240,6 @@ export function DashboardContent({ profile, posts, events, signOutAction }: Dash
             </div>
           </section>
         </div>
-      </div>
     </div>
   );
 }

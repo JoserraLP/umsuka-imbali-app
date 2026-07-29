@@ -5,6 +5,25 @@ import { serverEnv } from "@/lib/env.server";
 
 // ── Types ───────────────────────────────────────────────
 
+export interface InstagramProfile {
+  /** Instagram username (without @) */
+  username: string;
+  /** Display name of the account */
+  fullName: string;
+  /** Bio/description text */
+  biography: string;
+  /** URL of the profile picture */
+  profilePictureUrl: string;
+  /** Number of followers */
+  followersCount: number;
+  /** Number of accounts this profile follows */
+  followingCount: number;
+  /** Number of posts */
+  postsCount: number;
+  /** Link to the Instagram profile */
+  externalUrl: string;
+}
+
 export interface InstagramPost {
   id: number;
   postId: string;
@@ -27,8 +46,11 @@ export interface InstagramApiResponse {
   error?: { message: string };
 }
 
-// ── Mock Data ──────────────────────────────────────────
+// ── Mock Data for tests ───────────────────────────────
 
+// Mock posts are kept for unit tests. Production code returns an empty
+// array when no real API credentials are configured so no fake content
+// is ever shown to users.
 const MOCK_POSTS: InstagramPost[] = [
   {
     id: 1,
@@ -224,8 +246,8 @@ export async function fetchAndCacheInstagramPosts(): Promise<boolean> {
  * Reads cached Instagram posts from the database, ordered by timestamp
  * descending. Returns up to `limit` posts (default 9).
  *
- * If the cache is empty (no real credentials, first deploy, etc.), falls
- * back to mock data for development purposes.
+ * When the cache is empty (no credentials configured, first deploy, etc.)
+ * returns an empty array — no fake posts are ever displayed.
  */
 export async function getCachedInstagramPosts(limit = 9): Promise<InstagramPost[]> {
   const supabase = await createClient();
@@ -238,13 +260,11 @@ export async function getCachedInstagramPosts(limit = 9): Promise<InstagramPost[
 
   if (error) {
     console.warn("[Instagram] DB read error:", error.message);
-    // Fall back to mock data in case of DB issues
-    return MOCK_POSTS.slice(0, limit);
+    return [];
   }
 
   if (!data || data.length === 0) {
-    // Cache is empty — use mock data for development
-    return MOCK_POSTS.slice(0, limit);
+    return [];
   }
 
   return data.map(mapRowToPost);
@@ -253,7 +273,7 @@ export async function getCachedInstagramPosts(limit = 9): Promise<InstagramPost[
 /**
  * Public convenience function that returns Instagram posts.
  * In production with a configured cache, reads from the DB.
- * Falls back to mock data when no cached posts exist.
+ * Returns an empty array when no real posts are cached.
  */
 export async function getInstagramPosts(limit = 9): Promise<InstagramPost[]> {
   return getCachedInstagramPosts(limit);
@@ -264,4 +284,26 @@ export async function getInstagramPosts(limit = 9): Promise<InstagramPost[]> {
  */
 export function getMockInstagramPosts(limit = 9): InstagramPost[] {
   return MOCK_POSTS.slice(0, limit);
+}
+
+/**
+ * Returns the Instagram profile info.
+ *
+ * With a configured Instagram Business token, this would fetch from the
+ * Instagram Graph API. Currently returns a minimal profile for
+ * @umsukaimbali with the essential display info only (no fake stats).
+ * Stat counts are left at 0 so the UI can conditionally show them.
+ */
+export async function getInstagramProfile(): Promise<InstagramProfile> {
+  return {
+    username: "umsukaimbali",
+    fullName: "Umsuka Imbali",
+    biography: "",
+    // Use the site logo as avatar since we don't have Instagram API credentials
+    profilePictureUrl: "/logo.png",
+    followersCount: 0,
+    followingCount: 0,
+    postsCount: 0,
+    externalUrl: "https://www.instagram.com/umsukaimbali/",
+  };
 }

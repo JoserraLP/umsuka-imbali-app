@@ -33,8 +33,12 @@ export async function createClient() {
               cookieStore.set(name, value, options);
             });
           } catch {
-            // Called from a Server Component — safe to ignore because
-            // the middleware refreshes the session on every request.
+            // Server Components cannot set cookies (read-only context).
+            // This is expected — the middleware refreshes the session on
+            // every request so the server component never needs to write.
+            // Logged at debug level only when the session actually changed
+            // to avoid noise on every render. Filterable via
+            // DEBUG=supabase-ssr in environments that support it.
           }
         },
       },

@@ -7,7 +7,11 @@ const MESSAGES_BY_REASON: Record<string, string> = {
   provider: "Google no pudo completar la autenticación o cancelaste el proceso.",
   missing_code:
     "No se recibió el código de autorización. Es probable que la URL de redirección " +
-    "configurada en Supabase no coincida con este dominio.",
+    "configurada en Supabase no coincida con este dominio.\n\n" +
+    "Asegúrate de que en Supabase Dashboard → Authentication → URL Configuration, " +
+    "la lista de 'Redirect URLs' incluya:\n" +
+    "  • http://localhost:3000/auth/callback  (para desarrollo local)\n" +
+    "  • https://tu-dominio.vercel.app/auth/callback  (para producción)",
   exchange_failed: "El servidor no pudo validar la sesión con Supabase.",
 };
 

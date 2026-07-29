@@ -62,6 +62,21 @@ export async function updateSession(request: NextRequest) {
     error: getUserError,
   } = await supabase.auth.getUser();
 
+  const { pathname } = request.nextUrl;
+
+  console.log(
+    "[middleware] getUser result:",
+    {
+      pathname,
+      hasUser: !!user,
+      userId: user?.id ?? null,
+      error: getUserError
+        ? { name: getUserError.name, message: getUserError.message, status: getUserError.status }
+        : null,
+      cookieCount: request.cookies.getAll().length,
+    },
+  );
+
   if (getUserError) {
     console.error(
       "middleware: supabase.auth.getUser() falló al validar la sesión — este es el motivo " +
@@ -69,8 +84,6 @@ export async function updateSession(request: NextRequest) {
       { name: getUserError.name, message: getUserError.message, status: getUserError.status },
     );
   }
-
-  const { pathname } = request.nextUrl;
 
   if (!user && !isPublicRoute(pathname)) {
     const loginUrl = new URL("/auth/login", request.url);

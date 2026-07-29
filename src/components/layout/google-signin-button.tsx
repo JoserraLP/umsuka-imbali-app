@@ -4,6 +4,38 @@ import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 
+/** Allowed redirect origins for the callback URL. */
+type AllowedOrigin = string;
+
+/**
+ * Determines the base origin for the OAuth callback URL.
+ *
+ * Priority:
+ * 1. `NEXT_PUBLIC_SITE_URL` env var (must match Supabase Auth → Site URL)
+ * 2. `window.location.origin` (current browser origin)
+ *
+ * Using `NEXT_PUBLIC_SITE_URL` as the primary source ensures the callback
+ * URL matches what Supabase has configured in its "Redirect URLs" list
+ * (Supabase Dashboard → Authentication → URL Configuration). If the
+ * redirectTo URL is NOT in Supabase's allowlist, Supabase silently falls
+ * back to the configured Site URL — which in production is the Vercel app.
+ * This is why localhost logins can land on the production domain.
+ */
+function getCallbackOrigin(): AllowedOrigin {
+  // In production builds, NEXT_PUBLIC_* vars are inlined at build time.
+  // During `next dev` they are read from process.env at runtime.
+  const envSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  if (envSiteUrl) {
+    try {
+      const url = new URL(envSiteUrl);
+      return url.origin;
+    } catch {
+      // Invalid URL — fall through to window.location.origin
+    }
+  }
+  return window.location.origin;
+}
+
 interface GoogleSignInButtonProps {
   redirectTo?: string;
 }
@@ -27,10 +59,17 @@ export function GoogleSignInButton({ redirectTo }: GoogleSignInButtonProps) {
     setError(null);
 
     const supabase = createClient();
-    const callbackUrl = new URL("/auth/callback", window.location.origin);
+    const callbackUrl = new URL("/auth/callback", getCallbackOrigin());
     if (redirectTo) {
       callbackUrl.searchParams.set("redirectTo", redirectTo);
     }
+
+    // Log en la consola del browser para verificar la redirectTo real
+    console.log(
+      "%c[GoogleSignIn] redirectTo URL que se envía a Supabase:",
+      "font-weight:bold;color:#22c55e",
+      callbackUrl.toString(),
+    );
 
     const { error: signInError } = await supabase.auth.signInWithOAuth({
       provider: "google",

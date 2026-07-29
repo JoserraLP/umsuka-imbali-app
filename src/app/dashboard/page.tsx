@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { getCurrentProfile } from "@/lib/auth/session";
-import { getInstagramPosts } from "@/lib/social/instagram";
+import { getInstagramProfile } from "@/lib/social/instagram";
+import type { InstagramProfile } from "@/lib/social/instagram";
 import { listEvents } from "@/lib/events/queries";
 import { DashboardContent } from "@/app/dashboard/dashboard-content";
 import { signOutAction } from "@/app/dashboard/actions";
@@ -18,9 +19,9 @@ export default async function DashboardPage() {
     redirect("/auth/login");
   }
 
-  // Fetch Instagram posts and upcoming events in parallel
-  const [posts, events] = await Promise.all([
-    getInstagramPosts(9),
+  // Fetch Instagram profile and upcoming events in parallel
+  const [igProfile, events] = await Promise.all([
+    getInstagramProfile(),
     listEvents({ from: new Date().toISOString() }),
   ]);
 
@@ -28,7 +29,7 @@ export default async function DashboardPage() {
     <AppShell profile={profile}>
       <DashboardContent
         profile={profile}
-        posts={posts}
+        instagramProfile={igProfile}
         events={events}
         signOutAction={signOutAction}
       />
