@@ -63,7 +63,8 @@ export default async function AdminUsersPage() {
                   <TableHead>Nombre</TableHead>
                   <TableHead>Componente</TableHead>
                   <TableHead>Rol</TableHead>
-                  <TableHead>Estado</TableHead>
+                  <TableHead>Registro</TableHead>
+                  <TableHead>Alta/Baja</TableHead>
                   {canManage && <TableHead>Acciones</TableHead>}
                 </TableRow>
               </TableHeader>
@@ -92,8 +93,19 @@ export default async function AdminUsersPage() {
                         )}
                       </TableCell>
                       <TableCell>
+                        <Badge variant={
+                          member.status === "active" ? "default" :
+                          member.status === "pending" ? "secondary" :
+                          "destructive"
+                        }>
+                          {member.status === "active" ? "Activo" :
+                           member.status === "pending" ? "Pendiente" :
+                           "Suspendido"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
                         <Badge variant={member.isActive ? "default" : "destructive"}>
-                          {member.isActive ? "Activo" : "Dado de baja"}
+                          {member.isActive ? "Alta" : "Baja"}
                         </Badge>
                       </TableCell>
                       {canManage && (

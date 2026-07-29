@@ -5,10 +5,11 @@ import {
   User,
   Clock,
   Users,
+  UserCheck,
   type LucideIcon,
 } from "lucide-react";
 import type { AppRole } from "@/types/database.types";
-import { isManagementRole } from "@/lib/auth/roles";
+import { isManagementRole, isAdminRole } from "@/lib/auth/roles";
 
 export interface NavLink {
   href: string;
@@ -28,6 +29,12 @@ export const NAV_LINKS: NavLink[] = [
     label: "Miembros",
     icon: Users,
     showFor: (role) => isManagementRole(role),
+  },
+  {
+    href: "/admin/registrations",
+    label: "Aprobaciones",
+    icon: UserCheck,
+    showFor: (role) => isAdminRole(role),
   },
 ];
 

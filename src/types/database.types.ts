@@ -9,6 +9,7 @@ export type Json = string | number | boolean | null | { [key: string]: Json } | 
 export type ComponentType = "music" | "dance" | "member";
 export type EventType = "general" | "meeting" | "carnival" | "work_shift";
 export type Workgroup = "telas" | "barra" | "estandarte" | "limpieza" | "ninguno";
+export type UserStatus = "pending" | "active" | "suspended";
 export type AppRole =
   | "super_admin"
   | "admin"
@@ -31,6 +32,7 @@ export interface Database {
           workgroup: Workgroup;
           is_workgroup_lead: boolean;
           is_active: boolean;
+          status: UserStatus;
           created_at: string;
         };
         Insert: {
@@ -43,6 +45,7 @@ export interface Database {
           workgroup?: Workgroup;
           is_workgroup_lead?: boolean;
           is_active?: boolean;
+          status?: UserStatus;   // default 'pending' in DB
           created_at?: string;
         };
         Update: {
@@ -55,6 +58,7 @@ export interface Database {
           workgroup?: Workgroup;
           is_workgroup_lead?: boolean;
           is_active?: boolean;
+          status?: UserStatus;
           created_at?: string;
         };
         Relationships: [];
@@ -427,10 +431,19 @@ export interface Database {
         Args: Record<string, never>;
         Returns: boolean;
       };
+      is_active_member: {
+        Args: Record<string, never>;
+        Returns: boolean;
+      };
+      current_user_status: {
+        Args: Record<string, never>;
+        Returns: string;
+      };
     };
     Enums: {
       workgroup: Workgroup;
       event_type: EventType;
+      user_status: UserStatus;
     };
     CompositeTypes: Record<string, never>;
   };
