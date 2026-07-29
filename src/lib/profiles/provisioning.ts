@@ -50,6 +50,7 @@ export async function ensureProfileExists(user: User): Promise<MutationResult> {
       component_type: "member",
       role: "member",
       status: "pending",
+      auth_method: "google",
     },
     { onConflict: "id", ignoreDuplicates: true },
   );

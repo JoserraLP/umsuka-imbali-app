@@ -82,7 +82,7 @@ async function fetchProfileRow(userId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, first_name, last_name, birth_date, component_type, role, workgroup, is_workgroup_lead, is_active, status, created_at")
+    .select("id, first_name, last_name, birth_date, component_type, role, workgroup, is_workgroup_lead, is_active, status, username, auth_method, created_at")
     .eq("id", userId)
     .maybeSingle();
 
@@ -108,7 +108,9 @@ function buildAuthenticatedProfile(
     id: profile.id,
     firstName: profile.first_name,
     lastName: profile.last_name,
-    email: user.email ?? null,
+    // Never expose the internal email alias (user-{uuid}@umsuka.internal)
+    // to any user, not even the account owner themselves.
+    email: profile.auth_method === "email_alias" ? null : (user.email ?? null),
     avatarUrl: (user.user_metadata?.avatar_url as string | undefined) ?? null,
     role,
     componentType: profile.component_type,
@@ -117,6 +119,8 @@ function buildAuthenticatedProfile(
     birthDate: profile.birth_date,
     isActive: profile.is_active,
     status: profile.status,
+    username: profile.username ?? null,
+    authMethod: profile.auth_method,
     createdAt: profile.created_at,
   };
 }

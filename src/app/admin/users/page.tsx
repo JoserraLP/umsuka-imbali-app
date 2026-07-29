@@ -18,6 +18,7 @@ import { isManagementRole, isAdminRole } from "@/lib/auth/roles";
 import { listProfiles } from "@/lib/profiles/queries";
 import { UserRoleSelect } from "@/app/admin/users/user-role-select";
 import { MemberActiveToggle } from "@/app/admin/users/member-active-toggle";
+import { EmaillessAccountForm } from "@/app/admin/users/emailless-account-form";
 
 export const metadata: Metadata = {
   title: "Miembros",
@@ -129,6 +130,23 @@ export default async function AdminUsersPage() {
             </Table>
           </CardContent>
         </Card>
+
+        {profile.role === "super_admin" && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Crear cuenta sin correo electrónico</CardTitle>
+              <CardDescription>
+                Crea cuentas para miembros que no tengan email (ej. menores de edad). El sistema
+                genera un identificador interno y el miembro accede con usuario y contraseña.
+                La cuenta se crea en estado pendiente — un administrador debe aprobarla antes
+                de que pueda acceder.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <EmaillessAccountForm />
+            </CardContent>
+          </Card>
+        )}
       </div>
     </AppShell>
   );

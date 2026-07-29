@@ -10,6 +10,7 @@ export type ComponentType = "music" | "dance" | "member";
 export type EventType = "general" | "meeting" | "carnival" | "work_shift";
 export type Workgroup = "telas" | "barra" | "estandarte" | "limpieza" | "ninguno";
 export type UserStatus = "pending" | "active" | "suspended";
+export type AuthMethod = "google" | "email_alias" | "phone";
 export type AppRole =
   | "super_admin"
   | "admin"
@@ -33,6 +34,8 @@ export interface Database {
           is_workgroup_lead: boolean;
           is_active: boolean;
           status: UserStatus;
+          auth_method: AuthMethod;
+          username: string | null;
           created_at: string;
         };
         Insert: {
@@ -46,6 +49,8 @@ export interface Database {
           is_workgroup_lead?: boolean;
           is_active?: boolean;
           status?: UserStatus;   // default 'pending' in DB
+          auth_method?: AuthMethod;  // default 'google' in DB
+          username?: string | null;
           created_at?: string;
         };
         Update: {
@@ -59,6 +64,8 @@ export interface Database {
           is_workgroup_lead?: boolean;
           is_active?: boolean;
           status?: UserStatus;
+          auth_method?: AuthMethod;
+          username?: string | null;
           created_at?: string;
         };
         Relationships: [];
@@ -408,6 +415,30 @@ export interface Database {
         };
         Relationships: [];
       };
+      email_aliases: {
+        Row: {
+          id: string;
+          profile_id: string;
+          alias_email: string;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          alias_email: string;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          profile_id?: string;
+          alias_email?: string;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -444,6 +475,7 @@ export interface Database {
       workgroup: Workgroup;
       event_type: EventType;
       user_status: UserStatus;
+      auth_method: AuthMethod;
     };
     CompositeTypes: Record<string, never>;
   };

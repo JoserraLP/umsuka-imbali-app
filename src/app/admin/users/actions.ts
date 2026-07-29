@@ -8,6 +8,11 @@ import type {
   SetMemberActiveInput,
 } from "@/lib/profiles/schema";
 import type { MutationResult } from "@/lib/profiles/mutations";
+import { createEmaillessAccount } from "@/lib/auth/admin-create";
+import type {
+  CreateEmaillessAccountInput,
+  CreateEmaillessAccountResult,
+} from "@/lib/auth/emailless-schema";
 
 export async function updateMemberRoleAction(
   input: UpdateMemberRoleInput,
@@ -42,6 +47,19 @@ export async function setMemberActiveAction(
   if (result.success) {
     revalidatePath("/admin/users");
     revalidatePath(`/admin/users/${input.userId}`);
+  }
+
+  return result;
+}
+
+export async function createEmaillessAccountAction(
+  input: CreateEmaillessAccountInput,
+): Promise<CreateEmaillessAccountResult> {
+  const result = await createEmaillessAccount(input);
+
+  if (result.success) {
+    revalidatePath("/admin/users");
+    revalidatePath("/admin/registrations");
   }
 
   return result;

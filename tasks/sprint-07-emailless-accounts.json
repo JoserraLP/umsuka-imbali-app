@@ -1,0 +1,99 @@
+{
+  "title": "Sprint 7 — Creación de Cuentas sin Correo Electrónico (Super Admin)",
+  "description": "El super admin puede dar de alta a nuevos miembros en la aplicación sin necesidad de que estos tengan una cuenta de correo electrónico (por ejemplo, menores de edad). El sistema genera internamente un identificador único (email alias) que Supabase Auth utiliza como email, y el usuario accede con un nombre de usuario y contraseña proporcionados por el super admin.",
+  "status": "security-cleared",
+  "branch": "feature/sprint-07-emailless-accounts",
+  "dependencies": ["Sprint 6 — Confirmación de Super Admin en Registro", "Sprint 14 — Perfiles y Componentes"],
+  "acceptance_criteria": [
+    "El super admin puede crear una cuenta para un menor/miembro sin email desde el panel de administración.",
+    "El sistema genera un email alias único interno (user-{uuid}@umsuka.internal) que nunca se muestra al usuario.",
+    "El nuevo miembro puede iniciar sesión con su nombre de usuario + contraseña desde la página de login.",
+    "Las cuentas creadas sin email pasan por el mismo flujo de aprobación (Sprint 6): nacen en estado pending.",
+    "El super admin recibe un resumen con las credenciales para entregar al miembro.",
+    "El email alias generado no es accesible ni visible para ningún usuario (ni siquiera el propio miembro).",
+    "No se rompe el login existente con Google OAuth.",
+    "Todos los usuarios, independientemente de su método de auth, tienen las mismas capacidades dentro de la app."
+  ],
+  "definition_of_done": [
+    "Migración BD: columna auth_method en profiles (google, email_alias, phone), columna username única y opcional, tabla email_aliases.",
+    "Servicio lib/auth/admin-create.ts: createEmaillessAccount() que genera alias UUID, crea usuario en Auth, perfil y registra alias.",
+    "Servicio lib/auth/emailless-login.ts: loginWithUsername() que resuelve username a email alias y delega en signInWithPassword().",
+    "Server actions: createEmaillessAccountAction (solo super_admin) y emaillessLoginAction.",
+    "UI: Formulario de creación en /admin/users con campos: nombre, apellidos, username, contraseña, componente, workgroup.",
+    "UI: Pantalla de confirmación con credenciales generadas y advertencia de seguridad.",
+    "UI: En /auth/login, pestaña 'Acceder con usuario y contraseña' además del botón de Google.",
+    "UI: En /profile, opción 'Cambiar contraseña' para usuarios email_alias.",
+    "Middleware actualizado para manejar sesiones con auth_method = email_alias.",
+    "Backfill de RLS: verificar que ninguna política dependa exclusivamente del email.",
+    "Pruebas: tests unitarios para schemas y lógica, tests de integración para flujo completo.",
+    "TypeScript strict, sin errores de compilación.",
+    "Escaneo de seguridad superado sin hallazgos HIGH."
+  ],
+  "steps": [
+    {
+      "id": 1,
+      "name": "Diseño de la solución",
+      "detail": "Estrategia A: email alias autogenerado (user-{uuid}@umsuka.internal) + contraseña."
+    },
+    {
+      "id": 2,
+      "name": "Migración BD — profiles",
+      "detail": "Añadir columna username única y opcional, auth_method (google, email_alias, phone)."
+    },
+    {
+      "id": 3,
+      "name": "Migración BD — email_aliases",
+      "detail": "Crear tabla email_aliases (id, profile_id, alias_email UNIQUE, created_by, created_at)."
+    },
+    {
+      "id": 4,
+      "name": "Servicio admin-create.ts",
+      "detail": "createEmaillessAccount(): generar alias UUID, crear usuario Auth, perfil y registrar alias."
+    },
+    {
+      "id": 5,
+      "name": "Servicio emailless-login.ts",
+      "detail": "loginWithUsername(username, password): resolver username a alias_email y delegar en signInWithPassword()."
+    },
+    {
+      "id": 6,
+      "name": "Server actions",
+      "detail": "createEmaillessAccountAction (solo super_admin) y emaillessLoginAction."
+    },
+    {
+      "id": 7,
+      "name": "UI: Formulario de creación en /admin/users",
+      "detail": "Formulario con campos: nombre, apellidos, username, contraseña, componente, workgroup."
+    },
+    {
+      "id": 8,
+      "name": "UI: Pantalla de confirmación",
+      "detail": "Mostrar al super admin las credenciales generadas con advertencia de seguridad."
+    },
+    {
+      "id": 9,
+      "name": "UI: Login con usuario y contraseña",
+      "detail": "En /auth/login, añadir pestaña 'Acceder con usuario y contraseña'."
+    },
+    {
+      "id": 10,
+      "name": "UI: Cambio de contraseña en /profile",
+      "detail": "Opción 'Cambiar contraseña' para usuarios con auth_method = email_alias."
+    },
+    {
+      "id": 11,
+      "name": "Middleware update",
+      "detail": "Asegurar que middleware.ts maneje correctamente sesiones de usuarios email_alias."
+    },
+    {
+      "id": 12,
+      "name": "Backfill de RLS",
+      "detail": "Verificar que políticas RLS no dependan exclusivamente del email."
+    },
+    {
+      "id": 13,
+      "name": "Pruebas",
+      "detail": "Tests unitarios para schemas, generación de alias, login con username. Tests de integración del flujo completo."
+    }
+  ]
+}
