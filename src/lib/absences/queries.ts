@@ -151,6 +151,33 @@ export async function getUserAbsences(userId: string): Promise<UserAbsenceRecord
 }
 
 /**
+ * Returns a single absence record for a given user + event combination,
+ * without the full join to profiles. Used to show the viewer their own
+ * absence status without exposing all members' absence data.
+ */
+export async function getUserAbsenceForEvent(
+  userId: string,
+  eventId: string,
+): Promise<{ id: string; justified: boolean; reason: string | null } | null> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("absences")
+    .select("id, justified, reason")
+    .eq("user_id", userId)
+    .eq("event_id", eventId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(
+      `Failed to fetch absence for user ${userId} at event ${eventId}: ${error.message}`,
+    );
+  }
+
+  return data;
+}
+
+/**
  * Returns all absences that have not yet been justified (justified = false),
  * enriched with user profile names. Useful for management dashboards.
  */

@@ -1,7 +1,8 @@
 {
   "title": "Sprint 5 – Asistencia y Ausencias",
   "description": "Implementar la gestión de asistencia a eventos, el historial de asistencia y las solicitudes de ausencia justificadas. Incluye: marcar/desmarcar asistencia por parte de gestión, solicitar ausencia justificada por parte del miembro, aprobar/rechazar ausencias por parte de gestión, y visualizar el historial completo de asistencia/ausencias.",
-  "status": "documented",
+  "status": "security-cleared",
+  "security_scan": "2026-07-29 — PASS (0 HIGH, 2 MEDIUM fixed, 1 LOW fixed)",
   "acceptance_criteria": [
     "Los miembros de gestión pueden marcar asistencia (presente/ausente) para cualquier miembro en un evento.",
     "Los miembros de gestión pueden ver el listado de asistentes y no asistentes de un evento.",

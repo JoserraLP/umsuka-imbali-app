@@ -9,7 +9,7 @@ import { isManagementRole } from "@/lib/auth/roles";
 import { getEventById, getEventShifts } from "@/lib/events/queries";
 import { getEventRegistrationSummary } from "@/lib/registrations/queries";
 import { getEventAttendance, getEventAttendanceSummary } from "@/lib/attendance/queries";
-import { getEventAbsences } from "@/lib/absences/queries";
+import { getEventAbsences, getUserAbsenceForEvent } from "@/lib/absences/queries";
 import {
   getAllWorkgroupMembers,
   getWorkgroupAttendanceByShift,
@@ -71,8 +71,12 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   const [attendanceRecords, attendanceSummary, absences] = await Promise.all([
     canManage ? getEventAttendance(event.id) : [],
     canManage ? getEventAttendanceSummary(event.id) : null,
-    getEventAbsences(event.id),
+    canManage ? getEventAbsences(event.id) : [],
   ]);
+
+  const viewerAbsence = await (canManage
+    ? Promise.resolve(absences.find((a) => a.userId === profile.id) ?? null)
+    : getUserAbsenceForEvent(profile.id, event.id));
 
   const shifts = await getEventShifts(event.id);
   const firstShift = shifts[0] ?? null;
@@ -91,8 +95,6 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
       getWorkgroupAttendanceByShift(firstShift.id),
     ]);
   }
-
-  const viewerAbsence = absences.find((a) => a.userId === profile.id);
 
   return (
     <AppShell profile={profile}>
@@ -220,7 +222,6 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             <CardContent>
               <AbsencePanel
                 eventId={event.id}
-                viewerId={profile.id}
                 absences={absences}
                 canManage={canManage}
                 viewerAbsenceId={viewerAbsence?.id ?? null}
