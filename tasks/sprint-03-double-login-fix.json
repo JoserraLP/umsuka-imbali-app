@@ -1,0 +1,25 @@
+{
+  "title": "Sprint 3 — Bugfix: Doble Login en Página Principal",
+  "description": "Se ha reportado que en la página principal (/dashboard o /) los usuarios deben iniciar sesión dos veces antes de acceder correctamente a la aplicación. Esto ocurre porque el flujo de autenticación no completa correctamente la redirección post-login, o porque el estado de sesión no se propaga a tiempo antes del primer renderizado del middleware/ruta protegida.",
+  "status": "published",
+  "acceptance_criteria": [
+    "El usuario inicia sesión una sola vez y accede al dashboard sin necesidad de un segundo login.",
+    "No hay redirecciones fantasma entre /auth/login → /dashboard → /auth/login.",
+    "El middleware no interfiere con el flujo post-login.",
+    "Los tests E2E verifican el flujo completo de login sin doble autenticación.",
+    "El resto de rutas protegidas funcionan correctamente sin doble autenticación."
+  ],
+  "definition_of_done": [
+    "Diagnóstico completado: identificadas las causas raíz del doble login.",
+    "middleware.ts actualizado: getUser() refresca la sesión y redirectPreservingCookies preserva cookies.",
+    "auth/callback/route.ts actualizado: exchangeCodeForSession escribe cookies directamente en la respuesta.",
+    "page.tsx y dashboard/page.tsx no compiten con el middleware ni causan race conditions.",
+    "cookie-options.ts configurado correctamente (secure derivado de NODE_ENV, httpOnly separado para server/browser).",
+    "Build exitoso (npm run build).",
+    "Tests existentes continúan pasando.",
+    "Tests E2E actualizados para cubrir el flujo de login completo.",
+    "ADR documentando el bug y la decisión arquitectónica.",
+    "Escaneo de seguridad superado sin hallazgos HIGH."
+  ],
+  "branch": "feature/sprint-02-double-login-fix"
+}
