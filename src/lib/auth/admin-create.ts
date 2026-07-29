@@ -121,7 +121,7 @@ export async function createEmaillessAccount(
 
   if (aliasError) {
     // Rollback: delete profile + auth user
-    await admin.from("profiles").delete().eq("id", createdUserId).catch(() => {});
+    try { await admin.from("profiles").delete().eq("id", createdUserId); } catch { /* rollback best-effort */ }
     await admin.auth.admin.deleteUser(createdUserId).catch(() => {});
     return { success: false, error: aliasError.message };
   }
