@@ -13,7 +13,7 @@ describe("buildMonthGrid", () => {
     const weeks = buildMonthGrid(2026, 8);
     for (const week of weeks) {
       // getDay(): Mon=1
-      expect(week[0].date.getDay()).toBe(1);
+      expect(week[0]!.date.getDay()).toBe(1);
     }
   });
 
@@ -24,14 +24,14 @@ describe("buildMonthGrid", () => {
     const daysInMonthCells = weeks.flat().filter((day) => day.inCurrentMonth);
 
     expect(daysInMonthCells).toHaveLength(28);
-    expect(daysInMonthCells[0].date.getDate()).toBe(1);
-    expect(daysInMonthCells[daysInMonthCells.length - 1].date.getDate()).toBe(28);
+    expect(daysInMonthCells[0]!.date.getDate()).toBe(1);
+    expect(daysInMonthCells[daysInMonthCells.length - 1]!.date.getDate()).toBe(28);
   });
 
   it("marks leading/trailing days from adjacent months as not inCurrentMonth", () => {
     // August 2026: Aug 1 is a Saturday, so there are leading July days.
     const weeks = buildMonthGrid(2026, 8);
-    const firstWeek = weeks[0];
+    const firstWeek = weeks[0]!;
     const leadingDays = firstWeek.filter((day) => !day.inCurrentMonth);
 
     expect(leadingDays.length).toBeGreaterThan(0);

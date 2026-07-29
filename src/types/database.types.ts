@@ -7,7 +7,8 @@
 export type Json = string | number | boolean | null | { [key: string]: Json } | Json[];
 
 export type ComponentType = "music" | "dance" | "member";
-export type EventType = "general" | "meeting" | "carnival";
+export type EventType = "general" | "meeting" | "carnival" | "work_shift";
+export type Workgroup = "telas" | "barra" | "estandarte" | "limpieza" | "ninguno";
 export type AppRole =
   | "super_admin"
   | "admin"
@@ -27,6 +28,8 @@ export interface Database {
           birth_date: string | null;
           component_type: ComponentType;
           role: string;
+          workgroup: Workgroup;
+          is_workgroup_lead: boolean;
           is_active: boolean;
           created_at: string;
         };
@@ -37,6 +40,8 @@ export interface Database {
           birth_date?: string | null;
           component_type?: ComponentType;
           role?: string;
+          workgroup?: Workgroup;
+          is_workgroup_lead?: boolean;
           is_active?: boolean;
           created_at?: string;
         };
@@ -47,6 +52,8 @@ export interface Database {
           birth_date?: string | null;
           component_type?: ComponentType;
           role?: string;
+          workgroup?: Workgroup;
+          is_workgroup_lead?: boolean;
           is_active?: boolean;
           created_at?: string;
         };
@@ -325,6 +332,45 @@ export interface Database {
         };
         Relationships: [];
       };
+      workgroup_attendance: {
+        Row: {
+          id: string;
+          shift_id: string;
+          user_id: string;
+          workgroup: Workgroup;
+          attended: boolean;
+          hours_worked: number | null;
+          barra_task: string | null;
+          marked_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          shift_id: string;
+          user_id: string;
+          workgroup: Workgroup;
+          attended: boolean;
+          hours_worked?: number | null;
+          barra_task?: string | null;
+          marked_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          shift_id?: string;
+          user_id?: string;
+          workgroup?: Workgroup;
+          attended?: boolean;
+          hours_worked?: number | null;
+          barra_task?: string | null;
+          marked_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -336,8 +382,23 @@ export interface Database {
         Args: Record<string, never>;
         Returns: string;
       };
+      is_workgroup_lead: {
+        Args: { check_workgroup: string };
+        Returns: boolean;
+      };
+      current_user_workgroup: {
+        Args: Record<string, never>;
+        Returns: string;
+      };
+      is_super_admin: {
+        Args: Record<string, never>;
+        Returns: boolean;
+      };
     };
-    Enums: Record<string, never>;
+    Enums: {
+      workgroup: Workgroup;
+      event_type: EventType;
+    };
     CompositeTypes: Record<string, never>;
   };
 }

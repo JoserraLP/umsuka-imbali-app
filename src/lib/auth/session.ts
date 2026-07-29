@@ -72,7 +72,7 @@ async function fetchProfileRow(userId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, first_name, last_name, birth_date, component_type, role, is_active, created_at")
+    .select("id, first_name, last_name, birth_date, component_type, role, workgroup, is_workgroup_lead, is_active, created_at")
     .eq("id", userId)
     .maybeSingle();
 
@@ -102,6 +102,8 @@ function buildAuthenticatedProfile(
     avatarUrl: (user.user_metadata?.avatar_url as string | undefined) ?? null,
     role,
     componentType: profile.component_type,
+    workgroup: profile.workgroup ?? "ninguno",
+    isWorkgroupLead: profile.is_workgroup_lead ?? false,
     birthDate: profile.birth_date,
     isActive: profile.is_active,
     createdAt: profile.created_at,

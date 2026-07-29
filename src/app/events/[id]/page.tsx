@@ -6,15 +6,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { AppShell } from "@/components/layout/app-shell";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { isManagementRole } from "@/lib/auth/roles";
-import { getEventById } from "@/lib/events/queries";
+import { getEventById, getEventShifts } from "@/lib/events/queries";
 import { getEventRegistrationSummary } from "@/lib/registrations/queries";
 import { getEventAttendance, getEventAttendanceSummary } from "@/lib/attendance/queries";
 import { getEventAbsences } from "@/lib/absences/queries";
+import {
+  getAllWorkgroupMembers,
+  getWorkgroupAttendanceByShift,
+} from "@/lib/workgroups/queries";
 import { EventForm } from "@/app/events/event-form";
 import { DeleteEventButton } from "@/app/events/[id]/delete-event-button";
 import { RegistrationPanel } from "@/app/events/[id]/registration-panel";
 import { AttendancePanel } from "@/app/events/[id]/attendance-panel";
 import { AbsencePanel } from "@/app/events/[id]/absence-panel";
+import { WorkgroupAttendancePanel } from "@/app/events/[id]/workgroup-panel";
 import type { EventTypeValue } from "@/lib/events/schema";
 
 export const metadata: Metadata = {
@@ -25,6 +30,7 @@ const EVENT_TYPE_LABELS: Record<EventTypeValue, string> = {
   general: "General",
   meeting: "Reunión",
   carnival: "Carnaval",
+  work_shift: "Turno de trabajo",
 };
 
 const DATE_FORMATTER = new Intl.DateTimeFormat("es-ES", {
@@ -58,7 +64,8 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     notFound();
   }
 
-  const canManage = isManagementRole(profile.role);
+  const isWorkShift = event.eventType === "work_shift";
+  const canManage = isManagementRole(profile.role) || (isWorkShift && profile.isWorkgroupLead);
   const registrationSummary = await getEventRegistrationSummary(event.id, profile.id);
 
   const [attendanceRecords, attendanceSummary, absences] = await Promise.all([
@@ -66,6 +73,24 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     canManage ? getEventAttendanceSummary(event.id) : null,
     getEventAbsences(event.id),
   ]);
+
+  const shifts = await getEventShifts(event.id);
+  const firstShift = shifts[0] ?? null;
+
+  const canViewWorkgroupPanel =
+    profile.role === "super_admin" || profile.isWorkgroupLead || isWorkShift;
+
+  let workgroupMembers: Awaited<ReturnType<typeof getAllWorkgroupMembers>> = [];
+  let workgroupAttendanceRecords: Awaited<
+    ReturnType<typeof getWorkgroupAttendanceByShift>
+  > = [];
+
+  if (canViewWorkgroupPanel && firstShift) {
+    [workgroupMembers, workgroupAttendanceRecords] = await Promise.all([
+      getAllWorkgroupMembers(),
+      getWorkgroupAttendanceByShift(firstShift.id),
+    ]);
+  }
 
   const viewerAbsence = absences.find((a) => a.userId === profile.id);
 
@@ -122,24 +147,26 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           </Card>
         )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Inscripción</CardTitle>
-            <CardDescription>Apúntate o date de baja de este evento.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <RegistrationPanel
-              eventId={event.id}
-              isViewerRegistered={registrationSummary.isViewerRegistered}
-              count={registrationSummary.count}
-              capacity={registrationSummary.capacity}
-              attendees={registrationSummary.attendees}
-              canManageAttendees={canManage}
-            />
-          </CardContent>
-        </Card>
+        {!isWorkShift && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Inscripción</CardTitle>
+              <CardDescription>Apúntate o date de baja de este evento.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RegistrationPanel
+                eventId={event.id}
+                isViewerRegistered={registrationSummary.isViewerRegistered}
+                count={registrationSummary.count}
+                capacity={registrationSummary.capacity}
+                attendees={registrationSummary.attendees}
+                canManageAttendees={canManage}
+              />
+            </CardContent>
+          </Card>
+        )}
 
-        {canManage && (
+        {canManage && !isWorkShift && (
           <Card>
             <CardHeader>
               <CardTitle>Asistencia</CardTitle>
@@ -159,23 +186,48 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           </Card>
         )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Ausencias</CardTitle>
-            <CardDescription>
-              Solicita tu ausencia o gestiona las solicitudes.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <AbsencePanel
-              eventId={event.id}
-              viewerId={profile.id}
-              absences={absences}
-              canManage={canManage}
-              viewerAbsenceId={viewerAbsence?.id ?? null}
-            />
-          </CardContent>
-        </Card>
+        {canViewWorkgroupPanel && firstShift && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Asistencia por grupo de trabajo</CardTitle>
+              <CardDescription>
+                Marca quién asistió a su grupo de trabajo en el turno &laquo;
+                {firstShift.name}&raquo;.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <WorkgroupAttendancePanel
+                shiftId={firstShift.id}
+                shiftName={firstShift.name}
+                members={workgroupMembers}
+                attendanceRecords={workgroupAttendanceRecords}
+                currentUserWorkgroup={profile.workgroup}
+                isLead={profile.isWorkgroupLead}
+                isSuperAdmin={profile.role === "super_admin"}
+              />
+            </CardContent>
+          </Card>
+        )}
+
+        {!isWorkShift && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Ausencias</CardTitle>
+              <CardDescription>
+                Solicita tu ausencia o gestiona las solicitudes.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AbsencePanel
+                eventId={event.id}
+                viewerId={profile.id}
+                absences={absences}
+                canManage={canManage}
+                viewerAbsenceId={viewerAbsence?.id ?? null}
+              />
+            </CardContent>
+          </Card>
+        )}
       </div>
     </AppShell>
   );

@@ -52,20 +52,23 @@ Rediseñar la interfaz gráfica actual para adoptar un estilo visual moderno ins
 **Rama:** `feature/sprint-02-workgroup-roles`
 
 ### Descripción
-Añadir roles específicos de responsable para grupos de trabajo (telas, barra, estandarte, limpieza). Solo estos responsables podrán registrar si una persona ha participado o no en su turno de trabajo.
+Añadir roles específicos de responsable para grupos de trabajo (telas, barra, estandarte, limpieza). Solo estos responsables podrán registrar si una persona ha participado o no en su turno de trabajo. Además, los responsables pueden crear eventos de tipo "asistencia a turno de trabajo" donde se marca quién cumplió su turno.
 
 ### Pasos
 
 | # | Paso | Detalle |
 |---|---|---|
-| 1 | Migración de BD | Añadir columna `workgroup` a `umsuka.profiles` (enum: `telas`, `barra`, `estandarte`, `limpieza`, `ninguno`). Añadir columna `is_workgroup_lead` booleana. Crear índices. |
+| 1 | Migración de BD | Añadir columna `workgroup` a `umsuka.profiles` (tipo ENUM: `telas`, `barra`, `estandarte`, `limpieza`, `ninguno`). Añadir columna `is_workgroup_lead` booleana. Crear índices. |
 | 2 | Migración de BD — tabla workgroup_attendance | Crear `umsuka.workgroup_attendance` (id, shift_id, user_id, workgroup, attended, marked_by, timestamps) con RLS. |
-| 3 | Helper functions | Añadir `umsuka.is_workgroup_lead(workgroup text)` y `umsuka.current_user_workgroup()` en SQL. |
-| 4 | Actualizar tipos | Regenerar `src/types/database.types.ts` con `supabase gen types`. |
-| 5 | Capa de negocio `lib/workgroups/` | Crear schemas Zod, queries y mutations para la gestión de asistencia por grupo de trabajo. |
-| 6 | Server actions | Acciones para marcar/desmarcar asistencia de miembros en un turno, validando que el actor sea el lead del grupo correspondiente. |
-| 7 | UI de gestión | Panel en la página de evento/detalle de turno donde el responsable pueda ver los miembros de su grupo y marcar asistencia. |
-| 8 | Actualizar políticas RLS | Asegurar que `workgroup_attendance` solo sea visible/editable por el lead del grupo correspondiente + super_admin. |
+| 3 | Migración ENUM workgroup | Crear tipo ENUM `umsuka.workgroup` reemplazando el CHECK constraint en profiles. |
+| 4 | Migración event_type work_shift | Añadir `'work_shift'` como tipo de evento válido. Políticas RLS para que los responsables de grupo puedan crear/editar/eliminar sus propios eventos de tipo trabajo. |
+| 5 | Helper functions | Añadir `umsuka.is_workgroup_lead(workgroup text)`, `umsuka.current_user_workgroup()` y `umsuka.is_super_admin()` en SQL. |
+| 6 | Actualizar tipos | Regenerar `src/types/database.types.ts` con `supabase gen types`. |
+| 7 | Capa de negocio `lib/workgroups/` | Crear schemas Zod, queries y mutations para la gestión de asistencia por grupo de trabajo. |
+| 8 | Server actions | Acciones para marcar/desmarcar asistencia de miembros en un turno, validando que el actor sea el lead del grupo correspondiente. |
+| 9 | UI de gestión de asistencia | Panel en la página de evento/detalle de turno donde el responsable pueda ver los miembros de su grupo y marcar asistencia. |
+| 10 | Evento de tipo work_shift | Los responsables de grupo pueden crear eventos de tipo "asistencia a turno de trabajo". Al crearlos se auto-genera un turno. La página de detalle del evento muestra el panel de asistencia por grupo de trabajo. |
+| 11 | Actualizar políticas RLS | Asegurar que `workgroup_attendance` solo sea visible/editable por el lead del grupo correspondiente + super_admin. |
 
 ### Dependencias
 - Sprint 1 (UI/UX para los nuevos paneles)
@@ -75,6 +78,9 @@ Añadir roles específicos de responsable para grupos de trabajo (telas, barra, 
 - Solo el responsable de un grupo puede marcar asistencia para los miembros de su grupo.
 - Un responsable no puede marcar asistencia para miembros de otros grupos.
 - Super admin puede ver y gestionar todos los grupos.
+- Los responsables de grupo pueden crear eventos de tipo "asistencia a turno de trabajo".
+- Al crear un evento de tipo trabajo, se genera automáticamente un turno asociado.
+- La página de detalle del evento de trabajo muestra el panel de asistencia por grupo.
 
 ---
 
@@ -122,7 +128,7 @@ Rediseñar la página principal (`/dashboard`) para mostrar: feed de los último
 | 1 | Integración Instagram API | Crear servicio `src/lib/social/instagram.ts` que obtenga los últimos posts usando Instagram Basic Display API o Graph API. |
 | 2 | Caché de posts | Almacenar posts en Supabase (`umsuka.instagram_posts`) con TTL para evitar rate limiting. |
 | 3 | Server component de feed | Crear `InstagramFeed` que renderice los últimos 6-9 posts en cuadrícula. |
-| 4 | Widget de notificaciones | Consultar `umsuka.notifications` (a implementar en Sprint 14) y mostrar las últimas 5 no leídas. |
+| 4 | Widget de notificaciones | Consultar `umsuka.notifications` (a implementar en Sprint 15) y mostrar las últimas 5 no leídas. |
 | 5 | Widget de calendario | Consultar `umsuka.events` ordenados por fecha ascendente, mostrar los próximos 3-5 eventos. |
 | 6 | Diseño de dashboard | Maquetar las 3 secciones en columnas: feed central (Instagram), sidebar derecha (notificaciones + calendario). |
 | 7 | Actualizar `dashboard/page.tsx` | Refactorizar para usar los nuevos widgets. |
@@ -130,7 +136,7 @@ Rediseñar la página principal (`/dashboard`) para mostrar: feed de los último
 
 ### Dependencias
 - Sprint 1 (UI/UX)
-- Sprint 14 (Notificaciones) — si se quiere integración real; si no, se puede hacer primero con datos mock.
+- Sprint 15 (Notificaciones) — si se quiere integración real; si no, se puede hacer primero con datos mock.
 
 ### Criterios de Aceptación
 - La página principal muestra los últimos posts de Instagram de @umsuka (o cuenta configurada).
@@ -178,7 +184,7 @@ Implementar un flujo donde cada nuevo usuario que se registra (vía Google OAuth
 | 4 | UI de pending | Página `/auth/pending` con mensaje informativo. |
 | 5 | Panel de administración | En `/admin/users`, añadir columna de status y botones "Aprobar"/"Suspender". |
 | 6 | Server actions | `approveUserAction`, `suspendUserAction` — solo super_admin. |
-| 7 | Notificación al usuario | Opcional: enviar notificación interna cuando el usuario sea aprobado (depende de Sprint 14). |
+| 7 | Notificación al usuario | Opcional: enviar notificación interna cuando el usuario sea aprobado (depende de Sprint 15). |
 | 8 | Pruebas | Tests de integración para el flujo completo de aprobación. |
 
 ### Dependencias
@@ -192,9 +198,50 @@ Implementar un flujo donde cada nuevo usuario que se registra (vía Google OAuth
 
 ---
 
-## Sprint 7 — Turnos: Creación, Asignación y Control de Conflictos
+## Sprint 7 — Creación de Cuentas sin Correo Electrónico (Super Admin)
 
-**Rama:** `feature/sprint-07-shifts`
+**Rama:** `feature/sprint-07-emailless-accounts`
+
+### Descripción
+El super admin puede dar de alta a nuevos miembros en la aplicación sin necesidad de que estos tengan una cuenta de correo electrónico (por ejemplo, menores de edad). El sistema genera internamente un identificador único (email alias) que Supabase Auth utiliza como email, y el usuario accede con un nombre de usuario y contraseña proporcionados por el super admin.
+
+### Pasos
+
+| # | Paso | Detalle |
+|---|---|---|
+| 1 | Diseño de la solución | Decidir estrategia: (A) email alias autogenerado (`user-{uuid}@umsuka.internal`) + contraseña, o (B) usar `phone` como identificador alternativo en Supabase Auth. Se recomienda la opción (A) por compatibilidad con el esquema actual. |
+| 2 | Migración de BD — profiles | Añadir columna `username` única y opcional a `umsuka.profiles` para que estos usuarios puedan identificarse sin email. Añadir columna `auth_method` (`google`, `email_alias`, `phone`). |
+| 3 | Migración de BD — email_aliases | Crear tabla `umsuka.email_aliases` (id, profile_id, alias_email text UNIQUE, created_by, created_at) para llevar registro de los alias generados. |
+| 4 | Servicio `lib/auth/admin-create.ts` | Implementar función `createEmaillessAccount(data)` que: genere un alias UUID, llame a `supabase.auth.admin.createUser()` con el alias y contraseña, cree el perfil con `auth_method = 'email_alias'`, y registre el alias en la tabla de aliases. |
+| 5 | Servicio `lib/auth/emailless-login.ts` | Implementar función `loginWithUsername(username, password)` que resuelva el `username` al `alias_email` (o al `id` de auth) y delegue en `signInWithPassword()`. |
+| 6 | Server actions | `createEmaillessAccountAction` (solo super_admin) y `emaillessLoginAction` (público, para estos usuarios). |
+| 7 | UI: Formulario de creación | En `/admin/users`, formulario con campos: nombre, apellidos, nombre de usuario, contraseña, componente, grupo de trabajo. El sistema genera automáticamente el email alias en segundo plano. |
+| 8 | UI: Pantalla de confirmación | Tras crear la cuenta, mostrar al super admin las credenciales generadas (username + contraseña) para que las entregue al nuevo miembro. Advertencia de seguridad: "Cambia la contraseña en el primer inicio de sesión." |
+| 9 | UI: Login para emailless | En `/auth/login`, añadir pestaña "Acceder con usuario y contraseña" además del botón de Google. Validar que el método de auth del perfil sea `email_alias`. |
+| 10 | UI: Cambio de contraseña | En `/profile`, añadir opción "Cambiar contraseña" para estos usuarios (usa `supabase.auth.updateUser()`). |
+| 11 | Middleware update | Asegurar que `middleware.ts` maneje correctamente sesiones de usuarios con `auth_method = 'email_alias'`. |
+| 12 | Backfill de RLS | Verificar que las políticas RLS existentes no dependan exclusivamente del email (ninguna debería). |
+| 13 | Pruebas | Tests unitarios para generación de alias, creación de cuenta, login con username. Tests de integración del flujo completo. |
+
+### Dependencias
+- Sprint 6 (aprobación de usuarios + panel admin funcional)
+- Sprint 14 (perfiles con campos completos como username)
+
+### Criterios de Aceptación
+- El super admin puede crear una cuenta para un menor/miembro sin email desde el panel de administración.
+- El sistema genera un email alias único interno (`user-{uuid}@umsuka.internal`) que nunca se muestra al usuario.
+- El nuevo miembro puede iniciar sesión con su nombre de usuario + contraseña desde la página de login.
+- Las cuentas creadas sin email pasan por el mismo flujo de aprobación (Sprint 6): nacen en estado `pending`.
+- El super admin recibe un resumen con las credenciales para entregar al miembro.
+- El email alias generado no es accesible ni visible para ningún usuario (ni siquiera el propio miembro).
+- No se rompe el login existente con Google OAuth.
+- Todos los usuarios, independientemente de su método de auth, tienen las mismas capacidades dentro de la app.
+
+---
+
+## Sprint 8 — Turnos: Creación, Asignación y Control de Conflictos
+
+**Rama:** `feature/sprint-08-shifts`
 
 ### Descripción
 Crear y administrar turnos asociados a eventos, incluyendo asignación de miembros a turnos y control de conflictos (horarios solapados).
@@ -225,9 +272,9 @@ Crear y administrar turnos asociados a eventos, incluyendo asignación de miembr
 
 ---
 
-## Sprint 8 — Noticias: Publicación y Gestión
+## Sprint 9 — Noticias: Publicación y Gestión
 
-**Rama:** `feature/sprint-08-news`
+**Rama:** `feature/sprint-09-news`
 
 ### Descripción
 Sistema de publicación y gestión de noticias internas para los miembros.
@@ -242,12 +289,12 @@ Sistema de publicación y gestión de noticias internas para los miembros.
 | 4 | UI: Feed de noticias | Página `/news` con lista de noticias estilo red social (tarjetas con título, contenido truncado, autor, fecha). |
 | 5 | UI: Detalle de noticia | Página `/news/[id]` con contenido completo. |
 | 6 | UI: Crear/Editar noticia | Formulario para management, con editor de texto enriquecido (opcional). |
-| 7 | Notificaciones | Al crear una noticia, enviar notificación push/Interna a todos los miembros (depende de Sprint 14). |
+| 7 | Notificaciones | Al crear una noticia, enviar notificación push/Interna a todos los miembros (depende de Sprint 15). |
 | 8 | Pruebas | Tests unitarios e integración. |
 
 ### Dependencias
 - Sprint 1 (UI/UX)
-- Sprint 14 (Notificaciones — opcional para MVP)
+- Sprint 15 (Notificaciones — opcional para MVP)
 
 ### Criterios de Aceptación
 - Los management pueden crear, editar y eliminar noticias.
@@ -257,9 +304,9 @@ Sistema de publicación y gestión de noticias internas para los miembros.
 
 ---
 
-## Sprint 9 — Preguntas: Consultas y Seguimiento
+## Sprint 10 — Preguntas: Consultas y Seguimiento
 
-**Rama:** `feature/sprint-09-questions`
+**Rama:** `feature/sprint-10-questions`
 
 ### Descripción
 Módulo para realizar consultas internas, hacer seguimiento y marcar preguntas como resueltas.
@@ -288,9 +335,9 @@ Módulo para realizar consultas internas, hacer seguimiento y marcar preguntas c
 
 ---
 
-## Sprint 10 — Votaciones
+## Sprint 11 — Votaciones
 
-**Rama:** `feature/sprint-10-votings`
+**Rama:** `feature/sprint-11-votings`
 
 ### Descripción
 Sistema de votación con opciones múltiples, control de voto único por usuario y visualización de resultados en tiempo real.
@@ -320,9 +367,9 @@ Sistema de votación con opciones múltiples, control de voto único por usuario
 
 ---
 
-## Sprint 11 — Gestión Documental (Supabase Storage)
+## Sprint 12 — Gestión Documental (Supabase Storage)
 
-**Rama:** `feature/sprint-11-document-management`
+**Rama:** `feature/sprint-12-document-management`
 
 ### Descripción
 Gestionar documentos usando Supabase Storage con categorías, permisos por rol y control de versiones.
@@ -349,9 +396,9 @@ Gestionar documentos usando Supabase Storage con categorías, permisos por rol y
 
 ---
 
-## Sprint 12 — Eventos: Mejora de Registro y Gestión
+## Sprint 13 — Eventos: Mejora de Registro y Gestión
 
-**Rama:** `feature/sprint-12-events-enhancement`
+**Rama:** `feature/sprint-13-events-enhancement`
 
 ### Descripción
 Mejorar la gestión de eventos: registro con campos adicionales, comentarios, capacidad máxima, y lista de espera.
@@ -378,9 +425,9 @@ Mejorar la gestión de eventos: registro con campos adicionales, comentarios, ca
 
 ---
 
-## Sprint 13 — Perfiles y Componentes
+## Sprint 14 — Perfiles y Componentes
 
-**Rama:** `feature/sprint-13-profiles-components`
+**Rama:** `feature/sprint-14-profiles-components`
 
 ### Descripción
 Mejorar la gestión de perfiles de usuario: foto, biografía, componentes (telas, barra, etc.), habilidades, y historial de participación.
@@ -405,9 +452,9 @@ Mejorar la gestión de perfiles de usuario: foto, biografía, componentes (telas
 
 ---
 
-## Sprint 14 — Notificaciones
+## Sprint 15 — Notificaciones
 
-**Rama:** `feature/sprint-14-notifications`
+**Rama:** `feature/sprint-15-notifications`
 
 ### Descripción
 Sistema de notificaciones internas (en-app) y en tiempo real sobre eventos, noticias, votaciones y cambios relevantes.
@@ -436,9 +483,9 @@ Sistema de notificaciones internas (en-app) y en tiempo real sobre eventos, noti
 
 ---
 
-## Sprint 15 — Administración: Panel de Control
+## Sprint 16 — Administración: Panel de Control
 
-**Rama:** `feature/sprint-15-admin-panel`
+**Rama:** `feature/sprint-16-admin-panel`
 
 ### Descripción
 Panel de administración completo para gestión de usuarios, configuración global, permisos y auditoría.
@@ -458,7 +505,7 @@ Panel de administración completo para gestión de usuarios, configuración glob
 
 ### Dependencias
 - Sprint 6 (aprobación de usuarios)
-- Sprint 13 (perfiles completos)
+- Sprint 14 (perfiles completos)
 
 ### Criterios de Aceptación
 - Los super admin pueden ver y gestionar todos los usuarios (cambiar roles, activar/suspender).
@@ -468,9 +515,9 @@ Panel de administración completo para gestión de usuarios, configuración glob
 
 ---
 
-## Sprint 16 — PWA: Progressive Web App
+## Sprint 17 — PWA: Progressive Web App
 
-**Rama:** `feature/sprint-16-pwa`
+**Rama:** `feature/sprint-17-pwa`
 
 ### Descripción
 Convertir la aplicación en una Progressive Web App instalable con soporte offline mediante Service Workers.
@@ -496,9 +543,9 @@ Convertir la aplicación en una Progressive Web App instalable con soporte offli
 
 ---
 
-## Sprint 17 — CI/CD y Despliegue Automático
+## Sprint 18 — CI/CD y Despliegue Automático
 
-**Rama:** `feature/sprint-17-cicd`
+**Rama:** `feature/sprint-18-cicd`
 
 ### Descripción
 Configurar GitHub Actions para linting, typecheck, tests, build y despliegue automático a Vercel desde la rama `main`.
@@ -525,9 +572,9 @@ Configurar GitHub Actions para linting, typecheck, tests, build y despliegue aut
 
 ---
 
-## Sprint 18 — Hardening Final
+## Sprint 19 — Hardening Final
 
-**Rama:** `feature/sprint-18-hardening`
+**Rama:** `feature/sprint-19-hardening`
 
 ### Descripción
 Auditorías finales de seguridad, rendimiento, accesibilidad y validación general para producción.
@@ -567,18 +614,19 @@ Auditorías finales de seguridad, rendimiento, accesibilidad y validación gener
 | Sprint 4 — Home Feed | `feature/sprint-04-home-feed` | Sprint 1 |
 | Sprint 5 — Asistencia y Ausencias | `feature/sprint-05-asistencia-ausencias` | ✅ Completado |
 | Sprint 6 — Registration Approval | `feature/sprint-06-registration-approval` | Sprint 5 |
-| Sprint 7 — Shifts | `feature/sprint-07-shifts` | Sprint 1, Sprint 6 |
-| Sprint 8 — News | `feature/sprint-08-news` | Sprint 1 |
-| Sprint 9 — Questions | `feature/sprint-09-questions` | Sprint 1 |
-| Sprint 10 — Votings | `feature/sprint-10-votings` | Sprint 1, Sprint 6 |
-| Sprint 11 — Document Management | `feature/sprint-11-document-management` | Sprint 6 |
-| Sprint 12 — Events Enhancement | `feature/sprint-12-events-enhancement` | Sprint 1, Sprint 5 |
-| Sprint 13 — Profiles & Components | `feature/sprint-13-profiles-components` | Sprint 1 |
-| Sprint 14 — Notifications | `feature/sprint-14-notifications` | Múltiples |
-| Sprint 15 — Admin Panel | `feature/sprint-15-admin-panel` | Sprint 6, Sprint 13 |
-| Sprint 16 — PWA | `feature/sprint-16-pwa` | Sprint 1 |
-| Sprint 17 — CI/CD | `feature/sprint-17-cicd` | — |
-| Sprint 18 — Hardening | `feature/sprint-18-hardening` | Todos los anteriores |
+| **Sprint 7 — Emailless Accounts** | `feature/sprint-07-emailless-accounts` | **Sprint 6, Sprint 14** |
+| Sprint 8 — Shifts | `feature/sprint-08-shifts` | Sprint 1, Sprint 6 |
+| Sprint 9 — News | `feature/sprint-09-news` | Sprint 1 |
+| Sprint 10 — Questions | `feature/sprint-10-questions` | Sprint 1 |
+| Sprint 11 — Votings | `feature/sprint-11-votings` | Sprint 1, Sprint 6 |
+| Sprint 12 — Document Management | `feature/sprint-12-document-management` | Sprint 6 |
+| Sprint 13 — Events Enhancement | `feature/sprint-13-events-enhancement` | Sprint 1, Sprint 5 |
+| Sprint 14 — Profiles & Components | `feature/sprint-14-profiles-components` | Sprint 1 |
+| Sprint 15 — Notifications | `feature/sprint-15-notifications` | Múltiples |
+| Sprint 16 — Admin Panel | `feature/sprint-16-admin-panel` | Sprint 6, Sprint 14 |
+| Sprint 17 — PWA | `feature/sprint-17-pwa` | Sprint 1 |
+| Sprint 18 — CI/CD | `feature/sprint-18-cicd` | — |
+| Sprint 19 — Hardening | `feature/sprint-19-hardening` | Todos los anteriores |
 
 ---
 
