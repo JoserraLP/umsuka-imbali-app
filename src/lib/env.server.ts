@@ -13,11 +13,15 @@ import { z } from "zod";
  */
 const serverEnvSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1, "SUPABASE_SERVICE_ROLE_KEY es obligatoria"),
+  INSTAGRAM_ACCESS_TOKEN: z.string().optional(),
+  INSTAGRAM_USER_ID: z.string().optional(),
 });
 
 function readServerEnv() {
   const parsed = serverEnvSchema.safeParse({
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    INSTAGRAM_ACCESS_TOKEN: process.env.INSTAGRAM_ACCESS_TOKEN ?? process.env.NEXT_PUBLIC_INSTAGRAM_ACCESS_TOKEN,
+    INSTAGRAM_USER_ID: process.env.INSTAGRAM_USER_ID ?? process.env.NEXT_PUBLIC_INSTAGRAM_USER_ID,
   });
 
   if (!parsed.success) {

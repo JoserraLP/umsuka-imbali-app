@@ -1,0 +1,65 @@
+{
+  "title": "Sprint 4 — Página Principal: Feed de Instagram, Notificaciones y Calendario",
+  "description": "Rediseñar la página principal (/dashboard) para mostrar: feed de los últimos posts de Instagram de la cuenta oficial de Umsuka, notificaciones del usuario y eventos próximos del calendario.",
+  "status": "documented",
+  "branch": "feature/sprint-04-home-feed",
+  "dependencies": ["Sprint 1 (UI/UX)"],
+  "steps": [
+    {
+      "step": 1,
+      "name": "Integración Instagram API",
+      "detail": "Crear servicio src/lib/social/instagram.ts que obtenga los últimos posts usando Instagram Basic Display API o Graph API, con fallback a datos mock para desarrollo."
+    },
+    {
+      "step": 2,
+      "name": "Caché de posts en Supabase",
+      "detail": "Migración SQL para crear umsuka.instagram_posts con TTL para evitar rate limiting. Crear tabla con columnas: id, post_id (unique), caption, media_url, permalink, timestamp, cached_at."
+    },
+    {
+      "step": 3,
+      "name": "Server component InstagramFeed",
+      "detail": "Crear componente InstagramFeed que renderice los últimos 6-9 posts en cuadrícula responsiva."
+    },
+    {
+      "step": 4,
+      "name": "Widget de notificaciones",
+      "detail": "Consultar umsuka.notifications (o usar datos mock si no existe la tabla) y mostrar las últimas 5 no leídas."
+    },
+    {
+      "step": 5,
+      "name": "Widget de calendario",
+      "detail": "Consultar umsuka.events ordenados por fecha ascendente, mostrar los próximos 3-5 eventos."
+    },
+    {
+      "step": 6,
+      "name": "Diseño de dashboard",
+      "detail": "Maquetar las 3 secciones en columnas: feed central (Instagram), sidebar derecha (notificaciones + calendario)."
+    },
+    {
+      "step": 7,
+      "name": "Actualizar dashboard/page.tsx",
+      "detail": "Refactorizar para usar los nuevos widgets."
+    },
+    {
+      "step": 8,
+      "name": "Pruebas",
+      "detail": "Tests de integración para cada widget."
+    }
+  ],
+  "acceptance_criteria": [
+    "La página principal muestra los últimos posts de Instagram de @umsuka (o cuenta configurada).",
+    "Las notificaciones del usuario se muestran con indicador de no leídas.",
+    "Los próximos eventos del calendario aparecen ordenados por fecha.",
+    "El diseño es responsive y coherente con el rediseño de UI."
+  ],
+  "definition_of_done": [
+    "Servicio de integración con Instagram API implementado con caché en Supabase.",
+    "Componente InstagramFeed funcional que renderiza posts en cuadrícula.",
+    "Widget de notificaciones funcional (con datos mock hasta Sprint 15).",
+    "Widget de calendario funcional mostrando próximos eventos.",
+    "Dashboard rediseñado con layout de 3 secciones responsive.",
+    "Tests de integración para cada widget.",
+    "Código escaneado y sin secretos.",
+    "ADR documentado."
+  ]
+}

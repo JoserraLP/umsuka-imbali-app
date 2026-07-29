@@ -371,6 +371,39 @@ export interface Database {
         };
         Relationships: [];
       };
+      instagram_posts: {
+        Row: {
+          id: number;
+          post_id: string;
+          caption: string | null;
+          media_url: string;
+          permalink: string;
+          media_type: "image" | "video" | "carousel";
+          timestamp: string;
+          cached_at: string;
+        };
+        Insert: {
+          id?: number;
+          post_id: string;
+          caption?: string | null;
+          media_url: string;
+          permalink: string;
+          media_type?: "image" | "video" | "carousel";
+          timestamp: string;
+          cached_at?: string;
+        };
+        Update: {
+          id?: number;
+          post_id?: string;
+          caption?: string | null;
+          media_url?: string;
+          permalink?: string;
+          media_type?: "image" | "video" | "carousel";
+          timestamp?: string;
+          cached_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
