@@ -1,7 +1,7 @@
 {
   "title": "Sprint 7 — Creación de Cuentas sin Correo Electrónico (Super Admin)",
   "description": "El super admin puede dar de alta a nuevos miembros en la aplicación sin necesidad de que estos tengan una cuenta de correo electrónico (por ejemplo, menores de edad). El sistema genera internamente un identificador único (email alias) que Supabase Auth utiliza como email, y el usuario accede con un nombre de usuario y contraseña proporcionados por el super admin.",
-  "status": "security-cleared",
+  "status": "publishing",
   "branch": "feature/sprint-07-emailless-accounts",
   "dependencies": ["Sprint 6 — Confirmación de Super Admin en Registro", "Sprint 14 — Perfiles y Componentes"],
   "acceptance_criteria": [

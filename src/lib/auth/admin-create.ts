@@ -98,7 +98,13 @@ export async function createEmaillessAccount(
     profileInsert.workgroup = parsed.data.workgroup;
   }
 
-  const { error: profileError } = await admin.from("profiles").insert(profileInsert);
+  // Use upsert to handle the edge case where handle_new_user() DB trigger
+  // (fired by admin.createUser() above) already created a profile row
+  // with default values. Upsert will update that row with the correct
+  // values (auth_method, username, workgroup, etc.).
+  const { error: profileError } = await admin
+    .from("profiles")
+    .upsert(profileInsert, { onConflict: "id", ignoreDuplicates: false });
 
   if (profileError) {
     // Rollback: remove the auth user we just created
