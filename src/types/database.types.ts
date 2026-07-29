@@ -470,6 +470,19 @@ export interface Database {
         Args: Record<string, never>;
         Returns: string;
       };
+      create_emailless_profile: {
+        Args: {
+          p_id: string;
+          p_first_name: string;
+          p_last_name: string;
+          p_username: string;
+          p_component_type: string;
+          p_workgroup?: string | null;
+          p_alias_email: string;
+          p_created_by: string;
+        };
+        Returns: void;
+      };
     };
     Enums: {
       workgroup: Workgroup;

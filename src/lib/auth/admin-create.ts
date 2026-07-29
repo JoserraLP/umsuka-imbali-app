@@ -6,9 +6,6 @@ import {
   type CreateEmaillessAccountInput,
   type CreateEmaillessAccountResult,
 } from "@/lib/auth/emailless-schema";
-import type { Database } from "@/types/database.types";
-
-type ProfileInsert = Database["umsuka"]["Tables"]["profiles"]["Insert"];
 
 const EMAIL_ALIAS_DOMAIN = "umsuka.internal";
 
@@ -28,11 +25,11 @@ function generateEmailAlias(): string {
  *  1. Validates input and checks that the actor is super_admin.
  *  2. Generates a UUID email alias (`user-{uuid}@umsuka.internal`).
  *  3. Calls `supabase.auth.admin.createUser()` with the alias + password.
- *  4. Creates a profile row with `auth_method = 'email_alias'`.
- *  5. Records the alias in `umsuka.email_aliases`.
+ *  4. Calls `umsuka.create_emailless_profile()` (SECURITY DEFINER) which
+ *     inserts both the profile and email_alias in a single transaction.
  *
- * If any step after (3) fails, earlier mutations are rolled back
- * (auth user deleted, profile deleted) to avoid orphaned records.
+ * If step 4 fails, the auth user is deleted to avoid orphaned records.
+ * Step 4 itself is atomic — either both rows are created or neither.
  */
 export async function createEmaillessAccount(
   input: CreateEmaillessAccountInput,
@@ -63,7 +60,7 @@ export async function createEmaillessAccount(
   const { data: authData, error: authError } = await admin.auth.admin.createUser({
     email: emailAlias,
     password: parsed.data.password,
-    email_confirm: true, // auto-confirm — no email to send
+    email_confirm: true,
     user_metadata: {
       username: parsed.data.username,
       auth_method: "email_alias",
@@ -81,49 +78,25 @@ export async function createEmaillessAccount(
 
   const createdUserId = authData.user.id;
 
-  // ── 4. Create profile row ──────────────────────────────
-  const profileInsert: ProfileInsert = {
-    id: createdUserId,
-    first_name: parsed.data.firstName,
-    last_name: parsed.data.lastName,
-    username: parsed.data.username,
-    component_type: parsed.data.componentType,
-    role: "member",
-    status: "pending",
-    auth_method: "email_alias",
-    is_active: true,
-  };
-
-  if (parsed.data.workgroup && parsed.data.workgroup !== "ninguno") {
-    profileInsert.workgroup = parsed.data.workgroup;
-  }
-
-  // Use upsert to handle the edge case where handle_new_user() DB trigger
-  // (fired by admin.createUser() above) already created a profile row
-  // with default values. Upsert will update that row with the correct
-  // values (auth_method, username, workgroup, etc.).
-  const { error: profileError } = await admin
-    .from("profiles")
-    .upsert(profileInsert, { onConflict: "id", ignoreDuplicates: false });
-
-  if (profileError) {
-    // Rollback: remove the auth user we just created
-    await admin.auth.admin.deleteUser(createdUserId).catch(() => {});
-    return { success: false, error: profileError.message };
-  }
-
-  // ── 5. Record email alias ──────────────────────────────
-  const { error: aliasError } = await admin.from("email_aliases").insert({
-    profile_id: createdUserId,
-    alias_email: emailAlias,
-    created_by: actor.id,
+  // ── 4. Create profile + email alias via SECURITY DEFINER function ──
+  // This single rpc() call handles both inserts atomically and bypasses
+  // RLS / table-permission issues by running as the function owner.
+  const { error: rpcError } = await admin.rpc("create_emailless_profile", {
+    p_id: createdUserId,
+    p_first_name: parsed.data.firstName,
+    p_last_name: parsed.data.lastName,
+    p_username: parsed.data.username,
+    p_component_type: parsed.data.componentType,
+    p_workgroup: parsed.data.workgroup ?? null,
+    p_alias_email: emailAlias,
+    p_created_by: actor.id,
   });
 
-  if (aliasError) {
-    // Rollback: delete profile + auth user
-    try { await admin.from("profiles").delete().eq("id", createdUserId); } catch { /* rollback best-effort */ }
+  if (rpcError) {
+    // Rollback: remove the auth user (the DB function is atomic, so
+    // if it failed, no profile or alias was created).
     await admin.auth.admin.deleteUser(createdUserId).catch(() => {});
-    return { success: false, error: aliasError.message };
+    return { success: false, error: rpcError.message };
   }
 
   return {
