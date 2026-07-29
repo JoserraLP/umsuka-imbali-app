@@ -23,7 +23,6 @@ interface AbsenceInfo {
 
 interface AbsencePanelProps {
   eventId: string;
-  viewerId: string;
   absences: AbsenceInfo[];
   canManage: boolean;
   viewerAbsenceId: string | null;
@@ -31,7 +30,6 @@ interface AbsencePanelProps {
 
 export function AbsencePanel({
   eventId,
-  viewerId: _viewerId,
   absences,
   canManage,
   viewerAbsenceId,

@@ -193,9 +193,21 @@ tables and `umsuka.profiles` (both reference `auth.users` independently).
 Function signatures return camelCase objects with joined fields flattened
 (e.g., `firstName`, `lastName`, `eventTitle`).
 
+### Security Improvements (Post-Scan, 2026-07-29)
+
+After a security audit, the following improvements were made:
+
+| Issue | Severity | Fix |
+|-------|----------|-----|
+| Absence records with PII (`reason`, full name) were fetched for all page viewers, not just managers | MEDIUM | Gated `getEventAbsences()` behind `canManage` in `page.tsx`, matching the pattern already used for attendance data |
+| Non-managers still needed to see their own absence status | — | Added `getUserAbsenceForEvent(userId, eventId)` lightweight query that returns only the viewer's own absence record (id, justified, reason) without exposing other members' data |
+| Unused `viewerId` prop passed to `AbsencePanel` client component | LOW | Removed the prop from both the interface and the parent call |
+
+The fix ensures that absence data with personal information (`reason` field) is only sent to the client when the user has management privileges, aligning with the data-minimization principle.
+
 ### Test Coverage
 
-29 new unit tests were added, all validating Zod schema parsing:
+29 unit tests were added, all validating Zod schema parsing:
 
 | Test file | Tests | Schemas covered |
 |---|---|---|
@@ -280,5 +292,7 @@ No HIGH findings were reported by the security scan.
 
 | File | Change |
 |---|---|
-| `src/app/events/[id]/page.tsx` | Added `AttendancePanel` card (management-only) and `AbsencePanel` card (all authenticated users) to the event detail layout; fetches `getEventAttendance`, `getEventAttendanceSummary`, and `getEventAbsences` |
+| `src/app/events/[id]/page.tsx` | Added `AttendancePanel` card (management-only) and `AbsencePanel` card (all authenticated users) to the event detail layout; fetches `getEventAttendance`, `getEventAttendanceSummary`, and `getEventAbsences`. Post-security-scan: gated `getEventAbsences()` behind `canManage`; uses `getUserAbsenceForEvent()` for non-managers' own status. |
 | `src/components/layout/dashboard-nav.tsx` | Added `{ href: "/profile/history", label: "Historial" }` navigation link |
+| `src/lib/absences/queries.ts` | Added `getUserAbsenceForEvent()` lightweight query returning only the viewer's own absence without exposing all members' data |
+| `src/app/events/[id]/absence-panel.tsx` | Removed unused `viewerId` prop (LOW severity finding from security scan) |
