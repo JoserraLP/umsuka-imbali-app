@@ -40,6 +40,16 @@ export async function getCurrentProfile(): Promise<AuthenticatedProfile | null> 
       );
       return null;
     }
+
+    // NEW: check status — pending/suspended users cannot access the app
+    if (profile.status !== "active") {
+      console.error(
+        `getCurrentProfile: el perfil ${user.id} tiene status "${profile.status}" — ` +
+          "tratado como no autenticado.",
+      );
+      return null;
+    }
+
     return buildAuthenticatedProfile(profile, user);
   }
 
@@ -72,7 +82,7 @@ async function fetchProfileRow(userId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, first_name, last_name, birth_date, component_type, role, workgroup, is_workgroup_lead, is_active, created_at")
+    .select("id, first_name, last_name, birth_date, component_type, role, workgroup, is_workgroup_lead, is_active, status, created_at")
     .eq("id", userId)
     .maybeSingle();
 
@@ -106,6 +116,7 @@ function buildAuthenticatedProfile(
     isWorkgroupLead: profile.is_workgroup_lead ?? false,
     birthDate: profile.birth_date,
     isActive: profile.is_active,
+    status: profile.status,
     createdAt: profile.created_at,
   };
 }

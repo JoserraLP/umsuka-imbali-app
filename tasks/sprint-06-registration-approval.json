@@ -1,0 +1,66 @@
+{
+  "title": "Sprint 6 — Confirmación de Super Admin en Registro",
+  "description": "Implementar un flujo donde cada nuevo usuario que se registra (vía Google OAuth) queda en estado 'pendiente de aprobación' hasta que un super admin lo active explícitamente. Incluye migración de BD, actualización de RLS, middleware, UI de pending, panel de administración, server actions y pruebas.",
+  "status": "publishing",
+  "branch": "feature/sprint-06-registration-approval",
+  "dependencies": ["Sprint 5 — Asistencia y Ausencias"],
+  "acceptance_criteria": [
+    "Al registrarse con Google, el perfil se crea con status 'pending'.",
+    "El usuario pendiente ve una pantalla informativa y no puede acceder a ninguna funcionalidad.",
+    "Un super admin puede aprobar o suspender usuarios desde el panel de administración.",
+    "Al ser aprobado, el usuario puede acceder a la aplicación normalmente."
+  ],
+  "definition_of_done": [
+    "Migración de BD: columna 'status' (enum: pending, active, suspended) en profiles, default 'pending'. Trigger handle_new_user() actualizado.",
+    "RLS actualizadas: usuarios con status 'pending' solo ven su propio perfil. No acceden a eventos, turnos, etc.",
+    "Middleware actualizado: redirige a /auth/pending si el perfil está pending.",
+    "Página /auth/pending con mensaje informativo.",
+    "Panel de administración /admin/registrations con listado de pendientes y botones Aprobar/Suspender.",
+    "Server actions: approveUserAction, suspendUserAction — solo super_admin.",
+    "Pruebas de integración para el flujo completo de aprobación.",
+    "TypeScript strict, sin errores de compilación.",
+    "Escaneo de seguridad superado sin hallazgos HIGH."
+  ],
+  "steps": [
+    {
+      "id": 1,
+      "name": "Migración de BD",
+      "detail": "Añadir columna status a umsuka.profiles (enum: pending, active, suspended). Default pending. Actualizar trigger handle_new_user()."
+    },
+    {
+      "id": 2,
+      "name": "Actualizar RLS",
+      "detail": "Los usuarios con status pending solo pueden ver su propio perfil. No pueden acceder a eventos, turnos, etc."
+    },
+    {
+      "id": 3,
+      "name": "Middleware update",
+      "detail": "En middleware.ts, si el perfil está pending, redirigir a /auth/pending."
+    },
+    {
+      "id": 4,
+      "name": "UI de pending",
+      "detail": "Página /auth/pending con mensaje informativo."
+    },
+    {
+      "id": 5,
+      "name": "Panel de administración",
+      "detail": "En /admin/registrations, añadir listado de pendientes con columnas y botones Aprobar/Suspender."
+    },
+    {
+      "id": 6,
+      "name": "Server actions",
+      "detail": "approveUserAction, suspendUserAction — solo super_admin."
+    },
+    {
+      "id": 7,
+      "name": "Actualizar tipos y sesión",
+      "detail": "Actualizar database.types.ts y getCurrentProfile() para manejar status."
+    },
+    {
+      "id": 8,
+      "name": "Pruebas",
+      "detail": "Tests de integración para el flujo completo de aprobación."
+    }
+  ]
+}

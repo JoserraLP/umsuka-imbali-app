@@ -1,4 +1,4 @@
-import type { AppRole, ComponentType, Workgroup } from "@/types/database.types";
+import type { AppRole, ComponentType, Workgroup, UserStatus } from "@/types/database.types";
 
 export interface AuthenticatedProfile {
   id: string;
@@ -12,7 +12,8 @@ export interface AuthenticatedProfile {
   isWorkgroupLead: boolean;
   birthDate: string | null;
   isActive: boolean;
+  status: UserStatus;
   createdAt: string;
 }
 
-export type { AppRole, ComponentType, Workgroup };
+export type { AppRole, ComponentType, Workgroup, UserStatus };

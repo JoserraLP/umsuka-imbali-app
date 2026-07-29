@@ -4,7 +4,7 @@ import { clientEnv } from "@/lib/env.client";
 import { SERVER_AUTH_COOKIE_OPTIONS } from "@/lib/supabase/cookie-options";
 import type { Database } from "@/types/database.types";
 
-const PUBLIC_ROUTES = ["/auth/login", "/auth/callback", "/auth/auth-code-error"];
+const PUBLIC_ROUTES = ["/auth/login", "/auth/callback", "/auth/auth-code-error", "/auth/pending"];
 
 function isPublicRoute(pathname: string): boolean {
   return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
@@ -93,6 +93,23 @@ export async function updateSession(request: NextRequest) {
 
   if (user && pathname === "/auth/login") {
     return redirectPreservingCookies(new URL("/dashboard", request.url), supabaseResponse);
+  }
+
+  // ── Check profile status ──────────────────────────────────────────
+  // If user is authenticated but their profile is 'pending' or
+  // 'suspended', redirect them to the pending info page.
+  if (user && !isPublicRoute(pathname)) {
+    const { data: userStatus } = await supabase.rpc("current_user_status");
+
+    if (userStatus === "pending" || userStatus === "suspended") {
+      console.log(
+        `[middleware] usuario ${user.id} con status "${userStatus}" — redirigiendo a /auth/pending`,
+      );
+      return redirectPreservingCookies(
+        new URL("/auth/pending", request.url),
+        supabaseResponse,
+      );
+    }
   }
 
   return supabaseResponse;

@@ -49,6 +49,7 @@ export async function ensureProfileExists(user: User): Promise<MutationResult> {
       last_name: lastName,
       component_type: "member",
       role: "member",
+      status: "pending",
     },
     { onConflict: "id", ignoreDuplicates: true },
   );

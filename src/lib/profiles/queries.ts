@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { isValidRole, DEFAULT_ROLE } from "@/lib/auth/roles";
-import type { AppRole, ComponentType } from "@/types/database.types";
+import type { AppRole, ComponentType, UserStatus } from "@/types/database.types";
 
 export interface ProfileListItem {
   id: string;
@@ -9,6 +9,7 @@ export interface ProfileListItem {
   componentType: ComponentType;
   role: AppRole;
   isActive: boolean;
+  status: UserStatus;
   createdAt: string;
 }
 
@@ -27,7 +28,7 @@ export async function listProfiles(): Promise<ProfileListItem[]> {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, first_name, last_name, component_type, role, is_active, created_at")
+    .select("id, first_name, last_name, component_type, role, is_active, status, created_at")
     .order("first_name", { ascending: true })
     .order("last_name", { ascending: true });
 
@@ -42,6 +43,7 @@ export async function listProfiles(): Promise<ProfileListItem[]> {
     componentType: row.component_type,
     role: isValidRole(row.role) ? row.role : DEFAULT_ROLE,
     isActive: row.is_active,
+    status: row.status,
     createdAt: row.created_at,
   }));
 }
@@ -57,7 +59,7 @@ export async function getProfileById(userId: string): Promise<ProfileDetail | nu
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, first_name, last_name, birth_date, component_type, role, is_active, created_at")
+    .select("id, first_name, last_name, birth_date, component_type, role, is_active, status, created_at")
     .eq("id", userId)
     .maybeSingle();
 
@@ -77,6 +79,7 @@ export async function getProfileById(userId: string): Promise<ProfileDetail | nu
     componentType: data.component_type,
     role: isValidRole(data.role) ? data.role : DEFAULT_ROLE,
     isActive: data.is_active,
+    status: data.status,
     createdAt: data.created_at,
   };
 }
