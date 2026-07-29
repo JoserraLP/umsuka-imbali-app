@@ -47,7 +47,11 @@ export async function GET(request: NextRequest) {
     console.error(
       "Callback de OAuth recibido sin parámetro 'code'. Revisa que la Redirect URL " +
         "configurada en Supabase (Authentication → URL Configuration) coincida " +
-        "exactamente con el dominio desde el que se está probando.",
+        "exactamente con el dominio desde el que se está probando.\n" +
+        "  Origen actual del callback: " + origin + "\n" +
+        "  NEXT_PUBLIC_SITE_URL: " + (process.env.NEXT_PUBLIC_SITE_URL ?? "(no definido)") + "\n" +
+        "  Sugerencia: Añade '" + origin + "/auth/callback' a la lista de 'Redirect URLs' " +
+        "en Supabase Dashboard → Authentication → URL Configuration.",
     );
     return NextResponse.redirect(`${origin}/auth/auth-code-error?reason=missing_code`);
   }
@@ -55,6 +59,12 @@ export async function GET(request: NextRequest) {
   // Build the redirect response up front so the Supabase client can
   // attach Set-Cookie headers directly to it.
   const response = NextResponse.redirect(`${origin}${safeRedirectPath}`);
+
+  const cookieNamesBefore = request.cookies.getAll().map((c) => c.name);
+  console.log(
+    "[/auth/callback] Cookies presentes ANTES del exchange:",
+    { count: cookieNamesBefore.length, names: cookieNamesBefore },
+  );
 
   const supabase = createServerClient<Database, "umsuka">(
     clientEnv.NEXT_PUBLIC_SUPABASE_URL,
@@ -84,6 +94,37 @@ export async function GET(request: NextRequest) {
     );
     return NextResponse.redirect(`${origin}/auth/auth-code-error?reason=exchange_failed`);
   }
+
+  // Verify that the session was persisted after the exchange
+  try {
+    const { data: { session: postSession }, error: sessionError } =
+      await supabase.auth.getSession();
+    if (sessionError || !postSession) {
+      console.error(
+        "[/auth/callback] INTERCAMBIO EXITOSO pero getSession() post-exchange no encontró la sesión.",
+        { sessionError: sessionError?.message ?? "(ninguno)", hasSession: !!postSession },
+      );
+    } else {
+      console.log(
+        "[/auth/callback] Sesión verificada post-exchange:",
+        { expiresAt: postSession.expires_at, userId: postSession.user?.id },
+      );
+    }
+  } catch (verificationError) {
+    console.error(
+      "[/auth/callback] Error inesperado al verificar la sesión post-exchange:",
+      verificationError,
+    );
+  }
+
+  const cookieNamesAfter = response.cookies.getAll().map((c) => ({
+    name: c.name,
+    hasValue: !!c.value,
+  }));
+  console.log(
+    "[/auth/callback] Cookies puestas en la response redirect:",
+    { count: cookieNamesAfter.length, cookies: cookieNamesAfter },
+  );
 
   return response;
 }

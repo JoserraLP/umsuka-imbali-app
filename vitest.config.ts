@@ -25,9 +25,11 @@ export default defineConfig({
         "src/lib/profiles/**",
         "src/lib/events/**",
         "src/lib/registrations/**",
+        "src/lib/social/**",
         "src/lib/env.client.ts",
         "src/lib/env.server.ts",
         "src/lib/utils.ts",
+        "src/components/dashboard/**",
       ],
       exclude: ["src/lib/supabase/**"],
       thresholds: {
