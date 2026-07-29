@@ -80,12 +80,6 @@ function generateMockNotifications(): MockNotification[] {
   ];
 }
 
-// ── Helpers ─────────────────────────────────────────────
-
-function timeAgo(date: string): string {
-  return date; // already formatted in mock data
-}
-
 // ── Component ──────────────────────────────────────────
 
 /**

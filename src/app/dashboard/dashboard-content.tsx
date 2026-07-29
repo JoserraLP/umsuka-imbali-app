@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { NotificationsWidget } from "@/components/dashboard/notifications-widget";
@@ -182,12 +183,12 @@ export function DashboardContent({ profile, instagramProfile, events, signOutAct
               title="Próximos Eventos"
               icon={CalendarDays}
               action={
-                <a
+                <Link
                   href="/events"
                   className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Ver todos
-                </a>
+                </Link>
               }
             />
 
@@ -203,7 +204,7 @@ export function DashboardContent({ profile, instagramProfile, events, signOutAct
               <ul className="mt-1 divide-y divide-border" role="list">
                 {events.slice(0, 5).map((event) => (
                   <li key={event.id}>
-                    <a
+                    <Link
                       href={`/events/${event.id}`}
                       className="flex items-start justify-between gap-3 px-1 py-3 transition-colors hover:bg-accent/50 rounded-lg"
                     >
@@ -218,7 +219,7 @@ export function DashboardContent({ profile, instagramProfile, events, signOutAct
                       <Badge variant="outline" className="shrink-0 text-[10px]">
                         {EVENT_TYPE_LABELS[event.eventType] ?? event.eventType}
                       </Badge>
-                    </a>
+                    </Link>
                   </li>
                 ))}
               </ul>

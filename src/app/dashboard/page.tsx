@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { getInstagramProfile } from "@/lib/social/instagram";
-import type { InstagramProfile } from "@/lib/social/instagram";
 import { listEvents } from "@/lib/events/queries";
 import { DashboardContent } from "@/app/dashboard/dashboard-content";
 import { signOutAction } from "@/app/dashboard/actions";
