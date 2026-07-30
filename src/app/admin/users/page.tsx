@@ -19,6 +19,7 @@ import { listProfiles } from "@/lib/profiles/queries";
 import { UserRoleSelect } from "@/app/admin/users/user-role-select";
 import { MemberActiveToggle } from "@/app/admin/users/member-active-toggle";
 import { EmaillessAccountForm } from "@/app/admin/users/emailless-account-form";
+import { ResetPasswordButton } from "@/app/admin/users/reset-password-button";
 
 export const metadata: Metadata = {
   title: "Miembros",
@@ -120,6 +121,12 @@ export default async function AdminUsersPage() {
                               isActive={member.isActive}
                               disableSelf={isSelf}
                             />
+                            {member.authMethod === "email_alias" && !isSelf && (
+                              <ResetPasswordButton
+                                profileId={member.id}
+                                username={member.username ?? `${member.firstName} ${member.lastName}`}
+                              />
+                            )}
                           </div>
                         </TableCell>
                       )}

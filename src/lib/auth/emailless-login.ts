@@ -42,7 +42,7 @@ export async function resolveUsernameToEmail(
   }
 
   if (!profile) {
-    return { success: false, error: "Usuario no encontrado." };
+    return { success: false, error: "Usuario no encontrado.", errorCode: "account_not_found" };
   }
 
   // 2. Verify the account uses email_alias auth
@@ -50,6 +50,7 @@ export async function resolveUsernameToEmail(
     return {
       success: false,
       error: "Este usuario no utiliza autenticación por usuario/contraseña.",
+      errorCode: "wrong_auth_method",
     };
   }
 
@@ -68,6 +69,7 @@ export async function resolveUsernameToEmail(
     return {
       success: false,
       error: "Alias de correo no encontrado para este usuario.",
+      errorCode: "alias_not_found",
     };
   }
 

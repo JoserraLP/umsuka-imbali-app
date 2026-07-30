@@ -9,10 +9,15 @@ import type {
 } from "@/lib/profiles/schema";
 import type { MutationResult } from "@/lib/profiles/mutations";
 import { createEmaillessAccount } from "@/lib/auth/admin-create";
+import { generateResetToken } from "@/lib/auth/password-service";
 import type {
   CreateEmaillessAccountInput,
   CreateEmaillessAccountResult,
 } from "@/lib/auth/emailless-schema";
+import type {
+  GenerateResetTokenInput,
+  GenerateResetTokenResult,
+} from "@/lib/auth/password-schema";
 
 export async function updateMemberRoleAction(
   input: UpdateMemberRoleInput,
@@ -63,4 +68,10 @@ export async function createEmaillessAccountAction(
   }
 
   return result;
+}
+
+export async function generateResetTokenAction(
+  input: GenerateResetTokenInput,
+): Promise<GenerateResetTokenResult> {
+  return generateResetToken(input);
 }
