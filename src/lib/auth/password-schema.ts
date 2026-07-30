@@ -19,14 +19,6 @@ export const passwordStrengthSchema = z
     "La contraseña debe contener al menos un carácter especial (ej. !@#$%).",
   );
 
-// ── Login schema ─────────────────────────────────────────
-export const loginSchema = z.object({
-  username: z.string().trim().min(1, "El nombre de usuario es obligatorio."),
-  password: z.string().min(1, "La contraseña es obligatoria."),
-});
-
-export type LoginInput = z.infer<typeof loginSchema>;
-
 // ── Reset password schema ─────────────────────────────────
 export const resetPasswordSchema = z
   .object({
@@ -63,17 +55,6 @@ export const changePasswordSchema = z
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 
 // ── Result types ─────────────────────────────────────────
-export interface LoginResult {
-  success: boolean;
-  error?: string;
-  errorCode?:
-    | "invalid_credentials"
-    | "account_locked"
-    | "account_not_found"
-    | "wrong_auth_method";
-  blockedUntil?: string; // ISO timestamp if account_locked
-}
-
 export interface ResetPasswordResult {
   success: boolean;
   error?: string;

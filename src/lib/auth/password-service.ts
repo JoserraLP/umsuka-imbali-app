@@ -3,12 +3,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveUsernameToEmail } from "@/lib/auth/emailless-login";
 import { requireAuthenticatedProfile } from "@/lib/auth/session";
 import {
-  loginSchema,
   resetPasswordSchema,
   changePasswordSchema,
   generateResetTokenSchema,
-  type LoginInput,
-  type LoginResult,
   type ResetPasswordInput,
   type ResetPasswordResult,
   type ChangePasswordInput,
@@ -23,65 +20,29 @@ const WINDOW_MINUTES = 15;
 const BLOCK_MINUTES = 30;
 const TOKEN_EXPIRY_HOURS = 24;
 
-// ── Public functions ─────────────────────────────────────
+// ── Rate limiting helpers ────────────────────────────────
 
 /**
- * Attempt to log in with username + password.
- *
- * Server-side verification: resolves username → email alias, checks
- * rate limiting, attempts signInWithPassword (using the admin client),
- * records the attempt, and returns a specific error code on failure.
- *
- * On success the client must still call signInWithPassword() from the
- * browser to establish the user session. This two-step design keeps
- * the rate-limiting logic on the server while leaving session
- * management to the client-side Supabase client (which handles cookies).
+ * Verifica si un perfil está bloqueado por fuerza bruta.
+ * Devuelve false si no está bloqueado, o un objeto con
+ * blockedUntil si está bloqueado.
  */
-export async function loginWithPassword(
-  input: LoginInput,
-): Promise<LoginResult> {
-  // ── 1. Validate input ────────────────────────────────
-  const parsed = loginSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues.map((i) => i.message).join(", "),
-      errorCode: "invalid_credentials",
-    };
-  }
-
+export async function checkRateLimit(
+  username: string,
+): Promise<{ blocked: false } | { blocked: true; blockedUntil: string }> {
   const admin = createAdminClient();
 
-  // ── 2. Resolve username → profile + email alias ──────
-  const resolveResult = await resolveUsernameToEmail({
-    username: parsed.data.username,
-  });
-  if (!resolveResult.success) {
-    return {
-      success: false,
-      error: resolveResult.error ?? "Usuario no encontrado.",
-      errorCode: resolveResult.errorCode === "wrong_auth_method"
-        ? "wrong_auth_method"
-        : "account_not_found",
-    };
-  }
-
-  // ── 3. Get profile_id ────────────────────────────────
+  // Obtener profile_id desde el username
   const { data: profile } = await admin
     .from("profiles")
     .select("id")
-    .eq("username", parsed.data.username)
+    .eq("username", username)
     .maybeSingle();
 
   if (!profile) {
-    return {
-      success: false,
-      error: "Usuario no encontrado.",
-      errorCode: "account_not_found",
-    };
+    return { blocked: false }; // Usuario no encontrado, no bloqueamos
   }
 
-  // ── 4. Check rate limit ─────────────────────────────
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: isBlocked } = await (admin.rpc as any)("is_login_blocked", {
     p_profile_id: profile.id,
@@ -92,67 +53,40 @@ export async function loginWithPassword(
 
   if (isBlocked) {
     const blockedUntil = await getBlockedUntil(admin, profile.id);
-    return {
-      success: false,
-      error: getBlockedMessage(blockedUntil),
-      errorCode: "account_locked",
-      blockedUntil,
-    };
+    return { blocked: true, blockedUntil };
   }
 
-  // ── 5. Attempt authentication ────────────────────────
-  // Using the admin client here simply verifies the credentials.
-  // The returned session belongs to the target user within the
-  // admin client context — we ignore it. The browser client will
-  // establish its own session after this succeeds.
-  const { error: signInError } = await admin.auth.signInWithPassword({
-    email: resolveResult.emailAlias!,
-    password: parsed.data.password,
-  });
-
-  // ── 6. Record attempt (success/failure) ──────────────
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (admin.rpc as any)("record_login_attempt", {
-    p_profile_id: profile.id,
-    p_success: !signInError,
-  });
-
-  if (signInError) {
-    // Check if the account might be blocked now
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: nowBlocked } = await (admin.rpc as any)("is_login_blocked", {
-      p_profile_id: profile.id,
-      p_max_attempts: MAX_ATTEMPTS,
-      p_window_minutes: WINDOW_MINUTES,
-      p_block_minutes: BLOCK_MINUTES,
-    });
-
-    if (nowBlocked) {
-      const blockedUntil = await getBlockedUntil(admin, profile.id);
-      return {
-        success: false,
-        error: getBlockedMessage(blockedUntil),
-        errorCode: "account_locked",
-        blockedUntil,
-      };
-    }
-
-    return {
-      success: false,
-      error: "Usuario o contraseña incorrectos.",
-      errorCode: "invalid_credentials",
-    };
-  }
-
-  return { success: true };
+  return { blocked: false };
 }
 
 /**
+ * Registra un intento de login (éxito o fallo) en la BD.
+ */
+export async function recordLoginAttempt(
+  username: string,
+  success: boolean,
+): Promise<void> {
+  const admin = createAdminClient();
+
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("username", username)
+    .maybeSingle();
+
+  if (!profile) return;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (admin.rpc as any)("record_login_attempt", {
+    p_profile_id: profile.id,
+    p_success: success,
+  });
+}
+
+// ── Token generation ─────────────────────────────────────
+
+/**
  * Generate a password reset token (admin only).
- *
- * Only super_admin can generate tokens. The raw token is returned
- * so the admin can share it with the user. The database stores only
- * the SHA-256 hash of the token.
  */
 export async function generateResetToken(
   input: GenerateResetTokenInput,
@@ -198,11 +132,10 @@ export async function generateResetToken(
   };
 }
 
+// ── Password reset ───────────────────────────────────────
+
 /**
  * Reset password using a one-time token.
- *
- * The token is consumed atomically: if two requests arrive with
- * the same token, only the first succeeds.
  */
 export async function resetPassword(
   input: ResetPasswordInput,
@@ -245,10 +178,10 @@ export async function resetPassword(
   return { success: true };
 }
 
+// ── Change password ──────────────────────────────────────
+
 /**
  * Change password for the currently authenticated user.
- *
- * Verifies the current password before allowing the change.
  */
 export async function changePassword(
   input: ChangePasswordInput,
@@ -262,7 +195,6 @@ export async function changePassword(
   }
 
   const actor = await requireAuthenticatedProfile();
-
   const admin = createAdminClient();
 
   // Get the email alias for this profile
@@ -279,8 +211,13 @@ export async function changePassword(
     };
   }
 
-  // Verify current password
-  const { error: verifyError } = await admin.auth.signInWithPassword({
+  // Verify current password — usamos el server client con anon key
+  // para hacer el signIn real (no el admin client con service_role)
+  const {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    data: signInResponse,
+    error: verifyError,
+  } = await admin.auth.signInWithPassword({
     email: alias.alias_email,
     password: parsed.data.currentPassword,
   });
@@ -292,7 +229,7 @@ export async function changePassword(
     };
   }
 
-  // Update password
+  // Update password via admin API
   const { error: updateError } = await admin.auth.admin.updateUserById(
     actor.id,
     { password: parsed.data.newPassword },
@@ -307,10 +244,6 @@ export async function changePassword(
 
 // ── Helpers ─────────────────────────────────────────────
 
-/**
- * SHA-256 hash function for token hashing.
- * Uses Web Crypto API (available in Node 18+ and all modern runtimes).
- */
 async function sha256(message: string): Promise<string> {
   const msgUint8 = new TextEncoder().encode(message);
   const hashBuffer = await crypto.subtle.digest("SHA-256", msgUint8);
@@ -318,9 +251,6 @@ async function sha256(message: string): Promise<string> {
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-/**
- * Get the ISO timestamp when the block on an account ends.
- */
 async function getBlockedUntil(
   admin: ReturnType<typeof createAdminClient>,
   profileId: string,
@@ -335,24 +265,14 @@ async function getBlockedUntil(
     .limit(1)
     .maybeSingle();
 
-  const blockEnd = lastAttempt && (lastAttempt as { created_at: string }).created_at
-    ? new Date(
-        new Date((lastAttempt as { created_at: string }).created_at).getTime() +
-          BLOCK_MINUTES * 60 * 1000,
-      )
-    : new Date(Date.now() + BLOCK_MINUTES * 60 * 1000);
+  const blockEnd =
+    lastAttempt && (lastAttempt as { created_at: string }).created_at
+      ? new Date(
+          new Date(
+            (lastAttempt as { created_at: string }).created_at,
+          ).getTime() + BLOCK_MINUTES * 60 * 1000,
+        )
+      : new Date(Date.now() + BLOCK_MINUTES * 60 * 1000);
 
   return blockEnd.toISOString();
-}
-
-/**
- * Format a human-readable blocked message with the unlock time.
- */
-function getBlockedMessage(blockedUntil: string): string {
-  const unlockTime = new Date(blockedUntil);
-  const timeStr = unlockTime.toLocaleTimeString("es-ES", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  return `Demasiados intentos fallidos. La cuenta estará bloqueada hasta las ${timeStr}.`;
 }

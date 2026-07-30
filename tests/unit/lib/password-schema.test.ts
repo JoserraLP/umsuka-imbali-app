@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   passwordStrengthSchema,
-  loginSchema,
   resetPasswordSchema,
   changePasswordSchema,
   generateResetTokenSchema,
@@ -109,54 +108,6 @@ describe("passwordStrengthSchema", () => {
   it("accepts password with exactly 8 characters meeting all criteria", () => {
     const result = passwordStrengthSchema.safeParse("Abcd123!");
     expect(result.success).toBe(true);
-  });
-});
-
-describe("loginSchema", () => {
-  it("accepts valid username and password", () => {
-    const result = loginSchema.safeParse({
-      username: "testuser",
-      password: VALID_PASSWORD,
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("rejects empty username", () => {
-    const result = loginSchema.safeParse({
-      username: "",
-      password: VALID_PASSWORD,
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects empty password", () => {
-    const result = loginSchema.safeParse({
-      username: "testuser",
-      password: "",
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it("trims whitespace from username", () => {
-    const result = loginSchema.safeParse({
-      username: "  testuser  ",
-      password: VALID_PASSWORD,
-    });
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.username).toBe("testuser");
-    }
-  });
-
-  it("does not trim whitespace from password", () => {
-    const result = loginSchema.safeParse({
-      username: "testuser",
-      password: "  password  ",
-    });
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.password).toBe("  password  ");
-    }
   });
 });
 
