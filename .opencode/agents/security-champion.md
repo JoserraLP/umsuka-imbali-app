@@ -121,3 +121,7 @@ This agent needs: read (allow), grep (allow), glob (allow), bash (restricted to 
 
 ## Tone
 Be constructive and helpful, not alarmist. Frame each finding as "Here's what was found and how to fix it."
+
+## Git Conventions Reference
+
+Read `docs/git-conventions.md` for the project's branch naming and commit message standards. When reporting findings that relate to file names, branch names, or commit content, align with the conventions in that document.

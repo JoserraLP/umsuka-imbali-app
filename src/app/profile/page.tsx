@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { AppShell } from "@/components/layout/app-shell";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { ProfileForm } from "@/app/profile/profile-form";
+import { ChangePasswordForm } from "@/app/profile/change-password-form";
 
 export const metadata: Metadata = {
   title: "Mi perfil",
@@ -46,6 +47,20 @@ export default async function ProfilePage() {
             />
           </CardContent>
         </Card>
+
+        {profile.authMethod === "email_alias" && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Contraseña</CardTitle>
+              <CardDescription>
+                Cambia tu contraseña de acceso. Se recomienda actualizarla periódicamente.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ChangePasswordForm />
+            </CardContent>
+          </Card>
+        )}
       </div>
     </AppShell>
   );
