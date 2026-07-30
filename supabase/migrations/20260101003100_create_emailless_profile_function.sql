@@ -62,3 +62,9 @@ $$;
 
 comment on function umsuka.create_emailless_profile is
   'SECURITY DEFINER — inserts a profile + email alias for emailless accounts. Called server-side only.';
+
+-- Grant EXECUTE to service_role (used by the admin client via rpc()).
+-- Without this, PostgREST rejects the call even though the function is
+-- SECURITY DEFINER, because the calling role (service_role) must have
+-- EXECUTE privilege on the function.
+grant execute on function umsuka.create_emailless_profile to service_role;

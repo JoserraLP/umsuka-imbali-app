@@ -4,36 +4,33 @@ import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 
-/** Allowed redirect origins for the callback URL. */
-type AllowedOrigin = string;
-
 /**
  * Determines the base origin for the OAuth callback URL.
  *
  * Priority:
- * 1. `NEXT_PUBLIC_SITE_URL` env var (must match Supabase Auth → Site URL)
- * 2. `window.location.origin` (current browser origin)
+ * 1. `window.location.origin` — the actual browser origin (production,
+ *    preview deployment, or localhost). This is always correct for the
+ *    current browsing context.
+ * 2. `NEXT_PUBLIC_SITE_URL` env var — fallback for SSR edge cases.
  *
- * Using `NEXT_PUBLIC_SITE_URL` as the primary source ensures the callback
- * URL matches what Supabase has configured in its "Redirect URLs" list
- * (Supabase Dashboard → Authentication → URL Configuration). If the
- * redirectTo URL is NOT in Supabase's allowlist, Supabase silently falls
- * back to the configured Site URL — which in production is the Vercel app.
- * This is why localhost logins can land on the production domain.
+ * IMPORTANT: the Supabase project must have `window.location.origin` (or
+ * a wildcard pattern) listed in its "Redirect URLs" allowlist (Supabase
+ * Dashboard → Authentication → URL Configuration). If the redirectTo URL
+ * is NOT in Supabase's allowlist, Supabase silently falls back to the
+ * configured Site URL instead.
  */
-function getCallbackOrigin(): AllowedOrigin {
-  // In production builds, NEXT_PUBLIC_* vars are inlined at build time.
-  // During `next dev` they are read from process.env at runtime.
-  const envSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-  if (envSiteUrl) {
-    try {
-      const url = new URL(envSiteUrl);
-      return url.origin;
-    } catch {
-      // Invalid URL — fall through to window.location.origin
+function getCallbackOrigin(): string {
+  // "use client" — window is always available after hydration.
+  try {
+    return window.location.origin;
+  } catch {
+    // SSR safety net (should never fire in practice).
+    const envSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+    if (envSiteUrl) {
+      try { return new URL(envSiteUrl).origin; } catch { /* ignore */ }
     }
+    return "http://localhost:3000";
   }
-  return window.location.origin;
 }
 
 interface GoogleSignInButtonProps {
