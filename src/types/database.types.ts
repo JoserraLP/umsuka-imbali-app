@@ -250,6 +250,8 @@ export interface Database {
           user_id: string | null;
           title: string;
           content: string;
+          category: string | null;
+          priority: string | null;
           resolved: boolean;
           created_at: string;
         };
@@ -258,6 +260,8 @@ export interface Database {
           user_id?: string | null;
           title: string;
           content: string;
+          category?: string | null;
+          priority?: string | null;
           resolved?: boolean;
           created_at?: string;
         };
@@ -266,10 +270,44 @@ export interface Database {
           user_id?: string | null;
           title?: string;
           content?: string;
+          category?: string | null;
+          priority?: string | null;
           resolved?: boolean;
           created_at?: string;
         };
         Relationships: [];
+      };
+      question_comments: {
+        Row: {
+          id: string;
+          question_id: string;
+          user_id: string;
+          content: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          question_id: string;
+          user_id: string;
+          content: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          question_id?: string;
+          user_id?: string;
+          content?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "question_comments_question_id_fkey";
+            columns: ["question_id"];
+            isOneToOne: false;
+            referencedRelation: "questions";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       votings: {
         Row: {
