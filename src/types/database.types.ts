@@ -477,9 +477,9 @@ export interface Database {
           p_last_name: string;
           p_username: string;
           p_component_type: string;
-          p_workgroup?: string | null;
           p_alias_email: string;
           p_created_by: string;
+          p_workgroup?: string | null;
         };
         Returns: void;
       };

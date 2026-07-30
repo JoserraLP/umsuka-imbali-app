@@ -64,19 +64,6 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  console.log(
-    "[middleware] getUser result:",
-    {
-      pathname,
-      hasUser: !!user,
-      userId: user?.id ?? null,
-      error: getUserError
-        ? { name: getUserError.name, message: getUserError.message, status: getUserError.status }
-        : null,
-      cookieCount: request.cookies.getAll().length,
-    },
-  );
-
   if (getUserError) {
     console.error(
       "middleware: supabase.auth.getUser() falló al validar la sesión — este es el motivo " +
@@ -102,9 +89,6 @@ export async function updateSession(request: NextRequest) {
     const { data: userStatus } = await supabase.rpc("current_user_status");
 
     if (userStatus === "pending" || userStatus === "suspended") {
-      console.log(
-        `[middleware] usuario ${user.id} con status "${userStatus}" — redirigiendo a /auth/pending`,
-      );
       return redirectPreservingCookies(
         new URL("/auth/pending", request.url),
         supabaseResponse,

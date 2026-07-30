@@ -61,13 +61,6 @@ export function GoogleSignInButton({ redirectTo }: GoogleSignInButtonProps) {
       callbackUrl.searchParams.set("redirectTo", redirectTo);
     }
 
-    // Log en la consola del browser para verificar la redirectTo real
-    console.log(
-      "%c[GoogleSignIn] redirectTo URL que se envía a Supabase:",
-      "font-weight:bold;color:#22c55e",
-      callbackUrl.toString(),
-    );
-
     const { error: signInError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {

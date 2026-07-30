@@ -15,9 +15,9 @@ create or replace function umsuka.create_emailless_profile(
   p_last_name       text,
   p_username        text,
   p_component_type  text,
-  p_workgroup       text default null,
   p_alias_email     text,
-  p_created_by      uuid
+  p_created_by      uuid,
+  p_workgroup       text default null
 )
 returns void
 language plpgsql
