@@ -63,14 +63,28 @@ export function UsernameLoginForm({ redirectTo }: UsernameLoginFormProps) {
     });
 
     if (signInError) {
+      // Mostrar el error real de Supabase para diagnóstico
+      console.error("SignIn error:", signInError);
+
       // 4. Registrar intento fallido y verificar bloqueo
       const failResult = await recordFailedAttemptAction(username);
 
       if (failResult.blocked) {
         setError(failResult.error ?? "Cuenta bloqueada temporalmente.");
         setIsBlocked(true);
-      } else {
+      } else if (
+        signInError.message?.includes("Email not confirmed") ||
+        signInError.message?.includes("email_not_confirmed")
+      ) {
+        setError("El correo electrónico no está confirmado. Contacta al administrador.");
+      } else if (
+        signInError.message?.includes("Invalid login credentials") ||
+        signInError.code === "invalid_credentials"
+      ) {
         setError("Usuario o contraseña incorrectos.");
+      } else {
+        // Error inesperado — lo mostramos para depurar
+        setError(`Error al iniciar sesión: ${signInError.message}`);
       }
 
       setIsLoading(false);
