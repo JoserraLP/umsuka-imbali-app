@@ -12,7 +12,7 @@ import {
   shiftFormSchema,
   type ShiftFormValues,
 } from "@/lib/shifts/schema";
-import type { Workgroup } from "@/types/database.types";
+
 
 const WORKGROUP_LABELS: Record<string, string> = {
   telas: "Telas",

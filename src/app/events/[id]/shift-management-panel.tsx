@@ -12,11 +12,10 @@ import {
 } from "@/app/events/[id]/shift-actions";
 import type { ShiftWithAssignments, MemberOption } from "@/lib/shifts/queries";
 import type { ShiftFormValues } from "@/lib/shifts/schema";
-import type { EventTypeValue } from "@/lib/events/schema";
+
 
 interface ShiftManagementPanelProps {
   eventId: string;
-  eventType: EventTypeValue;
   shifts: ShiftWithAssignments[];
   availableMembers: MemberOption[];
   canManage: boolean;
@@ -32,7 +31,6 @@ function toDatetimeLocalValue(isoDate: string): string {
 
 export function ShiftManagementPanel({
   eventId,
-  eventType,
   shifts,
   availableMembers,
   canManage,
@@ -40,10 +38,6 @@ export function ShiftManagementPanel({
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingShiftId, setEditingShiftId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  const editingShift = editingShiftId
-    ? shifts.find((s) => s.id === editingShiftId)
-    : null;
 
   async function handleCreate(values: ShiftFormValues & { eventId: string }) {
     return createShiftAction({

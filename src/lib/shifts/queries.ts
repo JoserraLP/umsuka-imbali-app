@@ -240,7 +240,7 @@ export async function getUserShifts(userId: string): Promise<UserShift[]> {
 
   const { data: shifts, error: shiftsError } = await supabase
     .from("shifts")
-    .select("id, event_id, name, start_time, end_time")
+    .select("id, event_id, name, start_time, end_time, created_at")
     .in("id", shiftIds)
     .order("start_time", { ascending: false });
 
@@ -266,7 +266,6 @@ export async function getUserShifts(userId: string): Promise<UserShift[]> {
     }
   }
 
-  const shiftsById = new Map((shifts ?? []).map((s) => [s.id, s]));
   const assignmentByShiftId = new Map<string, string>();
   for (const a of assignments ?? []) {
     const shiftId = a.shift_id ?? "";

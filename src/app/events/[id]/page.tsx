@@ -204,7 +204,6 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           <CardContent>
             <ShiftManagementPanel
               eventId={event.id}
-              eventType={event.eventType}
               shifts={shifts}
               availableMembers={availableMembers}
               canManage={canManage}

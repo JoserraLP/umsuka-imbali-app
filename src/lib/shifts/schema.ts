@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { Workgroup } from "@/types/database.types";
+
 
 /** All possible workgroup values including "ninguno" (no filter). */
 export const WORKGROUPS = ["telas", "barra", "estandarte", "limpieza", "ninguno"] as const;

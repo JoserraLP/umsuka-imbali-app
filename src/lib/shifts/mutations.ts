@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireAuthenticatedProfile } from "@/lib/auth/session";
-import { isManagementRole } from "@/lib/auth/roles";
 import { requireManagement, AuthorizationError } from "@/lib/auth/permissions";
 import { checkShiftConflicts } from "@/lib/shifts/queries";
 import {

@@ -289,6 +289,78 @@ No existe política `UPDATE` para `shift_assignments` porque ninguna operación 
 - Se actualizó `src/types/database.types.ts` con los nuevos campos.
 - Se integró `ShiftManagementPanel` en la página de detalle de evento (visible para todos los tipos de evento, no solo `work_shift`).
 
+## Post-implementation fixes
+
+Tras la aceptación del ADR se aplicaron tres categorías de cambios correctivos:
+
+### 1. Bug fix: `service_role` SELECT grants
+
+**Contexto:** La migración `20260101003000_service_role_grants.sql` otorgaba permisos `INSERT`, `UPDATE` y `DELETE` sobre `umsuka.profiles` y `umsuka.email_aliases` al rol `service_role`, pero omitía el permiso `SELECT`. Esto provocaba el error `"permission denied for table profiles"` al iniciar sesión con usuario/contraseña, ya que la función `resolveUsernameToEmail()` utiliza un cliente admin (`service_role`) para consultar dichas tablas.
+
+**Decisión:** Se creó la migración `supabase/migrations/20260101003300_service_role_select_grants.sql` que añade `GRANT SELECT` al rol `service_role` sobre las siguientes tablas:
+
+| Tabla | Propósito |
+|-------|-----------|
+| `umsuka.profiles` | `resolveUsernameToEmail()` busca el perfil por username |
+| `umsuka.email_aliases` | Resolver `profile_id` a su alias de email interno |
+| `umsuka.events` | Futuras operaciones administrativas |
+| `umsuka.shifts` | Futuras operaciones administrativas |
+| `umsuka.shift_assignments` | Futuras operaciones administrativas |
+
+**Archivos afectados:**
+| Archivo | Acción |
+|---------|--------|
+| `supabase/migrations/20260101003300_service_role_select_grants.sql` | CREATE |
+
+### 2. Bug fix: middleware schema config
+
+**Contexto:** El archivo `src/lib/supabase/middleware.ts` creaba el cliente de Supabase con `createServerClient()` sin especificar `db: { schema: "umsuka" }`. Como resultado, las funciones RPC (ej. `current_user_status()`) y las consultas a tablas del schema `umsuka` fallaban porque el cliente por defecto opera sobre el schema `public`.
+
+**Decisión:** Se añadió la opción `db: { schema: "umsuka" }` a la configuración de `createServerClient` en `middleware.ts`, alineando el middleware con el resto de clientes del proyecto (`serverClient`, `adminClient`) que ya especificaban el schema explícitamente.
+
+```typescript
+const supabase = createServerClient<Database>(
+  clientEnv.NEXT_PUBLIC_SUPABASE_URL,
+  clientEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  {
+    db: { schema: "umsuka" },  // ← añadido
+    cookieOptions: SERVER_AUTH_COOKIE_OPTIONS,
+    // ...
+  },
+);
+```
+
+**Archivos afectados:**
+| Archivo | Acción |
+|---------|--------|
+| `src/lib/supabase/middleware.ts` | MODIFY |
+
+### 3. Code cleanup: ESLint `@typescript-eslint/no-unused-vars`
+
+**Contexto:** Tras la implementación inicial, varios linting reports señalaron imports, props y variables declaradas pero nunca utilizadas. Se eliminaron para mantener la base de código limpia y evitar warnings en CI.
+
+**Archivos y cambios:**
+
+| Archivo | Elemento eliminado | Motivo |
+|---------|-------------------|--------|
+| `src/app/events/[id]/shift-form.tsx` | `import { Workgroup }` | Tipo no usado en el componente |
+| `src/app/events/[id]/shift-management-panel.tsx` | Prop `eventType`, variable `editingShift`, import `EventTypeValue` | `eventType` nunca se consumía; `editingShift` era una variable huérfana (se usaba `editingShiftId` en su lugar); `EventTypeValue` ya no era necesario |
+| `src/app/profile/shifts/page.tsx` | `import { Badge }` | Componente no usado en la tabla de turnos |
+| `src/lib/shifts/mutations.ts` | `import { isManagementRole }` | La autorización delega en `assertCanManageShifts()` que maneja la lógica internamente |
+| `src/lib/shifts/queries.ts` | Variable `shiftsById` | Declarada pero nunca referenciada |
+| `src/lib/shifts/queries.ts` | Columna `created_at` en `getUserShifts` select | Type error: se añadió `created_at` al select de `getUserShifts()` para satisfacer el tipo de retorno |
+| `src/lib/shifts/schema.ts` | `import { Workgroup }` | Tipo no usado en los schemas Zod |
+
+**Archivos afectados:**
+| Archivo | Acción |
+|---------|--------|
+| `src/app/events/[id]/shift-form.tsx` | MODIFY |
+| `src/app/events/[id]/shift-management-panel.tsx` | MODIFY |
+| `src/app/profile/shifts/page.tsx` | MODIFY |
+| `src/lib/shifts/mutations.ts` | MODIFY |
+| `src/lib/shifts/queries.ts` | MODIFY |
+| `src/lib/shifts/schema.ts` | MODIFY |
+
 ## Archivos Modificados/Creados
 
 | Archivo | Acción |
