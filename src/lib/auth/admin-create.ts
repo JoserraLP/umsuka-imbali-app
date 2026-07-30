@@ -90,6 +90,7 @@ export async function createEmaillessAccount(
     p_workgroup: parsed.data.workgroup ?? null,
     p_alias_email: emailAlias,
     p_created_by: actor.id,
+    p_status: "active", // Creada por super_admin → activa directamente
   });
 
   if (rpcError) {

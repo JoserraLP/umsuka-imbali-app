@@ -9,10 +9,15 @@ import type {
 } from "@/lib/profiles/schema";
 import type { MutationResult } from "@/lib/profiles/mutations";
 import { createEmaillessAccount } from "@/lib/auth/admin-create";
+import { generateResetToken, adminUnlockAccount } from "@/lib/auth/password-service";
 import type {
   CreateEmaillessAccountInput,
   CreateEmaillessAccountResult,
 } from "@/lib/auth/emailless-schema";
+import type {
+  GenerateResetTokenInput,
+  GenerateResetTokenResult,
+} from "@/lib/auth/password-schema";
 
 export async function updateMemberRoleAction(
   input: UpdateMemberRoleInput,
@@ -60,6 +65,25 @@ export async function createEmaillessAccountAction(
   if (result.success) {
     revalidatePath("/admin/users");
     revalidatePath("/admin/registrations");
+  }
+
+  return result;
+}
+
+export async function generateResetTokenAction(
+  input: GenerateResetTokenInput,
+): Promise<GenerateResetTokenResult> {
+  return generateResetToken(input);
+}
+
+export async function unlockAccountAction(
+  profileId: string,
+): Promise<{ success: boolean; error?: string }> {
+  const result = await adminUnlockAccount(profileId);
+
+  if (result.success) {
+    const { revalidatePath } = await import("next/cache");
+    revalidatePath("/admin/users");
   }
 
   return result;

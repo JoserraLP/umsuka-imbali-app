@@ -128,7 +128,7 @@ Rediseñar la página principal (`/dashboard`) para mostrar: feed de los último
 | 1 | Integración Instagram API | Crear servicio `src/lib/social/instagram.ts` que obtenga los últimos posts usando Instagram Basic Display API o Graph API. |
 | 2 | Caché de posts | Almacenar posts en Supabase (`umsuka.instagram_posts`) con TTL para evitar rate limiting. |
 | 3 | Server component de feed | Crear `InstagramFeed` que renderice los últimos 6-9 posts en cuadrícula. |
-| 4 | Widget de notificaciones | Consultar `umsuka.notifications` (a implementar en Sprint 15) y mostrar las últimas 5 no leídas. |
+| 4 | Widget de notificaciones | Consultar `umsuka.notifications` (a implementar en Sprint 16) y mostrar las últimas 5 no leídas. |
 | 5 | Widget de calendario | Consultar `umsuka.events` ordenados por fecha ascendente, mostrar los próximos 3-5 eventos. |
 | 6 | Diseño de dashboard | Maquetar las 3 secciones en columnas: feed central (Instagram), sidebar derecha (notificaciones + calendario). |
 | 7 | Actualizar `dashboard/page.tsx` | Refactorizar para usar los nuevos widgets. |
@@ -136,7 +136,7 @@ Rediseñar la página principal (`/dashboard`) para mostrar: feed de los último
 
 ### Dependencias
 - Sprint 1 (UI/UX)
-- Sprint 15 (Notificaciones) — si se quiere integración real; si no, se puede hacer primero con datos mock.
+- Sprint 16 (Notificaciones) — si se quiere integración real; si no, se puede hacer primero con datos mock.
 
 ### Criterios de Aceptación
 - La página principal muestra los últimos posts de Instagram de @umsuka (o cuenta configurada).
@@ -184,7 +184,7 @@ Implementar un flujo donde cada nuevo usuario que se registra (vía Google OAuth
 | 4 | UI de pending | Página `/auth/pending` con mensaje informativo. |
 | 5 | Panel de administración | En `/admin/users`, añadir columna de status y botones "Aprobar"/"Suspender". |
 | 6 | Server actions | `approveUserAction`, `suspendUserAction` — solo super_admin. |
-| 7 | Notificación al usuario | Opcional: enviar notificación interna cuando el usuario sea aprobado (depende de Sprint 15). |
+| 7 | Notificación al usuario | Opcional: enviar notificación interna cuando el usuario sea aprobado (depende de Sprint 16). |
 | 8 | Pruebas | Tests de integración para el flujo completo de aprobación. |
 
 ### Dependencias
@@ -225,7 +225,7 @@ El super admin puede dar de alta a nuevos miembros en la aplicación sin necesid
 
 ### Dependencias
 - Sprint 6 (aprobación de usuarios + panel admin funcional)
-- Sprint 14 (perfiles con campos completos como username)
+- Sprint 15 (perfiles con campos completos como username)
 
 ### Criterios de Aceptación
 - El super admin puede crear una cuenta para un menor/miembro sin email desde el panel de administración.
@@ -261,7 +261,7 @@ Crear y administrar turnos asociados a eventos, incluyendo asignación de miembr
 
 ### Dependencias
 - Sprint 1 (UI/UX para la línea temporal)
-- Sprint 6 (para tener management roles claros)
+- Sprint 6 (Registration Approval — para tener management roles claros)
 
 ### Criterios de Aceptación
 - Los management pueden crear turnos asociados a un evento con hora de inicio y fin.
@@ -272,9 +272,49 @@ Crear y administrar turnos asociados a eventos, incluyendo asignación de miembr
 
 ---
 
-## Sprint 9 — Noticias: Publicación y Gestión
+## Sprint 9 — Validación y Almacenamiento Seguro de Contraseñas
 
-**Rama:** `feature/sprint-09-news`
+**Rama:** `feature/sprint-09-password-validation`
+
+### Descripción
+Implementar la comprobación y almacenamiento seguro de contraseñas para los usuarios creados sin correo electrónico (Sprint 7). Actualmente el login con usuario/contraseña no puede verificar si las credenciales introducidas son válidas porque el flujo de autenticación mediante Supabase Auth no está correctamente integrado. Este sprint completa la funcionalidad pendiente del Sprint 7 y asegura que las contraseñas se almacenen de forma segura (hash + salt) y se verifiquen correctamente en cada inicio de sesión.
+
+### Pasos
+
+| # | Paso | Detalle |
+|---|---|---|
+| 1 | Auditoría del estado actual | Revisar la implementación del Sprint 7: cómo se crean las cuentas con `supabase.auth.admin.createUser()`, cómo se almacena la contraseña, y cómo funciona el login con `signInWithPassword()`. Identificar la causa raíz de por qué no se pueden validar las credenciales. |
+| 2 | Migración de BD — password_attempts | Crear `umsuka.password_attempts` (id, profile_id, attempted_at, success, ip_address) para registrar intentos de login y prevenir fuerza bruta. |
+| 3 | Migración de BD — password_reset_tokens | Crear `umsuka.password_reset_tokens` (id, profile_id, token_hash, expires_at, used) para gestión de restablecimiento de contraseña. |
+| 4 | Servicio `lib/auth/password-hash.ts` | Implementar o verificar que Supabase Auth ya aplica bcrypt/hash a las contraseñas. Si no es así, implementar hash con `bcryptjs` o similar antes de enviar a Supabase. |
+| 5 | Servicio `lib/auth/emailless-login.ts` — corregir | Refactorizar `loginWithUsername()` para que: (1) busque el username en profiles, (2) resuelva el email alias asociado, (3) llame a `signInWithPassword()` con el email alias y la contraseña proporcionada, (4) capture y devuelva errores específicos (credenciales inválidas, cuenta no aprobada, cuenta suspendida). |
+| 6 | Servicio `lib/auth/password-reset.ts` | Implementar flujo de restablecimiento de contraseña para usuarios sin email: (1) el super admin genera un token de reset desde el panel, (2) se muestra al admin un enlace/código temporal, (3) el usuario ingresa el código en una página `/auth/reset-password` y crea una nueva contraseña. |
+| 7 | Server actions | `loginWithPasswordAction` (devuelve errores específicos), `resetPasswordAction`, `changePasswordAction`. |
+| 8 | UI: Página de login con feedback | Mejorar la pestaña "Acceder con usuario y contraseña" para mostrar mensajes de error específicos: "Usuario no encontrado", "Contraseña incorrecta", "Cuenta pendiente de aprobación", "Cuenta suspendida", "Demasiados intentos. Intente de nuevo en X minutos". |
+| 9 | UI: Restablecer contraseña | Página `/auth/reset-password` con formulario para ingresar token temporal y nueva contraseña (con confirmación y validación de fortaleza). |
+| 10 | UI: Panel admin — reset de contraseña | En `/admin/users`, botón "Restablecer contraseña" que genera un token temporal y lo muestra al admin para entregar al usuario. |
+| 11 | Protección contra fuerza bruta | Implementar rate limiting: después de 5 intentos fallidos en 15 minutos, bloquear el inicio de sesión por 30 minutos. Usar la tabla `password_attempts` para tracking. |
+| 12 | Validación de fortaleza de contraseña | Al crear/restablecer contraseña, validar: mínimo 8 caracteres, al menos una mayúscula, una minúscula, un número y un carácter especial. Usar Zod schema. |
+| 13 | Pruebas | Tests unitarios para hashing, validación de fortaleza, rate limiting. Tests de integración para login exitoso/fallido, restablecimiento de contraseña. |
+
+### Dependencias
+- Sprint 7 (Emailless Accounts — para tener el sistema de cuentas sin email)
+- Sprint 6 (Registration Approval — para la aprobación de cuentas)
+
+### Criterios de Aceptación
+- El login con usuario/contraseña verifica correctamente las credenciales contra Supabase Auth.
+- Los mensajes de error diferenciados indican la causa exacta del fallo de login.
+- Las contraseñas se almacenan con hash seguro (bcrypt o el mecanismo nativo de Supabase Auth).
+- Existe un flujo de restablecimiento de contraseña mediante token temporal generado por el super admin.
+- La fortaleza de la contraseña se valida al crearla o cambiarla.
+- El sistema bloquea temporalmente el login tras 5 intentos fallidos en 15 minutos.
+- Todos los tests de seguridad pasan sin hallazgos HIGH.
+
+---
+
+## Sprint 10 — Noticias: Publicación y Gestión
+
+**Rama:** `feature/sprint-10-news`
 
 ### Descripción
 Sistema de publicación y gestión de noticias internas para los miembros.
@@ -289,12 +329,12 @@ Sistema de publicación y gestión de noticias internas para los miembros.
 | 4 | UI: Feed de noticias | Página `/news` con lista de noticias estilo red social (tarjetas con título, contenido truncado, autor, fecha). |
 | 5 | UI: Detalle de noticia | Página `/news/[id]` con contenido completo. |
 | 6 | UI: Crear/Editar noticia | Formulario para management, con editor de texto enriquecido (opcional). |
-| 7 | Notificaciones | Al crear una noticia, enviar notificación push/Interna a todos los miembros (depende de Sprint 15). |
+| 7 | Notificaciones | Al crear una noticia, enviar notificación push/Interna a todos los miembros (depende de Sprint 16). |
 | 8 | Pruebas | Tests unitarios e integración. |
 
 ### Dependencias
 - Sprint 1 (UI/UX)
-- Sprint 15 (Notificaciones — opcional para MVP)
+- Sprint 16 (Notificaciones — opcional para MVP)
 
 ### Criterios de Aceptación
 - Los management pueden crear, editar y eliminar noticias.
@@ -304,9 +344,9 @@ Sistema de publicación y gestión de noticias internas para los miembros.
 
 ---
 
-## Sprint 10 — Preguntas: Consultas y Seguimiento
+## Sprint 11 — Preguntas: Consultas y Seguimiento
 
-**Rama:** `feature/sprint-10-questions`
+**Rama:** `feature/sprint-11-questions`
 
 ### Descripción
 Módulo para realizar consultas internas, hacer seguimiento y marcar preguntas como resueltas.
@@ -335,9 +375,9 @@ Módulo para realizar consultas internas, hacer seguimiento y marcar preguntas c
 
 ---
 
-## Sprint 11 — Votaciones
+## Sprint 12 — Votaciones
 
-**Rama:** `feature/sprint-11-votings`
+**Rama:** `feature/sprint-12-votings`
 
 ### Descripción
 Sistema de votación con opciones múltiples, control de voto único por usuario y visualización de resultados en tiempo real.
@@ -367,9 +407,9 @@ Sistema de votación con opciones múltiples, control de voto único por usuario
 
 ---
 
-## Sprint 12 — Gestión Documental (Supabase Storage)
+## Sprint 13 — Gestión Documental (Supabase Storage)
 
-**Rama:** `feature/sprint-12-document-management`
+**Rama:** `feature/sprint-13-document-management`
 
 ### Descripción
 Gestionar documentos usando Supabase Storage con categorías, permisos por rol y control de versiones.
@@ -396,9 +436,9 @@ Gestionar documentos usando Supabase Storage con categorías, permisos por rol y
 
 ---
 
-## Sprint 13 — Eventos: Mejora de Registro y Gestión
+## Sprint 14 — Eventos: Mejora de Registro y Gestión
 
-**Rama:** `feature/sprint-13-events-enhancement`
+**Rama:** `feature/sprint-14-events-enhancement`
 
 ### Descripción
 Mejorar la gestión de eventos: registro con campos adicionales, comentarios, capacidad máxima, y lista de espera.
@@ -425,9 +465,9 @@ Mejorar la gestión de eventos: registro con campos adicionales, comentarios, ca
 
 ---
 
-## Sprint 14 — Perfiles y Componentes
+## Sprint 15 — Perfiles y Componentes
 
-**Rama:** `feature/sprint-14-profiles-components`
+**Rama:** `feature/sprint-15-profiles-components`
 
 ### Descripción
 Mejorar la gestión de perfiles de usuario: foto, biografía, componentes (telas, barra, etc.), habilidades, y historial de participación.
@@ -452,9 +492,9 @@ Mejorar la gestión de perfiles de usuario: foto, biografía, componentes (telas
 
 ---
 
-## Sprint 15 — Notificaciones
+## Sprint 16 — Notificaciones
 
-**Rama:** `feature/sprint-15-notifications`
+**Rama:** `feature/sprint-16-notifications`
 
 ### Descripción
 Sistema de notificaciones internas (en-app) y en tiempo real sobre eventos, noticias, votaciones y cambios relevantes.
@@ -483,9 +523,9 @@ Sistema de notificaciones internas (en-app) y en tiempo real sobre eventos, noti
 
 ---
 
-## Sprint 16 — Administración: Panel de Control
+## Sprint 17 — Administración: Panel de Control
 
-**Rama:** `feature/sprint-16-admin-panel`
+**Rama:** `feature/sprint-17-admin-panel`
 
 ### Descripción
 Panel de administración completo para gestión de usuarios, configuración global, permisos y auditoría.
@@ -505,7 +545,7 @@ Panel de administración completo para gestión de usuarios, configuración glob
 
 ### Dependencias
 - Sprint 6 (aprobación de usuarios)
-- Sprint 14 (perfiles completos)
+- Sprint 15 (perfiles completos)
 
 ### Criterios de Aceptación
 - Los super admin pueden ver y gestionar todos los usuarios (cambiar roles, activar/suspender).
@@ -515,9 +555,9 @@ Panel de administración completo para gestión de usuarios, configuración glob
 
 ---
 
-## Sprint 17 — PWA: Progressive Web App
+## Sprint 18 — PWA: Progressive Web App
 
-**Rama:** `feature/sprint-17-pwa`
+**Rama:** `feature/sprint-18-pwa`
 
 ### Descripción
 Convertir la aplicación en una Progressive Web App instalable con soporte offline mediante Service Workers.
@@ -543,9 +583,9 @@ Convertir la aplicación en una Progressive Web App instalable con soporte offli
 
 ---
 
-## Sprint 18 — CI/CD y Despliegue Automático
+## Sprint 19 — CI/CD y Despliegue Automático
 
-**Rama:** `feature/sprint-18-cicd`
+**Rama:** `feature/sprint-19-cicd`
 
 ### Descripción
 Configurar GitHub Actions para linting, typecheck, tests, build y despliegue automático a Vercel desde la rama `main`.
@@ -572,9 +612,9 @@ Configurar GitHub Actions para linting, typecheck, tests, build y despliegue aut
 
 ---
 
-## Sprint 19 — Hardening Final
+## Sprint 20 — Hardening Final
 
-**Rama:** `feature/sprint-19-hardening`
+**Rama:** `feature/sprint-20-hardening`
 
 ### Descripción
 Auditorías finales de seguridad, rendimiento, accesibilidad y validación general para producción.
@@ -614,19 +654,20 @@ Auditorías finales de seguridad, rendimiento, accesibilidad y validación gener
 | Sprint 4 — Home Feed | `feature/sprint-04-home-feed` | Sprint 1 |
 | Sprint 5 — Asistencia y Ausencias | `feature/sprint-05-asistencia-ausencias` | ✅ Completado |
 | Sprint 6 — Registration Approval | `feature/sprint-06-registration-approval` | Sprint 5 |
-| **Sprint 7 — Emailless Accounts** | `feature/sprint-07-emailless-accounts` | **Sprint 6, Sprint 14** |
+| Sprint 7 — Emailless Accounts | `feature/sprint-07-emailless-accounts` | Sprint 6, Sprint 15 |
 | Sprint 8 — Shifts | `feature/sprint-08-shifts` | Sprint 1, Sprint 6 |
-| Sprint 9 — News | `feature/sprint-09-news` | Sprint 1 |
-| Sprint 10 — Questions | `feature/sprint-10-questions` | Sprint 1 |
-| Sprint 11 — Votings | `feature/sprint-11-votings` | Sprint 1, Sprint 6 |
-| Sprint 12 — Document Management | `feature/sprint-12-document-management` | Sprint 6 |
-| Sprint 13 — Events Enhancement | `feature/sprint-13-events-enhancement` | Sprint 1, Sprint 5 |
-| Sprint 14 — Profiles & Components | `feature/sprint-14-profiles-components` | Sprint 1 |
-| Sprint 15 — Notifications | `feature/sprint-15-notifications` | Múltiples |
-| Sprint 16 — Admin Panel | `feature/sprint-16-admin-panel` | Sprint 6, Sprint 14 |
-| Sprint 17 — PWA | `feature/sprint-17-pwa` | Sprint 1 |
-| Sprint 18 — CI/CD | `feature/sprint-18-cicd` | — |
-| Sprint 19 — Hardening | `feature/sprint-19-hardening` | Todos los anteriores |
+| **Sprint 9 — Password Validation** | `feature/sprint-09-password-validation` | **Sprint 7, Sprint 6** |
+| Sprint 10 — News | `feature/sprint-10-news` | Sprint 1 |
+| Sprint 11 — Questions | `feature/sprint-11-questions` | Sprint 1 |
+| Sprint 12 — Votings | `feature/sprint-12-votings` | Sprint 1, Sprint 6 |
+| Sprint 13 — Document Management | `feature/sprint-13-document-management` | Sprint 6 |
+| Sprint 14 — Events Enhancement | `feature/sprint-14-events-enhancement` | Sprint 1, Sprint 5 |
+| Sprint 15 — Profiles & Components | `feature/sprint-15-profiles-components` | Sprint 1 |
+| Sprint 16 — Notifications | `feature/sprint-16-notifications` | Múltiples |
+| Sprint 17 — Admin Panel | `feature/sprint-17-admin-panel` | Sprint 6, Sprint 15 |
+| Sprint 18 — PWA | `feature/sprint-18-pwa` | Sprint 1 |
+| Sprint 19 — CI/CD | `feature/sprint-19-cicd` | — |
+| Sprint 20 — Hardening | `feature/sprint-20-hardening` | Todos los anteriores |
 
 ---
 

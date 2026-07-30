@@ -4,13 +4,15 @@ import {
   resolveUsernameSchema,
 } from "@/lib/auth/emailless-schema";
 
+const VALID_PASSWORD = "SecurePass123!";
+
 describe("createEmaillessAccountSchema", () => {
   it("accepts valid input with all fields", () => {
     const result = createEmaillessAccountSchema.safeParse({
       firstName: "Ana",
       lastName: "García",
       username: "ana_garcia",
-      password: "securePass123",
+      password: VALID_PASSWORD,
       componentType: "dance",
       workgroup: "telas",
     });
@@ -22,7 +24,7 @@ describe("createEmaillessAccountSchema", () => {
       firstName: "Ana",
       lastName: "García",
       username: "ana_garcia",
-      password: "securePass123",
+      password: VALID_PASSWORD,
       componentType: "dance",
     });
     expect(result.success).toBe(true);
@@ -33,7 +35,7 @@ describe("createEmaillessAccountSchema", () => {
       firstName: "Ana",
       lastName: "García",
       username: "ana_garcia",
-      password: "securePass123",
+      password: VALID_PASSWORD,
       componentType: "dance",
       workgroup: "ninguno",
     });
@@ -45,7 +47,7 @@ describe("createEmaillessAccountSchema", () => {
       firstName: "Ana",
       lastName: "García",
       username: "ab",
-      password: "securePass123",
+      password: VALID_PASSWORD,
       componentType: "member",
     });
     expect(result.success).toBe(false);
@@ -59,7 +61,7 @@ describe("createEmaillessAccountSchema", () => {
       firstName: "Ana",
       lastName: "García",
       username: "ana garcia!",
-      password: "securePass123",
+      password: VALID_PASSWORD,
       componentType: "member",
     });
     expect(result.success).toBe(false);
@@ -70,10 +72,25 @@ describe("createEmaillessAccountSchema", () => {
       firstName: "Ana",
       lastName: "García",
       username: "ana garcia",
-      password: "securePass123",
+      password: VALID_PASSWORD,
       componentType: "member",
     });
     expect(result.success).toBe(false);
+  });
+
+  it("rejects weak password (no special character)", () => {
+    const result = createEmaillessAccountSchema.safeParse({
+      firstName: "Ana",
+      lastName: "García",
+      username: "ana_garcia",
+      password: "SecurePass123", // missing special char
+      componentType: "member",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error!.issues[0]!.path).toContain("password");
+      expect(result.error!.issues[0]!.message).toContain("especial");
+    }
   });
 
   it("rejects short password (less than 8 characters)", () => {
@@ -81,7 +98,7 @@ describe("createEmaillessAccountSchema", () => {
       firstName: "Ana",
       lastName: "García",
       username: "ana_garcia",
-      password: "short",
+      password: "Sh1!",
       componentType: "member",
     });
     expect(result.success).toBe(false);
@@ -90,12 +107,27 @@ describe("createEmaillessAccountSchema", () => {
     }
   });
 
+  it("rejects password without number", () => {
+    const result = createEmaillessAccountSchema.safeParse({
+      firstName: "Ana",
+      lastName: "García",
+      username: "ana_garcia",
+      password: "SecurePass!!!",
+      componentType: "member",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error!.issues[0]!.path).toContain("password");
+      expect(result.error!.issues[0]!.message).toContain("número");
+    }
+  });
+
   it("rejects empty first name", () => {
     const result = createEmaillessAccountSchema.safeParse({
       firstName: "",
       lastName: "García",
       username: "ana_garcia",
-      password: "securePass123",
+      password: VALID_PASSWORD,
       componentType: "member",
     });
     expect(result.success).toBe(false);
@@ -106,7 +138,7 @@ describe("createEmaillessAccountSchema", () => {
       firstName: "Ana",
       lastName: "",
       username: "ana_garcia",
-      password: "securePass123",
+      password: VALID_PASSWORD,
       componentType: "member",
     });
     expect(result.success).toBe(false);
@@ -117,7 +149,7 @@ describe("createEmaillessAccountSchema", () => {
       firstName: "Ana",
       lastName: "García",
       username: "ana_garcia",
-      password: "securePass123",
+      password: VALID_PASSWORD,
       componentType: "invalid",
     });
     expect(result.success).toBe(false);
@@ -128,7 +160,7 @@ describe("createEmaillessAccountSchema", () => {
       firstName: "Ana",
       lastName: "García",
       username: "ana_garcia",
-      password: "securePass123",
+      password: VALID_PASSWORD,
       componentType: "member",
       workgroup: "invalid",
     });
@@ -140,7 +172,7 @@ describe("createEmaillessAccountSchema", () => {
       firstName: "  Ana  ",
       lastName: "  García  ",
       username: "  ana_garcia  ",
-      password: "securePass123",
+      password: VALID_PASSWORD,
       componentType: "member",
     });
     expect(result.success).toBe(true);

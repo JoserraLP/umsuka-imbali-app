@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { passwordStrengthSchema } from "@/lib/auth/password-schema";
 
 /**
  * Schema for the super admin to create an emailless account.
@@ -24,10 +25,7 @@ export const createEmaillessAccountSchema = z.object({
       /^[a-zA-Z0-9_]+$/,
       "El nombre de usuario solo puede contener letras, números y guiones bajos.",
     ),
-  password: z
-    .string()
-    .min(8, "La contraseña debe tener al menos 8 caracteres.")
-    .max(100, "La contraseña debe tener 100 caracteres o menos."),
+  password: passwordStrengthSchema,
   componentType: z.enum(["music", "dance", "member"], {
     errorMap: () => ({ message: "El componente debe ser music, dance o member." }),
   }),
@@ -61,6 +59,7 @@ export interface CreateEmaillessAccountResult {
 export interface ResolveUsernameResult {
   success: boolean;
   error?: string;
+  errorCode?: "account_not_found" | "wrong_auth_method" | "alias_not_found";
   emailAlias?: string;
 }
 
