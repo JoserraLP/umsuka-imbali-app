@@ -110,6 +110,9 @@ export interface Database {
           name: string;
           start_time: string;
           end_time: string;
+          max_assignees: number | null;
+          workgroup: Workgroup | null;
+          notes: string | null;
           created_at: string;
         };
         Insert: {
@@ -118,6 +121,9 @@ export interface Database {
           name: string;
           start_time: string;
           end_time: string;
+          max_assignees?: number | null;
+          workgroup?: Workgroup | null;
+          notes?: string | null;
           created_at?: string;
         };
         Update: {
@@ -126,6 +132,9 @@ export interface Database {
           name?: string;
           start_time?: string;
           end_time?: string;
+          max_assignees?: number | null;
+          workgroup?: Workgroup | null;
+          notes?: string | null;
           created_at?: string;
         };
         Relationships: [];
