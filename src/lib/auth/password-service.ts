@@ -1,6 +1,5 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { resolveUsernameToEmail } from "@/lib/auth/emailless-login";
 import { requireAuthenticatedProfile } from "@/lib/auth/session";
 import {
   resetPasswordSchema,
@@ -281,13 +280,12 @@ async function getBlockedUntil(
   admin: ReturnType<typeof createAdminClient>,
   profileId: string,
 ): Promise<string> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: lastAttempt } = await (admin
-    .from("password_attempts") as any)
+  const { data: lastAttempt } = await admin
+    .from("password_attempts")
     .select("created_at")
     .eq("profile_id", profileId)
     .eq("success", false)
-    .order("created_at", { ascending: false } as any)
+    .order("created_at", { ascending: false } satisfies Record<string, unknown>)
     .limit(1)
     .maybeSingle();
 

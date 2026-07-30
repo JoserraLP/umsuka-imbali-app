@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { unlockAccountAction } from "@/app/admin/users/actions";
-import { Loader2, ShieldAlert, ShieldCheck } from "lucide-react";
+import { Loader2, ShieldAlert } from "lucide-react";
 
 interface UnlockAccountButtonProps {
   profileId: string;
