@@ -7,6 +7,7 @@ import {
   Users,
   UserCheck,
   Newspaper,
+  MessageSquare,
   type LucideIcon,
 } from "lucide-react";
 import type { AppRole } from "@/types/database.types";
@@ -24,6 +25,7 @@ export const NAV_LINKS: NavLink[] = [
   { href: "/events", label: "Eventos", icon: Calendar },
   { href: "/calendar", label: "Calendario", icon: CalendarDays },
   { href: "/news", label: "Noticias", icon: Newspaper },
+  { href: "/questions", label: "Preguntas", icon: MessageSquare },
   { href: "/profile", label: "Mi perfil", icon: User },
   { href: "/profile/history", label: "Historial", icon: Clock },
   {
