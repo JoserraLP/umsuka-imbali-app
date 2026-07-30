@@ -39,6 +39,7 @@ export async function updateSession(request: NextRequest) {
     clientEnv.NEXT_PUBLIC_SUPABASE_URL,
     clientEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
+      db: { schema: "umsuka" },
       cookieOptions: SERVER_AUTH_COOKIE_OPTIONS,
       cookies: {
         getAll() {

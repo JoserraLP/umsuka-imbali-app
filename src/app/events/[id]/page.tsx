@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { AppShell } from "@/components/layout/app-shell";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { isManagementRole } from "@/lib/auth/roles";
-import { getEventById, getEventShifts } from "@/lib/events/queries";
+import { getEventById } from "@/lib/events/queries";
 import { getEventRegistrationSummary } from "@/lib/registrations/queries";
 import { getEventAttendance, getEventAttendanceSummary } from "@/lib/attendance/queries";
 import { getEventAbsences, getUserAbsenceForEvent } from "@/lib/absences/queries";
@@ -14,12 +14,14 @@ import {
   getAllWorkgroupMembers,
   getWorkgroupAttendanceByShift,
 } from "@/lib/workgroups/queries";
+import { getEventShifts, getAvailableMembers } from "@/lib/shifts/queries";
 import { EventForm } from "@/app/events/event-form";
 import { DeleteEventButton } from "@/app/events/[id]/delete-event-button";
 import { RegistrationPanel } from "@/app/events/[id]/registration-panel";
 import { AttendancePanel } from "@/app/events/[id]/attendance-panel";
 import { AbsencePanel } from "@/app/events/[id]/absence-panel";
 import { WorkgroupAttendancePanel } from "@/app/events/[id]/workgroup-panel";
+import { ShiftManagementPanel } from "@/app/events/[id]/shift-management-panel";
 import type { EventTypeValue } from "@/lib/events/schema";
 
 export const metadata: Metadata = {
@@ -78,7 +80,10 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     ? Promise.resolve(absences.find((a) => a.userId === profile.id) ?? null)
     : getUserAbsenceForEvent(profile.id, event.id));
 
-  const shifts = await getEventShifts(event.id);
+  const [shifts, availableMembers] = await Promise.all([
+    getEventShifts(event.id),
+    getAvailableMembers(),
+  ]);
   const firstShift = shifts[0] ?? null;
 
   const canViewWorkgroupPanel =
@@ -187,6 +192,24 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             </CardContent>
           </Card>
         )}
+
+        {/* Shift management panel — shown for all event types */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Gestión de turnos</CardTitle>
+            <CardDescription>
+              Crea turnos, asigna miembros y visualiza la línea temporal.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ShiftManagementPanel
+              eventId={event.id}
+              shifts={shifts}
+              availableMembers={availableMembers}
+              canManage={canManage}
+            />
+          </CardContent>
+        </Card>
 
         {canViewWorkgroupPanel && firstShift && (
           <Card>

@@ -1,0 +1,70 @@
+{
+  "title": "Sprint 8 — Turnos: Creación, Asignación y Control de Conflictos",
+  "description": "Crear y administrar turnos asociados a eventos, incluyendo asignación de miembros a turnos y control de conflictos (horarios solapados).",
+  "branch": "feature/sprint-08-shifts",
+  "status": "published",
+  "steps": [
+    {
+      "id": 1,
+      "name": "Migración de BD",
+      "detail": "Revisar tablas existentes umsuka.shifts y umsuka.shift_assignments. Añadir columnas: max_assignees (integer, nullable), workgroup (umsuka.workgroup, nullable) a shifts. Crear migración 20260101003200_shifts_enhancement.sql con RLS policies."
+    },
+    {
+      "id": 2,
+      "name": "Mejorar capa lib/shifts/",
+      "detail": "Crear src/lib/shifts/ con schemas Zod (createShiftSchema, updateShiftSchema, assignMemberSchema, unassignMemberSchema), queries (getEventShifts, getShiftById, getShiftAssignments, getUserShifts, getConflicts), mutations (createShift, updateShift, deleteShift, assignMember, unassignMember)."
+    },
+    {
+      "id": 3,
+      "name": "Lógica de detección de conflictos",
+      "detail": "Implementar función checkShiftConflicts(userId, startTime, endTime, excludeShiftId?) que detecte solapamientos con turnos existentes del miembro. Integrar en assignMember."
+    },
+    {
+      "id": 4,
+      "name": "Server actions",
+      "detail": "Crear src/app/events/[id]/shift-actions.ts con createShiftAction, updateShiftAction, deleteShiftAction, assignMemberAction, unassignMemberAction, getConflictsAction."
+    },
+    {
+      "id": 5,
+      "name": "UI de gestión de turnos en evento",
+      "detail": "Crear ShiftManagementPanel para renderizar dentro de la página de detalle de evento. Incluye lista de turnos, crear/editar/eliminar turnos, asignar/desasignar miembros, ver conflictos."
+    },
+    {
+      "id": 6,
+      "name": "Calendario visual (timeline)",
+      "detail": "Vista de turnos en línea temporal (timeline) para ver solapamientos gráficamente. Componente ShiftTimeline."
+    },
+    {
+      "id": 7,
+      "name": "Mi vista de turnos",
+      "detail": "Página /profile/shifts donde el miembro ve sus turnos asignados."
+    },
+    {
+      "id": 8,
+      "name": "Pruebas",
+      "detail": "Tests unitarios para schemas Zod (shifts), detección de conflictos (checkShiftConflicts). Tests de integración para queries y mutations."
+    }
+  ],
+  "acceptance_criteria": [
+    "Los management pueden crear turnos asociados a un evento con hora de inicio y fin.",
+    "Los management pueden asignar miembros a turnos.",
+    "El sistema detecta y advierte sobre conflictos horarios al asignar un miembro.",
+    "No se puede asignar a un miembro a dos turnos que solapen.",
+    "Los miembros pueden ver sus turnos asignados en su perfil.",
+    "Los turnos se muestran en una línea temporal visual.",
+    "Cada cambio queda registrado correctamente."
+  ],
+  "definition_of_done": [
+    "Migración SQL creada y aplicable.",
+    "Capa lib/shifts/ completa con schemas, queries y mutations.",
+    "Detección de conflictos implementada y testeada.",
+    "Server actions funcionando.",
+    "UI de gestión de turnos integrada en página de evento.",
+    "Vista de timeline visual implementada.",
+    "Página /profile/shifts implementada.",
+    "Tests unitarios y de integración pasando.",
+    "Security scan sin issues HIGH.",
+    "ADR documentado."
+  ],
+  "dependencies": ["Sprint 1 (UI/UX)", "Sprint 6 (Registration Approval)"]
+}
