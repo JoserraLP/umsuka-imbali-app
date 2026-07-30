@@ -132,7 +132,33 @@ export async function generateResetToken(
   };
 }
 
-// ── Password reset ───────────────────────────────────────
+/**
+ * Desbloquea manualmente una cuenta eliminando todos los
+ * intentos fallidos de login. Solo super_admin.
+ */
+export async function adminUnlockAccount(
+  profileId: string,
+): Promise<{ success: boolean; error?: string }> {
+  const actor = await requireAuthenticatedProfile();
+  if (actor.role !== "super_admin") {
+    return {
+      success: false,
+      error: "Solo el super_admin puede desbloquear cuentas.",
+    };
+  }
+
+  const admin = createAdminClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (admin.rpc as any)("admin_unlock_account", {
+    p_profile_id: profileId,
+  });
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
 
 /**
  * Reset password using a one-time token.
