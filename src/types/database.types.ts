@@ -216,6 +216,9 @@ export interface Database {
           id: string;
           title: string;
           content: string;
+          image_url: string | null;
+          published: boolean;
+          pinned: boolean;
           created_by: string | null;
           created_at: string;
         };
@@ -223,6 +226,9 @@ export interface Database {
           id?: string;
           title: string;
           content: string;
+          image_url?: string | null;
+          published?: boolean;
+          pinned?: boolean;
           created_by?: string | null;
           created_at?: string;
         };
@@ -230,6 +236,9 @@ export interface Database {
           id?: string;
           title?: string;
           content?: string;
+          image_url?: string | null;
+          published?: boolean;
+          pinned?: boolean;
           created_by?: string | null;
           created_at?: string;
         };

@@ -6,15 +6,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { NotificationsWidget } from "@/components/dashboard/notifications-widget";
 import { SectionHeader } from "@/components/dashboard/section-header";
-import { Instagram, CalendarDays, ExternalLink, Users, Image as ImageIcon, Heart } from "lucide-react";
+import { Instagram, CalendarDays, Newspaper, ExternalLink, Users, Image as ImageIcon, Heart } from "lucide-react";
 import type { AuthenticatedProfile } from "@/types/auth";
 import type { InstagramProfile } from "@/lib/social/instagram";
 import type { EventListItem } from "@/lib/events/queries";
+import type { NewsItem } from "@/lib/news/queries";
 
 interface DashboardContentProps {
   profile: AuthenticatedProfile;
   instagramProfile: InstagramProfile;
   events: EventListItem[];
+  latestNews: NewsItem[];
   signOutAction: () => void;
 }
 
@@ -65,7 +67,7 @@ function compactNumber(n: number): string {
   return String(n);
 }
 
-export function DashboardContent({ profile, instagramProfile, events, signOutAction }: DashboardContentProps) {
+export function DashboardContent({ profile, instagramProfile, events, latestNews, signOutAction }: DashboardContentProps) {
   return (
     <div className="animate-fade-in space-y-6">
       {/* ── Welcome Banner ──────────────────────────────── */}
@@ -168,6 +170,53 @@ export function DashboardContent({ profile, instagramProfile, events, signOutAct
             </a>
           </div>
         </div>
+      </section>
+
+      {/* ── Latest News ──────────────────────────────────── */}
+      <section className="rounded-xl border bg-card p-5">
+        <SectionHeader
+          title="Últimas Noticias"
+          icon={Newspaper}
+          action={
+            <Link
+              href="/news"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Ver todas
+            </Link>
+          }
+        />
+
+        {latestNews.length === 0 ? (
+          <div className="mt-2 flex flex-col items-center justify-center py-8 text-center">
+            <Newspaper className="mb-2 h-8 w-8 text-muted-foreground/40" />
+            <p className="text-sm text-muted-foreground">No hay noticias recientes</p>
+            <p className="mt-1 text-xs text-muted-foreground/60">
+              Las noticias publicadas aparecerán aquí.
+            </p>
+          </div>
+        ) : (
+          <div className="mt-1 divide-y divide-border" role="list">
+            {latestNews.map((item) => (
+              <div key={item.id}>
+                <Link
+                  href={`/news/${item.id}`}
+                  className="flex flex-col gap-1 px-1 py-3 transition-colors hover:bg-accent/50 rounded-lg"
+                >
+                  <p className="text-sm font-medium leading-tight text-foreground">
+                    {item.title}
+                  </p>
+                  <p className="text-xs text-muted-foreground line-clamp-2">
+                    {item.content}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground/60">
+                    {item.authorFirstName} {item.authorLastName} · {new Date(item.createdAt).toLocaleDateString("es-ES")}
+                  </p>
+                </Link>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* ── Notifications + Calendar ──────────────────────── */}

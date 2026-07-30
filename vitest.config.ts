@@ -16,7 +16,7 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./tests/setup/vitest.setup.ts"],
-    include: ["tests/unit/**/*.test.{ts,tsx}"],
+    include: ["tests/unit/**/*.test.{ts,tsx}", "src/lib/**/__tests__/**/*.test.{ts,tsx}"],
     coverage: {
       provider: "v8",
       reporter: ["text", "html", "lcov"],
@@ -26,6 +26,7 @@ export default defineConfig({
         "src/lib/events/**",
         "src/lib/registrations/**",
         "src/lib/social/**",
+        "src/lib/news/**",
         "src/lib/env.client.ts",
         "src/lib/env.server.ts",
         "src/lib/utils.ts",

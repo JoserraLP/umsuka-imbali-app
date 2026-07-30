@@ -1,0 +1,26 @@
+{
+  "title": "Sprint 10 — Noticias: Publicación y Gestión",
+  "description": "Sistema de publicación y gestión de noticias internas para los miembros. Incluye migración de BD para añadir columnas faltantes (image_url, published, pinned), capa de negocio lib/news/, server actions, páginas de feed y detalle, formulario CRUD para management, y tests.",
+  "status": "published",
+  "acceptance_criteria": [
+    "Los management pueden crear, editar y eliminar noticias.",
+    "Todos los miembros autenticados pueden ver las noticias.",
+    "Las noticias se muestran ordenadas por fecha (más reciente primero).",
+    "Las noticias importantes pueden fijarse al inicio (pinned).",
+    "Las noticias pueden tener estado publicado/borrador (published).",
+    "La navegación incluye un enlace a Noticias en sidebar y bottom-nav."
+  ],
+  "definition_of_done": [
+    "Migración SQL con nuevos campos (image_url, published, pinned).",
+    "Capa lib/news/ con schemas Zod, queries y mutations.",
+    "Server actions con revalidación de path.",
+    "Página /news con feed de tarjetas estilo red social.",
+    "Página /news/[id] con detalle completo.",
+    "Página /news/new y /news/[id]/edit para management.",
+    "Enlace a Noticias en navegación.",
+    "Tests unitarios y de integración.",
+    "Security scan sin hallazgos HIGH."
+  ],
+  "branch": "feature/sprint-10-news",
+  "dependencies": ["Sprint 1 (UI/UX)"]
+}
