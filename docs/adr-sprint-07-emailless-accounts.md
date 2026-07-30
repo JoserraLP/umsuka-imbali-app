@@ -1,6 +1,6 @@
 # ADR-007: Sprint 7 — Creación de Cuentas sin Correo Electrónico (Emailless Accounts)
 
-**Status:** Accepted · **Date:** 2026-07-29
+**Status:** Accepted · **Date:** 2026-07-30
 
 ---
 
@@ -75,8 +75,9 @@ Si cualquier paso falla después de crear el Auth user, se revierten las mutacio
 | Paso | Si falla... | Rollback |
 |------|-------------|----------|
 | 1. Crear Auth user | Se retorna error inmediatamente | N/A |
-| 2. Insertar profile | Se elimina el Auth user | `admin.auth.admin.deleteUser()` |
-| 3. Insertar email_aliases | Se elimina profile + Auth user | `admin.from("profiles").delete()` + `deleteUser()` |
+| 2. `rpc("create_emailless_profile", ...)` | Se elimina el Auth user | `admin.auth.admin.deleteUser()` |
+
+El paso 2 es atómico (SECURITY DEFINER function): ambas filas (profile + email_alias) se insertan en una sola transacción. Si la función falla, no quedan registros huérfanos en ninguna de las dos tablas, por lo que solo es necesario eliminar el Auth user.
 
 #### 4. Email nunca expuesto
 
@@ -89,6 +90,63 @@ Las nuevas cuentas se crean con `status: "pending"`, integrándose con el flujo 
 #### 6. Cambio de contraseña autogestionado
 
 Los miembros con `auth_method === "email_alias"` ven una tarjeta adicional "Contraseña" en su perfil con un formulario de cambio de contraseña que usa `supabase.auth.updateUser({ password })`.
+
+#### 7. SECURITY DEFINER function para creación de perfiles
+
+Inicialmente, el perfil y el alias de email se insertaban mediante operaciones PostgREST directas (`admin.from("profiles").upsert()`). Esto falló porque:
+
+- El `service_role` no tiene permisos de tabla por defecto en Supabase local — las migraciones GRANT otorgan INSERT/UPDATE/DELETE, pero PostgREST adicionalmente exige que el rol tenga `BYPASSRLS` (no configurado por defecto).
+- Incluso con `grant insert, update, delete on umsuka.profiles to service_role`, PostgREST rechazaba las operaciones con `"permission denied for table profiles"`.
+
+La solución fue reemplazar las operaciones de tabla por una **función PL/pgSQL SECURITY DEFINER** en el schema `umsuka`:
+
+```sql
+create or replace function umsuka.create_emailless_profile(
+  p_id              uuid,
+  p_first_name      text,
+  p_last_name       text,
+  p_username        text,
+  p_component_type  text,
+  p_alias_email     text,
+  p_created_by      uuid,
+  p_workgroup       text default null   -- PostgreSQL exige defaults al final
+)
+returns void
+language plpgsql
+security definer
+set search_path = umsuka, public
+as $$ ... $$;
+```
+
+La función:
+
+- Se ejecuta con los privilegios del owner (superuser), evitando por completo RLS y permisos de tabla.
+- Inserta el profile (con `ON CONFLICT DO UPDATE` como upsert) y el email_alias en una **sola transacción atómica**.
+- Se invoca vía `admin.rpc("create_emailless_profile", {...})` desde el servidor.
+- Requiere `grant execute on function ... to service_role` para que PostgREST acepte la llamada.
+- El parámetro `p_workgroup` debe ir al final con `default null` — PostgreSQL no permite parámetros con valor por defecto antes que parámetros sin él.
+
+#### 8. Resolución de origen para callback OAuth
+
+El `GoogleSignInButton` debe construir la URL de callback OAuth (`/auth/callback`) usando el origen correcto. Inicialmente se usaba `NEXT_PUBLIC_SITE_URL`, pero en producción esta variable de entorno podía estar configurada incorrectamente, causando que el redirect OAuth apuntara a `localhost`.
+
+Solución: priorizar `window.location.origin` (siempre correcto porque refleja la URL real del navegador) y usar `NEXT_PUBLIC_SITE_URL` solo como fallback SSR.
+
+```typescript
+function getCallbackOrigin(): string {
+  try {
+    return window.location.origin;       // 1ª opción: origen real del navegador
+  } catch {
+    const envSiteUrl = process.env.NEXT_PUBLIC_SITE_URL; // 2ª opción: fallback SSR
+    if (envSiteUrl) {
+      try { return new URL(envSiteUrl).origin; } catch { /* ignore */ }
+    }
+    return "http://localhost:3000";       // 3ª opción: último recurso
+  }
+}
+```
+
+**Importante**: El proyecto de Supabase debe tener `window.location.origin` (o un patrón wildcard) en su lista de "Redirect URLs" permitidas (Supabase Dashboard → Authentication → URL Configuration). Si la URL de redirect no está en la whitelist, Supabase silenciosamente cae al Site URL configurado.
 
 ### Formato del alias de email
 
@@ -186,9 +244,9 @@ umsuka.email_aliases
 - El service role key nunca se expone al bundle del cliente.
 
 ### 3. Rollback de seguridad
-- Si la inserción del profile falla, el Auth user se elimina — no hay cuentas Auth huérfanas.
-- Si la inserción del alias falla, tanto el profile como el Auth user se eliminan.
-- El catch silencioso (`.catch(() => {})`) en los rollbacks evita que errores secundarios enmascaren el error original.
+- Si la llamada a `rpc("create_emailless_profile", ...)` falla, el Auth user se elimina — no hay cuentas Auth huérfanas.
+- No es necesario un rollback separado para profile y email_alias porque la SECURITY DEFINER function ejecuta ambas inserciones en una sola transacción atómica.
+- El catch silencioso (`.catch(() => {})`) en el rollback evita que errores secundarios enmascaren el error original.
 
 ### 4. Cuentas pending por defecto
 - Las cuentas se crean con `status: "pending"`, requiriendo aprobación administrativa antes del primer acceso.
@@ -223,3 +281,8 @@ umsuka.email_aliases
 | `src/app/profile/page.tsx` | MODIFY |
 | `tests/unit/lib/emailless-schema.test.ts` | CREATE |
 | `tests/unit/lib/admin-create.test.ts` | CREATE |
+| `supabase/migrations/20260101003000_service_role_grants.sql` | CREATE |
+| `supabase/migrations/20260101003100_create_emailless_profile_function.sql` | CREATE |
+| `src/app/auth/callback/route.ts` | MODIFY — removed debug logs |
+| `src/lib/supabase/middleware.ts` | MODIFY — removed debug logs |
+| `src/components/layout/google-signin-button.tsx` | MODIFY — fixed callback origin priority, removed debug log |

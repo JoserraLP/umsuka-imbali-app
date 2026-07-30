@@ -16,30 +16,32 @@ Before doing anything, verify the workspace state to ensure there is work to com
    - If there are no changes, stop and report: "No changes to commit or PR. Aborting."
 2. **`gh auth status`** — verify GitHub CLI is authenticated.
    - If not authenticated, report the error and stop.
+3. **Read `docs/git-conventions.md`** — load the full Git conventions document. You MUST follow its rules for branch names, commit messages, and PR formatting. This is the single source of truth.
 
 ## Workflow
 
 ### 1. Gather context
 Gather context about the local uncommitted changes to decide on branch names and PR details:
 - `git diff` and `git diff --cached` — to understand the actual changes made.
-- Find the most recent task file: `ls -t tasks/*.json 2>/dev/null | head -1` and read it.
-- Look for ADRs: `ls docs/adr/ 2>/dev/null` and read the most recent one if it exists.
+- Find the most recent task file: `Get-ChildItem -Path tasks/*.json | Sort-Object LastWriteTime -Descending | Select-Object -First 1` and read it.
+- Look for ADRs: `Get-ChildItem -Path docs/adr-*.md 2>$null | Sort-Object LastWriteTime -Descending | Select-Object -First 1` and read the most recent one if it exists.
+- **Re-read `docs/git-conventions.md` sections 1, 2, and 3** to ensure strict compliance.
 
 ### 2. Branch, Commit, and Push
-Based on the gathered context:
-1. Generate a descriptive branch name (e.g., `feature/add-history-panel`, `fix/task-123`).
+Based on the gathered context and the conventions in `docs/git-conventions.md`:
+1. Generate a descriptive branch name following the pattern `<type>/<sprint-prefix?><kebab-case-description>` (e.g. `feature/sprint-08-eventos-calendario`, `fix/login-error-503`). See `docs/git-conventions.md §1`.
 2. Create and switch to the new branch: `git checkout -b <branch-name>`
 3. Stage all changes: `git add .`
-4. Commit the changes with a concise, meaningful message: `git commit -m "<Brief description of changes>"`
+4. Commit the changes with a conventional commit message: `git commit -m "<type>(<scope>): <subject>"`. The subject MUST be in imperative present tense, ≤72 chars, lowercase. See `docs/git-conventions.md §2`.
 5. Push the new branch to the remote: `git push -u origin <branch-name>`
 
 ### 3. Compose the PR
-Generate a PR body with these sections:
+Generate a PR body following the exact sections in `docs/git-conventions.md §3.2`.
 
 **Title**: Use the task title if available, otherwise derive from the context.
-Format: `[task-type] Brief description` (e.g. `[feature] Add move history panel`)
+Format: `[<type>] <Sprint X — ><Descripción breve>` (e.g. `[feature] Sprint 7 — Creación de cuentas sin correo electrónico`)
 
-**Body**:
+**Body** (must include ALL of these sections):
 ## Summary
 <concise summary of changes>
 
@@ -54,6 +56,10 @@ Format: `[task-type] Brief description` (e.g. `[feature] Add move history panel`
 
 ## ADR
 <link to ADR if one was created>
+
+## Breaking Changes
+- [ ] Yes
+- [ ] No
 
 ### 4. Create the PR
 Run: `gh pr create --title "<title>" --body "<body>"`
