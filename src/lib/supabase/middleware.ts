@@ -4,7 +4,13 @@ import { clientEnv } from "@/lib/env.client";
 import { SERVER_AUTH_COOKIE_OPTIONS } from "@/lib/supabase/cookie-options";
 import type { Database } from "@/types/database.types";
 
-const PUBLIC_ROUTES = ["/auth/login", "/auth/callback", "/auth/auth-code-error", "/auth/pending"];
+const PUBLIC_ROUTES = [
+  "/auth/login",
+  "/auth/callback",
+  "/auth/auth-code-error",
+  "/auth/pending",
+  "/auth/reset-password",
+];
 
 function isPublicRoute(pathname: string): boolean {
   return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));

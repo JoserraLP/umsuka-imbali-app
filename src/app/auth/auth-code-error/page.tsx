@@ -11,7 +11,10 @@ const MESSAGES_BY_REASON: Record<string, string> = {
     "Asegúrate de que en Supabase Dashboard → Authentication → URL Configuration, " +
     "la lista de 'Redirect URLs' incluya:\n" +
     "  • http://localhost:3000/auth/callback  (para desarrollo local)\n" +
-    "  • https://tu-dominio.vercel.app/auth/callback  (para producción)",
+    "  • https://tu-dominio.vercel.app/auth/callback  (para producción)\n\n" +
+    "También verifica que la 'Deployment Protection' de Vercel (Vercel Authentication) " +
+    "esté deshabilitada o limitada, para que no intercepte /auth/callback " +
+    "(Vercel → Proyecto → Settings → Deployment Protection).",
   exchange_failed: "El servidor no pudo validar la sesión con Supabase.",
 };
 
