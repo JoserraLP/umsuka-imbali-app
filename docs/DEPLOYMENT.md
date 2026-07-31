@@ -47,6 +47,24 @@ in front of production.
    Alternatively, keep Vercel's Git integration for preview deployments on
    `feature/*`/`develop` and let `deploy.yml` own `main` exclusively.
 
+## Vercel Authentication (Deployment Protection)
+
+- **Symptom:** production shows a Vercel-branded login page, or the OAuth
+  callback lands on a Vercel login page instead of completing sign-in in
+  the app. This happens when Vercel's "Deployment Protection" (Vercel
+  Authentication) is enabled for production: it intercepts ALL requests —
+  including `/auth/callback` and `/auth/login` — before the app loads.
+- **Fix:** Vercel Dashboard → Project → Settings → Deployment Protection
+  → disable "Vercel Authentication" for production, or restrict it to
+  preview deployments only (and/or configure an allowed-emails list).
+  By default, preview deployments have protection enabled; production
+  should not, unless it is intentionally gated.
+- **Reminder:** the production domain must be registered in Supabase
+  Authentication → URL Configuration → Redirect URLs as
+  `https://<your-domain>/auth/callback`, and `NEXT_PUBLIC_SITE_URL` must be
+  set to `https://<your-domain>` in the Vercel Production environment — it
+  is the canonical origin used for building OAuth callbacks.
+
 ## Supabase project setup
 
 1. Create a Supabase project (production) and, optionally, a second one for
