@@ -1,7 +1,7 @@
 {
   "title": "Sprint 11 — Preguntas: Consultas y Seguimiento",
   "description": "Módulo para realizar consultas internas, hacer seguimiento y marcar preguntas como resueltas. Incluye migración de BD para añadir columnas faltantes (category, priority), tabla de comentarios, capa de negocio lib/questions/, server actions, páginas de listado y detalle, formulario de creación, y tests.",
-  "status": "documented",
+  "status": "published",
   "acceptance_criteria": [
     "Cualquier miembro autenticado puede crear una pregunta.",
     "Los management y el creador pueden marcar la pregunta como resuelta.",
