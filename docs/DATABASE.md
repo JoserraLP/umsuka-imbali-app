@@ -120,6 +120,7 @@ erDiagram
 | `20260101001100_voting_votes.sql` | `umsuka.voting_votes` |
 | `20260101001200_auth_trigger.sql` | Additive `component_type` default + `handle_new_user()` trigger |
 | `20260101001300_rls_policies.sql` | Helper functions + RLS policies for every table |
+| `20260101004000_shift_assignment_groups.sql` | `shift_assignments.confirmed`/`created_by`, `events.visible_to_group`/`created_by_workgroup`, RLS de eventos y asignaciones por grupo |
 
 Apply locally with `npm run supabase:reset`; apply to a remote project with
 `supabase db push` (also run automatically by `deploy.yml` on merge to `main`).
@@ -161,8 +162,10 @@ loosened):
 | Table | Select | Insert / Update / Delete |
 |---|---|---|
 | `profiles` | any authenticated user | update: owner or admin · delete: admin · insert: trigger only |
-| `events`, `shifts`, `news`, `votings`, `voting_options` | any authenticated user | management roles only |
-| `shift_assignments`, `attendance` | owner or management | management roles only |
+| `events` | any authenticated user, **or restricted to `visible_to_group` members; management always** | management roles only · plus workgroup leads for their own `work_shift` events |
+| `shifts`, `news`, `votings`, `voting_options` | any authenticated user | management roles only |
+| `shift_assignments` | owner or management (plus leads of the shift's event) | management roles only · plus leads for shifts on their own `work_shift` events matching their group |
+| `attendance` | owner or management | management roles only |
 | `absences` | owner or management | insert: owner · update/delete: management |
 | `questions` | any authenticated user | insert: owner · update: owner or management · delete: management |
 | `voting_votes` | owner or management | insert: owner (immutable — no update policy) · delete: management |
