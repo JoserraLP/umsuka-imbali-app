@@ -7,7 +7,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { getQuestions } from "@/lib/questions/queries";
 import { QUESTION_CATEGORIES } from "@/lib/questions/schema";
-import { HelpCircle, CheckCircle2, MessageSquare } from "lucide-react";
+import { HelpCircle, CheckCircle2 } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Preguntas",

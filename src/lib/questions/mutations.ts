@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireAuthenticatedProfile } from "@/lib/auth/session";
 import { isManagementRole } from "@/lib/auth/roles";
-import { AuthorizationError } from "@/lib/auth/permissions";
 import type { AuthenticatedProfile } from "@/types/auth";
 import {
   createQuestionSchema,
