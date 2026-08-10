@@ -27,17 +27,6 @@ export interface ShiftWithAssignments {
   assignments: AssignmentWithUser[];
 }
 
-export interface UserShift {
-  shiftId: string;
-  shiftName: string;
-  eventId: string;
-  eventTitle: string;
-  eventDate: string | null;
-  startTime: string;
-  endTime: string;
-  assignedAt: string;
-}
-
 export interface ShiftConflict {
   shiftId: string;
   shiftName: string;
@@ -215,78 +204,6 @@ export async function getShiftById(shiftId: string): Promise<ShiftWithAssignment
     createdAt: shift.created_at,
     assignments: enrichedAssignments,
   };
-}
-
-/**
- * Returns all shifts assigned to a specific user, enriched with
- * event details (title, date) and shift times.
- */
-export async function getUserShifts(userId: string): Promise<UserShift[]> {
-  const supabase = await createClient();
-
-  const { data: assignments, error } = await supabase
-    .from("shift_assignments")
-    .select("id, shift_id, created_at")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    throw new Error(`Error al obtener asignaciones del usuario: ${error.message}`);
-  }
-
-  if (!assignments || assignments.length === 0) return [];
-
-  const shiftIds = [...new Set(assignments.map((a) => a.shift_id).filter(Boolean))] as string[];
-
-  const { data: shifts, error: shiftsError } = await supabase
-    .from("shifts")
-    .select("id, event_id, name, start_time, end_time, created_at")
-    .in("id", shiftIds)
-    .order("start_time", { ascending: false });
-
-  if (shiftsError) {
-    throw new Error(`Error al obtener turnos: ${shiftsError.message}`);
-  }
-
-  const eventIds = [...new Set((shifts ?? []).map((s) => s.event_id).filter(Boolean))] as string[];
-  const eventsById = new Map<string, { title: string; event_date: string | null }>();
-
-  if (eventIds.length > 0) {
-    const { data: events, error: eventsError } = await supabase
-      .from("events")
-      .select("id, title, event_date")
-      .in("id", eventIds);
-
-    if (eventsError) {
-      throw new Error(`Error al obtener eventos: ${eventsError.message}`);
-    }
-
-    for (const event of events ?? []) {
-      eventsById.set(event.id, { title: event.title, event_date: event.event_date ?? null });
-    }
-  }
-
-  const assignmentByShiftId = new Map<string, string>();
-  for (const a of assignments ?? []) {
-    const shiftId = a.shift_id ?? "";
-    if (shiftId && !assignmentByShiftId.has(shiftId)) {
-      assignmentByShiftId.set(shiftId, a.id);
-    }
-  }
-
-  return (shifts ?? []).map((shift) => {
-    const event = shift.event_id ? eventsById.get(shift.event_id) : undefined;
-    return {
-      shiftId: shift.id,
-      shiftName: shift.name,
-      eventId: shift.event_id ?? "",
-      eventTitle: event?.title ?? "Evento desconocido",
-      eventDate: event?.event_date ?? null,
-      startTime: shift.start_time,
-      endTime: shift.end_time,
-      assignedAt: assignmentByShiftId.get(shift.id) ?? shift.created_at,
-    };
-  });
 }
 
 /**
