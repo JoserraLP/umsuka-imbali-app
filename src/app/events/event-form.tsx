@@ -3,13 +3,19 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { eventFormSchema, type EventFormValues, type EventTypeValue } from "@/lib/events/schema";
+import {
+  eventFormSchema,
+  type EventFormValues,
+  type EventTypeValue,
+  type EventWorkgroup,
+} from "@/lib/events/schema";
 import { createEventAction, updateEventAction } from "@/app/events/actions";
+import type { Workgroup } from "@/types/database.types";
 
 const EVENT_TYPE_LABELS: Record<EventTypeValue, string> = {
   general: "General",
@@ -18,24 +24,43 @@ const EVENT_TYPE_LABELS: Record<EventTypeValue, string> = {
   work_shift: "Asistencia a turno de trabajo",
 };
 
+const EVENT_WORKGROUP_LABELS: Record<EventWorkgroup, string> = {
+  telas: "Telas",
+  barra: "Barra",
+  estandarte: "Estandarte",
+  limpieza: "Limpieza",
+};
+
 interface EventFormProps {
   mode: "create" | "edit";
   eventId?: string;
   defaultValues: EventFormValues;
+  /**
+   * Workgroup of a non-management lead. When set, the form only allows
+   * creating/editing work_shift events for that group (type selector
+   * hidden, workgroup selector locked).
+   */
+  leadWorkgroup?: Workgroup | null;
 }
 
-export function EventForm({ mode, eventId, defaultValues }: EventFormProps) {
+export function EventForm({ mode, eventId, defaultValues, leadWorkgroup }: EventFormProps) {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
 
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<EventFormValues>({
     resolver: zodResolver(eventFormSchema),
     defaultValues,
   });
+
+  const isLead = leadWorkgroup !== undefined;
+  const eventType = useWatch({ control, name: "eventType" }) as EventTypeValue | undefined;
+
+  const showWorkgroupField = isLead || eventType === "work_shift";
 
   async function onSubmit(values: EventFormValues) {
     setServerError(null);
@@ -87,13 +112,25 @@ export function EventForm({ mode, eventId, defaultValues }: EventFormProps) {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="eventType">Tipo</Label>
-          <Select id="eventType" {...register("eventType")}>
-            {Object.entries(EVENT_TYPE_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </Select>
+          {isLead ? (
+            <>
+              <input type="hidden" value="work_shift" {...register("eventType")} />
+              <Select id="eventType" disabled value="work_shift">
+                <option value="work_shift">{EVENT_TYPE_LABELS.work_shift}</option>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Como responsable de grupo solo puedes crear turnos de trabajo de tu grupo.
+              </p>
+            </>
+          ) : (
+            <Select id="eventType" {...register("eventType")}>
+              {Object.entries(EVENT_TYPE_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </Select>
+          )}
           {errors.eventType && (
             <p className="text-xs text-destructive">{errors.eventType.message}</p>
           )}
@@ -120,6 +157,30 @@ export function EventForm({ mode, eventId, defaultValues }: EventFormProps) {
             <p className="text-xs text-destructive">{errors.capacity.message}</p>
           )}
         </div>
+
+        {showWorkgroupField && (
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="workgroup">Grupo de trabajo</Label>
+            <Select
+              id="workgroup"
+              disabled={isLead}
+              value={isLead ? (leadWorkgroup ?? "ninguno") : undefined}
+              {...register("workgroup")}
+            >
+              {Object.entries(EVENT_WORKGROUP_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              El evento de trabajo solo será visible para los miembros de este grupo.
+            </p>
+            {errors.workgroup && (
+              <p className="text-xs text-destructive">{errors.workgroup.message}</p>
+            )}
+          </div>
+        )}
       </div>
 
       {serverError && (

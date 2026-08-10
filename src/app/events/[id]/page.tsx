@@ -22,7 +22,7 @@ import { AttendancePanel } from "@/app/events/[id]/attendance-panel";
 import { AbsencePanel } from "@/app/events/[id]/absence-panel";
 import { WorkgroupAttendancePanel } from "@/app/events/[id]/workgroup-panel";
 import { ShiftManagementPanel } from "@/app/events/[id]/shift-management-panel";
-import type { EventTypeValue } from "@/lib/events/schema";
+import type { EventTypeValue, EventWorkgroup } from "@/lib/events/schema";
 
 export const metadata: Metadata = {
   title: "Evento",
@@ -33,6 +33,14 @@ const EVENT_TYPE_LABELS: Record<EventTypeValue, string> = {
   meeting: "Reunión",
   carnival: "Carnaval",
   work_shift: "Turno de trabajo",
+};
+
+const WORKGROUP_LABELS: Record<string, string> = {
+  telas: "Telas",
+  barra: "Barra",
+  estandarte: "Estandarte",
+  limpieza: "Limpieza",
+  ninguno: "Ninguno",
 };
 
 const DATE_FORMATTER = new Intl.DateTimeFormat("es-ES", {
@@ -67,7 +75,11 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   }
 
   const isWorkShift = event.eventType === "work_shift";
-  const canManage = isManagementRole(profile.role) || (isWorkShift && profile.isWorkgroupLead);
+  // Management can manage any event; a workgroup lead can only manage the
+  // work_shift events they created for their own group (Sprint 12).
+  const canManage =
+    isManagementRole(profile.role) ||
+    (isWorkShift && profile.isWorkgroupLead && event.createdBy === profile.id);
   const registrationSummary = await getEventRegistrationSummary(event.id, profile.id);
 
   const [attendanceRecords, attendanceSummary, absences] = await Promise.all([
@@ -107,7 +119,12 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
         <div className="border-b border-border pb-4">
           <div className="mb-1 flex items-start justify-between">
             <h1 className="text-xl font-bold tracking-tight">{event.title}</h1>
-            <Badge variant="outline">{EVENT_TYPE_LABELS[event.eventType]}</Badge>
+            <div className="flex items-center gap-2">
+              {event.visibleToGroup !== null && (
+                <Badge variant="secondary">Grupo: {WORKGROUP_LABELS[event.visibleToGroup]}</Badge>
+              )}
+              <Badge variant="outline">{EVENT_TYPE_LABELS[event.eventType]}</Badge>
+            </div>
           </div>
           <p className="text-sm text-muted-foreground">
             {DATE_FORMATTER.format(new Date(event.eventDate))}
@@ -133,7 +150,13 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                   eventType: event.eventType,
                   eventDate: toDatetimeLocalValue(event.eventDate),
                   capacity: event.capacity,
+                  workgroup: event.visibleToGroup as EventWorkgroup | null,
                 }}
+                leadWorkgroup={
+                  !isManagementRole(profile.role) && profile.isWorkgroupLead
+                    ? profile.workgroup
+                    : undefined
+                }
               />
               <div className="border-t pt-4">
                 <DeleteEventButton eventId={event.id} />
