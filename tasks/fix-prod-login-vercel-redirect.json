@@ -1,7 +1,7 @@
 {
   "title": "Fix: Login desde producción redirige al login de Vercel",
   "description": "Cuando un usuario intenta iniciar sesión (Google OAuth) desde el despliegue de producción, el flujo termina redirigiendo al login de Vercel (Vercel Authentication / Deployment Protection) en lugar de completar la autenticación en la app. Causas: (1) la URL de callback del OAuth se construye con window.location.origin, que puede ser un dominio vercel.app protegido o no incluido en la allowlist de Supabase; (2) falta documentación y configuración correcta de NEXT_PUBLIC_SITE_URL y de Vercel Deployment Protection para producción.",
-  "status": "created",
+  "status": "published",
   "acceptance_criteria": [
     "La URL de callback de OAuth se construye usando NEXT_PUBLIC_SITE_URL (dominio canónico) en producción, con fallback a window.location.origin.",
     "El dominio canónico de producción está documentado como obligatorio en la allowlist de Supabase (Redirect URLs).",
