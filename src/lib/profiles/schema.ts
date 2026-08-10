@@ -63,3 +63,16 @@ export const setMemberActiveSchema = z.object({
 });
 
 export type SetMemberActiveInput = z.infer<typeof setMemberActiveSchema>;
+
+/**
+ * Admin-only: changes a member's component type (music/dance/member) from
+ * the directory table, without touching any other personal field.
+ */
+export const setMemberComponentTypeSchema = z.object({
+  userId: z.string().uuid("userId must be a valid UUID."),
+  componentType: z.enum(["music", "dance", "member"], {
+    errorMap: () => ({ message: "Component type must be music, dance or member." }),
+  }),
+});
+
+export type SetMemberComponentTypeInput = z.infer<typeof setMemberComponentTypeSchema>;

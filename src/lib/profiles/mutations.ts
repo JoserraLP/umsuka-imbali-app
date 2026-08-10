@@ -6,10 +6,12 @@ import {
   updateMemberRoleSchema,
   updateMemberProfileSchema,
   setMemberActiveSchema,
+  setMemberComponentTypeSchema,
   type UpdateOwnProfileInput,
   type UpdateMemberRoleInput,
   type UpdateMemberProfileInput,
   type SetMemberActiveInput,
+  type SetMemberComponentTypeInput,
 } from "@/lib/profiles/schema";
 import type { AppRole } from "@/types/database.types";
 
@@ -165,6 +167,43 @@ export async function setMemberActive(input: SetMemberActiveInput): Promise<Muta
   const { error } = await supabase
     .from("profiles")
     .update({ is_active: parsed.data.isActive })
+    .eq("id", parsed.data.userId);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+
+/**
+ * Admin-only: changes a member's component type from the directory table.
+ * Only touches component_type — name, role, and status keep their own
+ * dedicated mutations.
+ */
+export async function updateMemberComponentType(
+  input: SetMemberComponentTypeInput,
+): Promise<MutationResult> {
+  const parsed = setMemberComponentTypeSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues.map((issue) => issue.message).join(", ") };
+  }
+
+  const actor = await requireAuthenticatedProfile();
+
+  try {
+    requireAdmin(actor.role);
+  } catch (err) {
+    if (err instanceof AuthorizationError) {
+      return { success: false, error: err.message };
+    }
+    throw err;
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update({ component_type: parsed.data.componentType })
     .eq("id", parsed.data.userId);
 
   if (error) {
