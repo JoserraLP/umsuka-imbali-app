@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { AppShell } from "@/components/layout/app-shell";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { getQuestions } from "@/lib/questions/queries";
-import { QUESTION_CATEGORIES } from "@/lib/questions/schema";
 import { HelpCircle, CheckCircle2 } from "lucide-react";
+import { CategoryFilter } from "@/app/questions/category-filter";
 
 export const metadata: Metadata = {
   title: "Preguntas",
@@ -122,21 +122,7 @@ export default async function QuestionsPage({ searchParams }: PageProps) {
           </div>
 
           {/* Category filter */}
-          <select
-            className="h-8 rounded-md border border-input bg-background px-2 text-xs"
-            onChange={(e) => {
-              const url = filterUrl({ category: e.target.value });
-              window.location.href = url;
-            }}
-            value={category}
-          >
-            <option value="todas">Todas las categorías</option>
-            {QUESTION_CATEGORIES.map((cat) => (
-              <option key={cat} value={cat}>
-                {CATEGORY_LABELS[cat] ?? cat}
-              </option>
-            ))}
-          </select>
+          <CategoryFilter category={category} status={status} mine={mine} />
 
           {/* Mine toggle */}
           <Link
