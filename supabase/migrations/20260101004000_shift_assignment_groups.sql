@@ -56,7 +56,7 @@ create policy "events_select_authenticated"
   to authenticated
   using (
     visible_to_group is null
-    or visible_to_group::text = umsuka.current_user_workgroup()
+    or visible_to_group::text = umsuka.current_user_workgroup()::text
     or umsuka.is_management()
   );
 
@@ -115,7 +115,7 @@ create policy "shift_assignments_insert_management_or_lead"
       select 1 from umsuka.shifts s
       where s.id = shift_id
         and umsuka.is_workgroup_lead_for_event(s.event_id)
-        and (s.workgroup is null or s.workgroup::text = umsuka.current_user_workgroup())
+        and (s.workgroup is null or s.workgroup::text = umsuka.current_user_workgroup()::text)
     )
   );
 
@@ -129,6 +129,6 @@ create policy "shift_assignments_delete_management_or_lead"
       select 1 from umsuka.shifts s
       where s.id = shift_id
         and umsuka.is_workgroup_lead_for_event(s.event_id)
-        and (s.workgroup is null or s.workgroup::text = umsuka.current_user_workgroup())
+        and (s.workgroup is null or s.workgroup::text = umsuka.current_user_workgroup()::text)
     )
   );
