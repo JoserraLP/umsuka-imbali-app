@@ -8,27 +8,45 @@ import { createClient } from "@/lib/supabase/client";
  * Determines the base origin for the OAuth callback URL.
  *
  * Priority:
- * 1. `window.location.origin` — the actual browser origin (production,
- *    preview deployment, or localhost). This is always correct for the
- *    current browsing context.
- * 2. `NEXT_PUBLIC_SITE_URL` env var — fallback for SSR edge cases.
+ * 1. `NEXT_PUBLIC_SITE_URL` — the canonical site URL (the domain
+ *    registered in Supabase's Redirect URL allowlist). Preferred over the
+ *    browsing origin so the callback never depends on which hostname
+ *    (alias, preview, etc.) the user happens to be on. Skipped when unset
+ *    or pointing at localhost (i.e. local dev).
+ * 2. `window.location.origin` — the actual browsing origin (local dev,
+ *    previews).
  *
- * IMPORTANT: the Supabase project must have `window.location.origin` (or
- * a wildcard pattern) listed in its "Redirect URLs" allowlist (Supabase
- * Dashboard → Authentication → URL Configuration). If the redirectTo URL
- * is NOT in Supabase's allowlist, Supabase silently falls back to the
- * configured Site URL instead.
+ * IMPORTANT: the resulting URL MUST be listed in Supabase's "Redirect
+ * URLs" allowlist (Supabase Dashboard → Authentication → URL
+ * Configuration). If the redirectTo URL is NOT in the allowlist, Supabase
+ * silently falls back to the configured Site URL instead.
  */
 function getCallbackOrigin(): string {
-  // "use client" — window is always available after hydration.
+  const envSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  // 1) Canonical site URL — the domain registered in Supabase's Redirect
+  //    URL allowlist. Preferred over the browsing origin so the OAuth
+  //    callback never depends on which hostname (alias, preview, etc.)
+  //    the user happens to be on.
+  if (envSiteUrl) {
+    try {
+      const parsed = new URL(envSiteUrl);
+      const isLocalhost =
+        parsed.hostname === "localhost" ||
+        parsed.hostname === "127.0.0.1" ||
+        parsed.hostname === "0.0.0.0";
+      const isHttpScheme = parsed.protocol === "http:" || parsed.protocol === "https:";
+      if (isHttpScheme && !isLocalhost) {
+        return parsed.origin;
+      }
+    } catch {
+      // invalid env URL — fall through
+    }
+  }
+  // 2) Fallback: actual browsing origin (local dev, previews).
   try {
     return window.location.origin;
   } catch {
-    // SSR safety net (should never fire in practice).
-    const envSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-    if (envSiteUrl) {
-      try { return new URL(envSiteUrl).origin; } catch { /* ignore */ }
-    }
+    // SSR safety net.
     return "http://localhost:3000";
   }
 }

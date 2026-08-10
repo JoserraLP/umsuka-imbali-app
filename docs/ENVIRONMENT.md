@@ -10,7 +10,7 @@ values (Project Settings → API in the Supabase dashboard).
 | `NEXT_PUBLIC_SUPABASE_URL` | Public (client + server) | Your Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public (client + server) | Supabase anonymous/public API key. Safe to expose; access is governed by RLS |
 | `SUPABASE_SERVICE_ROLE_KEY` | **Server only** | Bypasses RLS. Used only by `src/lib/supabase/admin.ts`, imported exclusively from trusted server code. Never expose to the browser |
-| `NEXT_PUBLIC_SITE_URL` | Public (client + server) | Base URL used to build the OAuth redirect URL (`http://localhost:3000` locally, your production domain on Vercel) |
+| `NEXT_PUBLIC_SITE_URL` | Public (client + server) | Must be the canonical production domain (e.g. `https://your-app.vercel.app` or your custom domain). The OAuth callback URL is built from this value, so it MUST be present in Supabase's Redirect URLs allowlist. It is preferred over `window.location.origin` for building callback URLs. Locally: `http://localhost:3000` |
 
 Public values are validated in `src/lib/env.client.ts` and the service
 role key in `src/lib/env.server.ts` (kept in **separate modules on
