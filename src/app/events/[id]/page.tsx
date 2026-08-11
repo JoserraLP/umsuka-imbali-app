@@ -110,8 +110,13 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   > = [];
 
   if (canViewWorkgroupPanel && firstShift) {
+    // A non-management lead only sees their own group's members in the
+    // workgroup attendance panel; management keeps the full list.
+    const leadWorkgroup =
+      profile.isWorkgroupLead && !isManagementRole(profile.role) ? profile.workgroup : null;
+
     [workgroupMembers, workgroupAttendanceRecords] = await Promise.all([
-      getAllWorkgroupMembers(),
+      getAllWorkgroupMembers(leadWorkgroup),
       getWorkgroupAttendanceByShift(firstShift.id),
     ]);
   }
