@@ -1,0 +1,63 @@
+{
+  "title": "Sprint 14 — Listado de Miembros para Directiva y Responsables de Grupo",
+  "description": "Sección donde la directiva (super_admin/management) y los responsables de cada grupo de trabajo pueden ver el listado de los usuarios dados de alta en la comparsa. La directiva ve a todos los miembros; cada responsable de grupo ve únicamente los miembros de su propio grupo de trabajo. Incluye capa lib/members/, server actions con validación de rol, verificación de RLS, página /members con tabla filtrable (grupo, componente, estado, búsqueda por nombre), vista por grupo para leads, ficha de detalle de miembro, y tests.",
+  "branch": "feature/sprint-14-member-list",
+  "status": "implemented",
+  "steps": [
+    {
+      "id": 1,
+      "name": "Capa lib/members/",
+      "detail": "Queries: getAllMembers() (solo directiva/super_admin), getWorkgroupMembers(workgroup) (solo lead de ese grupo), getMemberDetail(userId) con datos de perfil."
+    },
+    {
+      "id": 2,
+      "name": "Server actions",
+      "detail": "getMembersAction con validación de rol: super_admin/management → todos los miembros; is_workgroup_lead → solo los de su grupo; resto → denegado."
+    },
+    {
+      "id": 3,
+      "name": "RLS check",
+      "detail": "Verificar las políticas SELECT en umsuka.profiles para que un responsable no pueda leer miembros de otros grupos mediante las queries existentes."
+    },
+    {
+      "id": 4,
+      "name": "UI: Página de listado",
+      "detail": "Página /members con tabla: nombre, componente, grupo de trabajo, rol, estado (pending/active/suspended), fecha de alta. Filtros por grupo, componente y estado, y búsqueda por nombre."
+    },
+    {
+      "id": 5,
+      "name": "UI: Vista por grupo",
+      "detail": "Para los responsables de grupo, la misma página muestra únicamente los miembros de su grupo (filtrada por su workgroup). Enlace visible en el dashboard solo para directiva y leads."
+    },
+    {
+      "id": 6,
+      "name": "UI: Detalle de miembro",
+      "detail": "Al hacer clic en un miembro, ver su ficha: datos de perfil, grupo de trabajo, turnos asignados y asistencia (reutilizando datos de sprints anteriores)."
+    },
+    {
+      "id": 7,
+      "name": "Pruebas",
+      "detail": "Tests unitarios de las queries y validaciones de rol. Tests de integración: directiva ve todos, lead ve solo su grupo, lead no puede ver otros grupos."
+    }
+  ],
+  "acceptance_criteria": [
+    "La directiva ve el listado de todos los usuarios dados de alta en la comparsa.",
+    "Cada responsable de grupo ve únicamente los miembros de su grupo de trabajo.",
+    "Un responsable no puede ver los miembros de otros grupos.",
+    "El listado muestra nombre, componente, grupo, rol, estado y fecha de alta.",
+    "Se puede buscar y filtrar por grupo, componente y estado.",
+    "La directiva puede ver el listado completo y el de cualquier grupo."
+  ],
+  "definition_of_done": [
+    "Capa lib/members/ completa con getAllMembers, getWorkgroupMembers y getMemberDetail.",
+    "Server action getMembersAction con validación de rol correcta.",
+    "RLS verificado: un lead no puede leer perfiles de otros grupos.",
+    "Página /members con tabla, filtros y búsqueda.",
+    "Vista filtrada por grupo para leads y enlace en dashboard solo para directiva y leads.",
+    "Ficha de detalle de miembro con turnos y asistencia.",
+    "Tests unitarios y de integración pasando.",
+    "Security scan sin issues HIGH.",
+    "ADR documentado."
+  ],
+  "dependencies": ["Sprint 2 (Workgroup Roles)", "Sprint 19 (Perfiles y Componentes)"]
+}
