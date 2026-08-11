@@ -2,7 +2,7 @@
   "title": "Sprint 14 — Listado de Miembros para Directiva y Responsables de Grupo",
   "description": "Sección donde la directiva (super_admin/management) y los responsables de cada grupo de trabajo pueden ver el listado de los usuarios dados de alta en la comparsa. La directiva ve a todos los miembros; cada responsable de grupo ve únicamente los miembros de su propio grupo de trabajo. Incluye capa lib/members/, server actions con validación de rol, verificación de RLS, página /members con tabla filtrable (grupo, componente, estado, búsqueda por nombre), vista por grupo para leads, ficha de detalle de miembro, y tests.",
   "branch": "feature/sprint-14-member-list",
-  "status": "implemented",
+  "status": "documented",
   "steps": [
     {
       "id": 1,

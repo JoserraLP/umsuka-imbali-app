@@ -60,7 +60,17 @@ create policy "shift_assignments_select_lead_workgroup"
   );
 ```
 
-Y su análoga `attendance_select_lead_workgroup` sobre `umsuka.attendance`. No se elimina ni modifica ninguna política existente; la política de SELECT de `umsuka.profiles` queda intacta. Se usa `p.workgroup::text` siguiendo el patrón de la migración 0041 (`created_by_workgroup::text`), ya que `is_workgroup_lead` recibe `text`.
+Y su análoga `attendance_select_lead_workgroup` sobre `umsuka.attendance`. No se elimina ni modifica ninguna política existente; la política de SELECT de `umsuka.profiles` queda intacta. Se usa `p.workgroup::text` siguiendo el patrón de la migración 0040 (`20260101004000_shift_assignment_groups.sql`: `is_workgroup_lead(created_by_workgroup::text)`), ya que `is_workgroup_lead` recibe `text`.
+
+**Decisión deliberada: la política SELECT de `umsuka.profiles` NO se modifica.** Ajustar `profiles_select_authenticated` (p. ej. a `is_management() or id = auth.uid() or is_workgroup_lead(workgroup::text)`) filtraría los perfiles por grupo, pero **regresionaría el enriquecimiento de noticias, preguntas y eventos**, que leen los perfiles de cualquier miembro para mostrar autores/creadores (10+ puntos de llamada repartidos por esos módulos). Por eso el scoping de `/members` se aplica **en la capa de aplicación** con doble barrera: `resolveMemberScope` se deriva **siempre del actor de sesión, nunca del input del cliente**; `getWorkgroupMembers` revalida `isLeadOfGroup` antes de ejecutar; las páginas aplican guardas de rol y `notFound()` para el detalle entre grupos.
+
+**Trade-off aceptado:** cualquier miembro activo puede leer filas de `umsuka.profiles` a través de la API pública (PostgREST) gracias a `profiles_select_authenticated`. La tabla **no contiene email ni credenciales** (esos datos viven en `auth.users`, inaccesible para el cliente), por lo que la exposición se limita a datos de identidad básicos: nombre, componente, grupo, rol, estado, `is_active`, `username` y fecha de alta. Es una decisión deliberada y documentada.
+
+**Condiciones de activación para ajustar la política en el futuro** (cuando se cumpla cualquiera, sustituir `profiles_select_authenticated` por una política que distinga management / lead del grupo / propietario y adaptar los puntos de enriquecimiento):
+
+1. Si `umsuka.profiles` pasa a almacenar campos sensibles (email, teléfono, dirección, biografía extensa, avatar privado).
+2. Si los módulos de enriquecimiento (news/questions/events) se consolidan detrás de vistas o funciones propias que hagan seguro restringir el SELECT a nivel de tabla.
+3. Si un requisito legal o de privacidad exige limitar la exposición de perfiles a la API pública.
 
 ### 4. UI
 
@@ -91,6 +101,8 @@ Y su análoga `attendance_select_lead_workgroup` sobre `umsuka.attendance`. No s
 - La directiva ve el directorio completo; cada responsable ve únicamente su grupo; nadie más accede a `/members` (redirección a `/dashboard`).
 - Un lead no puede leer turnos/asistencia de otros grupos ni por la UI ni por la API (doble barrera: app + RLS).
 - El número total de políticas en `shift_assignments`/`attendance` aumenta en una cada una, todas aditivas y sin regresiones sobre las existentes.
+- **Trade-off asumido:** `umsuka.profiles` sigue siendo legible por cualquier miembro activo vía API pública (la tabla no contiene email ni credenciales); el scoping por grupo para `/members` vive en la capa de aplicación. Ver condiciones de activación para revertirlo en la sección 3.
+- 49 tests unitarios nuevos en `src/lib/members/__tests__/` (11 de schema, 15 de queries, 23 de autorización), todos pasando.
 
 ---
 
@@ -108,4 +120,6 @@ Y su análoga `attendance_select_lead_workgroup` sobre `umsuka.attendance`. No s
 | `src/components/layout/nav-links.ts`, `app-shell.tsx`, `sidebar.tsx`, `bottom-nav.tsx` | MODIFY — enlace «Directorio» |
 | `src/lib/workgroups/queries.ts`, `src/app/events/[id]/page.tsx` | MODIFY — filtro por grupo para leads en panel de grupo |
 | `supabase/migrations/20260101004200_member_detail_lead_reads.sql` | CREATE — políticas aditivas lead |
+| `tasks/sprint-14-member-list.json` | CREATE — tarea del sprint |
+| `tasks/plan-desarrollo-completo.md` | MODIFY — Sprint 14 marcado ✅ Ejecutado |
 | `docs/DATABASE.md` | MODIFY — documentación |

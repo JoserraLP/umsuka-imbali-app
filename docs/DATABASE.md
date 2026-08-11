@@ -166,8 +166,8 @@ loosened):
 | `profiles` | any authenticated user | update: owner or admin · delete: admin · insert: trigger only |
 | `events` | any authenticated user, **or restricted to `visible_to_group` members; management always** | management roles only · plus workgroup leads for their own `work_shift` events |
 | `shifts`, `news`, `votings`, `voting_options` | any authenticated user | management roles only |
-| `shift_assignments` | owner or management (plus leads of the shift's event, plus workgroup leads for members of their own workgroup — Sprint 14) | management roles only · plus leads for shifts on their own `work_shift` events matching their group |
-| `attendance` | owner or management (plus workgroup leads for members of their own workgroup — Sprint 14) | management roles only |
+| `shift_assignments` | owner or management (plus leads of the shift's event, plus workgroup leads for members of their own workgroup via `shift_assignments_select_lead_workgroup` — Sprint 14) | management roles only · plus leads for shifts on their own `work_shift` events matching their group |
+| `attendance` | owner or management (plus workgroup leads for members of their own workgroup via `attendance_select_lead_workgroup` — Sprint 14) | management roles only |
 | `absences` | owner or management | insert: owner · update/delete: management |
 | `questions` | any authenticated user | insert: owner · update: owner or management · delete: management |
 | `voting_votes` | owner or management | insert: owner (immutable — no update policy) · delete: management |
