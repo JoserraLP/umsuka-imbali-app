@@ -68,7 +68,10 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     redirect("/auth/login");
   }
 
-  const event = await getEventById(id);
+  const event = await getEventById(id, {
+    workgroup: profile.workgroup,
+    isManagement: isManagementRole(profile.role),
+  });
 
   if (!event) {
     notFound();

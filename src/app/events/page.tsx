@@ -50,7 +50,10 @@ export default async function EventsPage() {
   }
 
   const canManage = isManagementRole(profile.role) || profile.isWorkgroupLead;
-  const events = await listEvents();
+  const events = await listEvents(undefined, {
+    workgroup: profile.workgroup,
+    isManagement: isManagementRole(profile.role),
+  });
 
   return (
     <AppShell profile={profile}>

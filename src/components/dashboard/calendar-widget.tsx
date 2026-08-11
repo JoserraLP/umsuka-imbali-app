@@ -2,8 +2,7 @@ import Link from "next/link";
 import { CalendarDays, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { SectionHeader } from "@/components/dashboard/section-header";
-import { listEvents } from "@/lib/events/queries";
-import type { EventListItem } from "@/lib/events/queries";
+import { listEvents, type EventListItem, type EventVisibility } from "@/lib/events/queries";
 
 // ── Event type label mapping ───────────────────────────
 
@@ -50,6 +49,8 @@ function formatEventDate(dateStr: string): string {
 interface CalendarWidgetProps {
   /** Maximum number of events to display (default 5). */
   limit?: number;
+  /** Caller's group context; when omitted, group-scoped events are not filtered. */
+  visibility?: EventVisibility;
 }
 
 /**
@@ -58,10 +59,11 @@ interface CalendarWidgetProps {
  * Fetches events from the umsuka.events table ordered by event_date ASC,
  * filters to future events, and shows up to `limit` items.
  */
-export async function CalendarWidget({ limit = 5 }: CalendarWidgetProps) {
-  const allEvents: EventListItem[] = await listEvents({
-    from: new Date().toISOString(),
-  });
+export async function CalendarWidget({ limit = 5, visibility }: CalendarWidgetProps) {
+  const allEvents: EventListItem[] = await listEvents(
+    { from: new Date().toISOString() },
+    visibility,
+  );
 
   const upcomingEvents = allEvents.slice(0, limit);
 

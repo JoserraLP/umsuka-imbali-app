@@ -24,6 +24,12 @@ export interface ListEventsOptions {
   to?: string;
 }
 
+/** Caller's group context, used to filter group-scoped events. */
+export interface EventVisibility {
+  workgroup: Workgroup;
+  isManagement: boolean;
+}
+
 interface EventRow {
   id: string;
   title: string;
@@ -73,8 +79,15 @@ export function isEventVisibleToGroup(
  * for any authenticated user" RLS policy — no elevated client is used
  * here. Pass `from`/`to` to scope to a date range (e.g. one calendar
  * month); omit both to list every event.
+ *
+ * When `visibility` is provided, group-scoped events are filtered with
+ * `isEventVisibleToGroup` (same rule as the RLS policy), so a barra
+ * member only sees barra work_shift events and general events.
  */
-export async function listEvents(options: ListEventsOptions = {}): Promise<EventListItem[]> {
+export async function listEvents(
+  options: ListEventsOptions = {},
+  visibility?: EventVisibility,
+): Promise<EventListItem[]> {
   const supabase = await createClient();
 
   let query = supabase
@@ -97,10 +110,19 @@ export async function listEvents(options: ListEventsOptions = {}): Promise<Event
     throw new Error(`Failed to list events: ${error.message}`);
   }
 
-  return (data ?? []).map(mapRow);
+  const events = (data ?? []).map(mapRow);
+
+  if (visibility) {
+    return events.filter((event) => isEventVisibleToGroup(event, visibility.workgroup, visibility.isManagement));
+  }
+
+  return events;
 }
 
-export async function getEventById(id: string): Promise<EventListItem | null> {
+export async function getEventById(
+  id: string,
+  visibility?: EventVisibility,
+): Promise<EventListItem | null> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -115,7 +137,13 @@ export async function getEventById(id: string): Promise<EventListItem | null> {
     throw new Error(`Failed to fetch event ${id}: ${error.message}`);
   }
 
-  return data ? mapRow(data) : null;
+  const event = data ? mapRow(data) : null;
+
+  if (event && visibility && !isEventVisibleToGroup(event, visibility.workgroup, visibility.isManagement)) {
+    return null;
+  }
+
+  return event;
 }
 
 export interface ShiftInfo {
