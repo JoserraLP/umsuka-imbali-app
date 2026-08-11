@@ -143,16 +143,15 @@ export async function updateMemberProfile(input: UpdateMemberProfileInput): Prom
   }
 
   const supabase = await createClient();
-  const { data: targetProfile } = await supabase
-    .from("profiles")
-    .select("workgroup")
-    .eq("id", parsed.data.userId)
-    .maybeSingle();
 
-  if (
-    targetProfile &&
-    !canSetComponentType(parsed.data.componentType, targetProfile.workgroup as Workgroup | null)
-  ) {
+  // The member's effective workgroup after this update: the new value if
+  // provided, otherwise the one currently stored in the DB.
+  const effectiveWorkgroup: Workgroup =
+    parsed.data.workgroup === undefined
+      ? ((await getMemberWorkgroup(supabase, parsed.data.userId)) ?? "ninguno")
+      : parsed.data.workgroup;
+
+  if (!canSetComponentType(parsed.data.componentType, effectiveWorkgroup)) {
     return {
       success: false,
       error:
@@ -167,6 +166,7 @@ export async function updateMemberProfile(input: UpdateMemberProfileInput): Prom
       last_name: parsed.data.lastName,
       birth_date: parsed.data.birthDate,
       component_type: parsed.data.componentType,
+      workgroup: effectiveWorkgroup,
     })
     .eq("id", parsed.data.userId);
 
@@ -175,6 +175,18 @@ export async function updateMemberProfile(input: UpdateMemberProfileInput): Prom
   }
 
   return { success: true };
+}
+
+async function getMemberWorkgroup(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+): Promise<Workgroup | null> {
+  const { data } = await supabase
+    .from("profiles")
+    .select("workgroup")
+    .eq("id", userId)
+    .maybeSingle();
+  return (data?.workgroup as Workgroup | undefined) ?? null;
 }
 
 /**

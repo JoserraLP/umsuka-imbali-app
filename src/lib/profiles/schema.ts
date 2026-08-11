@@ -43,11 +43,14 @@ export type UpdateMemberRoleInput = z.infer<typeof updateMemberRoleSchema>;
 
 /**
  * Admin-only: edits the personal fields of ANY member's profile (not
- * just the caller's own). Deliberately excludes `role` — that stays on
- * updateMemberRoleSchema, which has its own dedicated privilege checks.
+ * just the caller's own), including their workgroup. Deliberately
+ * excludes `role` — that stays on updateMemberRoleSchema, which has its
+ * own dedicated privilege checks.
  */
 export const updateMemberProfileSchema = updateOwnProfileSchema.extend({
   userId: z.string().uuid("userId must be a valid UUID."),
+  // When omitted, the member's current workgroup is preserved.
+  workgroup: z.enum(["telas", "barra", "estandarte", "limpieza", "ninguno"]).optional(),
 });
 
 export type UpdateMemberProfileInput = z.infer<typeof updateMemberProfileSchema>;

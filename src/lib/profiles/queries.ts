@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { isValidRole, DEFAULT_ROLE } from "@/lib/auth/roles";
-import type { AppRole, ComponentType, UserStatus, AuthMethod } from "@/types/database.types";
+import type { AppRole, ComponentType, UserStatus, AuthMethod, Workgroup } from "@/types/database.types";
 
 export interface ProfileListItem {
   id: string;
@@ -19,6 +19,7 @@ export interface ProfileDetail extends ProfileListItem {
   birthDate: string | null;
   username: string | null;
   authMethod: AuthMethod;
+  workgroup: Workgroup;
 }
 
 /**
@@ -65,7 +66,7 @@ export async function getProfileById(userId: string): Promise<ProfileDetail | nu
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, first_name, last_name, birth_date, component_type, role, is_active, status, username, auth_method, created_at")
+    .select("id, first_name, last_name, birth_date, component_type, role, is_active, status, username, auth_method, created_at, workgroup")
     .eq("id", userId)
     .maybeSingle();
 
@@ -88,6 +89,7 @@ export async function getProfileById(userId: string): Promise<ProfileDetail | nu
     status: data.status as UserStatus,
     username: data.username,
     authMethod: data.auth_method as AuthMethod,
+    workgroup: data.workgroup ?? "ninguno",
     createdAt: data.created_at,
   };
 }
