@@ -13,11 +13,28 @@ import {
   type SetMemberActiveInput,
   type SetMemberComponentTypeInput,
 } from "@/lib/profiles/schema";
-import type { AppRole } from "@/types/database.types";
+import type { AppRole, ComponentType, Workgroup } from "@/types/database.types";
 
 export interface MutationResult {
   success: boolean;
   error?: string;
+}
+
+/**
+ * Music and dance members must belong to a workgroup (mirrors the
+ * profiles_component_type_requires_workgroup DB constraint). A member
+ * profile only belongs to "ninguno" when no workgroup was ever assigned.
+ */
+export function componentTypeRequiresWorkgroup(componentType: ComponentType): boolean {
+  return componentType === "music" || componentType === "dance";
+}
+
+function canSetComponentType(
+  componentType: ComponentType,
+  currentWorkgroup: Workgroup | null,
+): boolean {
+  if (!componentTypeRequiresWorkgroup(componentType)) return true;
+  return currentWorkgroup !== null && currentWorkgroup !== "ninguno";
 }
 
 /**
@@ -33,6 +50,14 @@ export async function updateOwnProfile(input: UpdateOwnProfileInput): Promise<Mu
 
   const profile = await requireAuthenticatedProfile();
   const supabase = await createClient();
+
+  if (!canSetComponentType(parsed.data.componentType, profile.workgroup)) {
+    return {
+      success: false,
+      error:
+        "Música y baile requieren un grupo de trabajo obligatoriamente. Contacta a un administrador para que te asigne uno.",
+    };
+  }
 
   const { error } = await supabase
     .from("profiles")
@@ -118,6 +143,23 @@ export async function updateMemberProfile(input: UpdateMemberProfileInput): Prom
   }
 
   const supabase = await createClient();
+  const { data: targetProfile } = await supabase
+    .from("profiles")
+    .select("workgroup")
+    .eq("id", parsed.data.userId)
+    .maybeSingle();
+
+  if (
+    targetProfile &&
+    !canSetComponentType(parsed.data.componentType, targetProfile.workgroup as Workgroup | null)
+  ) {
+    return {
+      success: false,
+      error:
+        "Música y baile requieren un grupo de trabajo obligatoriamente. Asigna un grupo de trabajo antes de cambiar el componente.",
+    };
+  }
+
   const { error } = await supabase
     .from("profiles")
     .update({
@@ -201,6 +243,23 @@ export async function updateMemberComponentType(
   }
 
   const supabase = await createClient();
+  const { data: targetProfile } = await supabase
+    .from("profiles")
+    .select("workgroup")
+    .eq("id", parsed.data.userId)
+    .maybeSingle();
+
+  if (
+    targetProfile &&
+    !canSetComponentType(parsed.data.componentType, targetProfile.workgroup as Workgroup | null)
+  ) {
+    return {
+      success: false,
+      error:
+        "Música y baile requieren un grupo de trabajo obligatoriamente. Asigna un grupo de trabajo antes de cambiar el componente.",
+    };
+  }
+
   const { error } = await supabase
     .from("profiles")
     .update({ component_type: parsed.data.componentType })

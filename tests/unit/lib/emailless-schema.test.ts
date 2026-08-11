@@ -19,7 +19,30 @@ describe("createEmaillessAccountSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("accepts valid input without optional workgroup", () => {
+  it("accepts valid input without workgroup for member", () => {
+    const result = createEmaillessAccountSchema.safeParse({
+      firstName: "Ana",
+      lastName: "García",
+      username: "ana_garcia",
+      password: VALID_PASSWORD,
+      componentType: "member",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts ninguno as workgroup for member", () => {
+    const result = createEmaillessAccountSchema.safeParse({
+      firstName: "Ana",
+      lastName: "García",
+      username: "ana_garcia",
+      password: VALID_PASSWORD,
+      componentType: "member",
+      workgroup: "ninguno",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects dance without a workgroup", () => {
     const result = createEmaillessAccountSchema.safeParse({
       firstName: "Ana",
       lastName: "García",
@@ -27,17 +50,35 @@ describe("createEmaillessAccountSchema", () => {
       password: VALID_PASSWORD,
       componentType: "dance",
     });
-    expect(result.success).toBe(true);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error!.issues[0]!.path).toContain("workgroup");
+    }
   });
 
-  it("accepts ninguno as workgroup", () => {
+  it("rejects music with ninguno workgroup", () => {
+    const result = createEmaillessAccountSchema.safeParse({
+      firstName: "Ana",
+      lastName: "García",
+      username: "ana_garcia",
+      password: VALID_PASSWORD,
+      componentType: "music",
+      workgroup: "ninguno",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error!.issues[0]!.path).toContain("workgroup");
+    }
+  });
+
+  it("accepts dance with a workgroup", () => {
     const result = createEmaillessAccountSchema.safeParse({
       firstName: "Ana",
       lastName: "García",
       username: "ana_garcia",
       password: VALID_PASSWORD,
       componentType: "dance",
-      workgroup: "ninguno",
+      workgroup: "telas",
     });
     expect(result.success).toBe(true);
   });
