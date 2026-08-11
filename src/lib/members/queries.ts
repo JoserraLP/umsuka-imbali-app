@@ -38,7 +38,7 @@ function mapMemberRow(row: MemberRow): MemberListItem {
     lastName: row.last_name,
     componentType: row.component_type,
     workgroup: row.workgroup ?? "ninguno",
-    role: isValidRole(row.role) ? row.role : DEFAULT_ROLE,
+    role: isValidRole(row.role ?? "") ? (row.role as AppRole) : DEFAULT_ROLE,
     isActive: row.is_active,
     status: row.status,
     username: row.username,

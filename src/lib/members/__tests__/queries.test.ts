@@ -144,9 +144,9 @@ describe("getAllMembers", () => {
     expect(builder.select).toHaveBeenCalledTimes(1);
     expect(builder.eq).not.toHaveBeenCalled();
     expect(members).toHaveLength(2);
-    expect(members[0].id).toBe("user-1");
-    expect(members[0].firstName).toBe("Ana");
-    expect(members[0].workgroup).toBe("telas");
+    expect(members[0]!.id).toBe("user-1");
+    expect(members[0]!.firstName).toBe("Ana");
+    expect(members[0]!.workgroup).toBe("telas");
   });
 
   it("maps a null workgroup to ninguno", async () => {
@@ -154,7 +154,7 @@ describe("getAllMembers", () => {
 
     const members = await getAllMembers();
 
-    expect(members[0].workgroup).toBe("ninguno");
+    expect(members[0]!.workgroup).toBe("ninguno");
   });
 
   it("maps an invalid role to DEFAULT_ROLE", async () => {
@@ -162,7 +162,7 @@ describe("getAllMembers", () => {
 
     const members = await getAllMembers();
 
-    expect(members[0].role).toBe("member");
+    expect(members[0]!.role).toBe("member");
   });
 
   it("returns an empty array when there are no rows", async () => {
@@ -214,9 +214,9 @@ describe("getWorkgroupMembers", () => {
 
     const members = await getWorkgroupMembers(telasLead, "telas");
 
-    expect(members[0].workgroup).toBe("telas");
-    expect(members[1].workgroup).toBe("ninguno");
-    expect(members[1].role).toBe("member");
+    expect(members[0]!.workgroup).toBe("telas");
+    expect(members[1]!.workgroup).toBe("ninguno");
+    expect(members[1]!.role).toBe("member");
   });
 
   it("throws when the query fails", async () => {
@@ -287,7 +287,7 @@ describe("getMemberDetailWithHistory", () => {
     expect(result?.member.id).toBe("user-1");
     expect(getMyAssignedShifts).toHaveBeenCalledWith("user-1");
     expect(getUserAttendance).toHaveBeenCalledWith("user-1");
-    expect(result?.shifts).toEqual(sampleShifts);
-    expect(result?.attendance).toEqual(sampleAttendance);
+    expect(result!.shifts).toEqual(sampleShifts);
+    expect(result!.attendance).toEqual(sampleAttendance);
   });
 });
