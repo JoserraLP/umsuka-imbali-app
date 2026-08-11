@@ -139,19 +139,20 @@ export default async function MembersPage({ searchParams }: PageProps) {
         )}
 
         <Card>
-          <CardHeader className="gap-3">
+          <CardHeader>
             <CardTitle>Miembros</CardTitle>
             <CardDescription>
-              <MemberFiltersControl
-                workgroup={parsed.success ? (filters.workgroup ?? "all") : "all"}
-                componentType={parsed.success ? (filters.componentType ?? "all") : "all"}
-                status={parsed.success ? (filters.status ?? "all") : "all"}
-                q={filters.q ?? ""}
-                lockedWorkgroup={lockedWorkgroup}
-              />
+              Filtra por grupo, componente, estado o nombre.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex flex-col gap-4">
+            <MemberFiltersControl
+              workgroup={parsed.success ? (filters.workgroup ?? "all") : "all"}
+              componentType={parsed.success ? (filters.componentType ?? "all") : "all"}
+              status={parsed.success ? (filters.status ?? "all") : "all"}
+              q={filters.q ?? ""}
+              lockedWorkgroup={lockedWorkgroup}
+            />
             {members.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 No hay miembros que coincidan con los filtros.
