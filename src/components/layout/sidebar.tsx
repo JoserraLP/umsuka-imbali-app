@@ -7,17 +7,19 @@ import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { getVisibleLinks, isLinkActive } from "@/components/layout/nav-links";
 import { signOutAction } from "@/app/dashboard/actions";
-import type { AppRole } from "@/types/database.types";
+import type { AppRole, Workgroup } from "@/types/database.types";
 
 interface SidebarProps {
   currentRole: AppRole;
+  isWorkgroupLead: boolean;
+  workgroup: Workgroup;
   userName: string;
   userEmail: string | null;
 }
 
-export function Sidebar({ currentRole, userName, userEmail }: SidebarProps) {
+export function Sidebar({ currentRole, isWorkgroupLead, workgroup, userName, userEmail }: SidebarProps) {
   const pathname = usePathname();
-  const links = getVisibleLinks(currentRole);
+  const links = getVisibleLinks({ role: currentRole, isWorkgroupLead, workgroup });
 
   return (
     <aside className="fixed left-0 top-0 z-30 hidden h-screen w-sidebar flex-col border-r bg-sidebar md:flex">

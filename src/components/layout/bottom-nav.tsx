@@ -3,15 +3,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { getVisibleLinks, isLinkActive } from "@/components/layout/nav-links";
-import type { AppRole } from "@/types/database.types";
+import type { AppRole, Workgroup } from "@/types/database.types";
 
 interface BottomNavProps {
   currentRole: AppRole;
+  isWorkgroupLead: boolean;
+  workgroup: Workgroup;
 }
 
-export function BottomNav({ currentRole }: BottomNavProps) {
+export function BottomNav({ currentRole, isWorkgroupLead, workgroup }: BottomNavProps) {
   const pathname = usePathname();
-  const links = getVisibleLinks(currentRole);
+  const links = getVisibleLinks({ role: currentRole, isWorkgroupLead, workgroup });
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-30 border-t bg-background md:hidden">

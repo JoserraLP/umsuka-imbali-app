@@ -15,10 +15,16 @@ export function AppShell({ profile, children }: AppShellProps) {
     <div className="min-h-screen bg-background">
       <Sidebar
         currentRole={profile.role}
+        isWorkgroupLead={profile.isWorkgroupLead}
+        workgroup={profile.workgroup}
         userName={userName}
         userEmail={profile.email}
       />
-      <BottomNav currentRole={profile.role} />
+      <BottomNav
+        currentRole={profile.role}
+        isWorkgroupLead={profile.isWorkgroupLead}
+        workgroup={profile.workgroup}
+      />
       <main className="md:pl-sidebar pb-16 md:pb-0">
         <div className="feed-container px-4 py-4 sm:px-6 sm:py-6">
           {children}
