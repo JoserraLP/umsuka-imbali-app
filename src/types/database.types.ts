@@ -78,6 +78,8 @@ export interface Database {
           event_type: EventType;
           event_date: string;
           capacity: number | null;
+          visible_to_group: Workgroup | null;
+          created_by_workgroup: Workgroup | null;
           created_by: string | null;
           created_at: string;
         };
@@ -88,6 +90,8 @@ export interface Database {
           event_type: EventType;
           event_date: string;
           capacity?: number | null;
+          visible_to_group?: Workgroup | null;
+          created_by_workgroup?: Workgroup | null;
           created_by?: string | null;
           created_at?: string;
         };
@@ -98,6 +102,8 @@ export interface Database {
           event_type?: EventType;
           event_date?: string;
           capacity?: number | null;
+          visible_to_group?: Workgroup | null;
+          created_by_workgroup?: Workgroup | null;
           created_by?: string | null;
           created_at?: string;
         };
@@ -144,18 +150,24 @@ export interface Database {
           id: string;
           shift_id: string | null;
           user_id: string | null;
+          confirmed: boolean;
+          created_by: string | null;
           created_at: string;
         };
         Insert: {
           id?: string;
           shift_id?: string | null;
           user_id?: string | null;
+          confirmed?: boolean;
+          created_by?: string | null;
           created_at?: string;
         };
         Update: {
           id?: string;
           shift_id?: string | null;
           user_id?: string | null;
+          confirmed?: boolean;
+          created_by?: string | null;
           created_at?: string;
         };
         Relationships: [];

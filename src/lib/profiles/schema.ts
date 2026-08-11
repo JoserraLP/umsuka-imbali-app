@@ -43,11 +43,14 @@ export type UpdateMemberRoleInput = z.infer<typeof updateMemberRoleSchema>;
 
 /**
  * Admin-only: edits the personal fields of ANY member's profile (not
- * just the caller's own). Deliberately excludes `role` — that stays on
- * updateMemberRoleSchema, which has its own dedicated privilege checks.
+ * just the caller's own), including their workgroup. Deliberately
+ * excludes `role` — that stays on updateMemberRoleSchema, which has its
+ * own dedicated privilege checks.
  */
 export const updateMemberProfileSchema = updateOwnProfileSchema.extend({
   userId: z.string().uuid("userId must be a valid UUID."),
+  // When omitted, the member's current workgroup is preserved.
+  workgroup: z.enum(["telas", "barra", "estandarte", "limpieza", "ninguno"]).optional(),
 });
 
 export type UpdateMemberProfileInput = z.infer<typeof updateMemberProfileSchema>;
@@ -63,3 +66,30 @@ export const setMemberActiveSchema = z.object({
 });
 
 export type SetMemberActiveInput = z.infer<typeof setMemberActiveSchema>;
+
+/**
+ * Admin-only: changes a member's component type (music/dance/member) from
+ * the directory table, without touching any other personal field.
+ */
+export const setMemberComponentTypeSchema = z.object({
+  userId: z.string().uuid("userId must be a valid UUID."),
+  componentType: z.enum(["music", "dance", "member"], {
+    errorMap: () => ({ message: "Component type must be music, dance or member." }),
+  }),
+});
+
+export type SetMemberComponentTypeInput = z.infer<typeof setMemberComponentTypeSchema>;
+
+/**
+ * Admin-only: changes a member's workgroup from the directory table,
+ * without touching any other field. The music/dance-requires-workgroup
+ * rule is enforced against the member's CURRENT component type.
+ */
+export const setMemberWorkgroupSchema = z.object({
+  userId: z.string().uuid("userId must be a valid UUID."),
+  workgroup: z.enum(["telas", "barra", "estandarte", "limpieza", "ninguno"], {
+    errorMap: () => ({ message: "Workgroup must be one of telas, barra, estandarte, limpieza or ninguno." }),
+  }),
+});
+
+export type SetMemberWorkgroupInput = z.infer<typeof setMemberWorkgroupSchema>;

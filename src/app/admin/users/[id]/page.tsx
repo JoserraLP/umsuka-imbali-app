@@ -72,6 +72,7 @@ export default async function AdminUserDetailPage({ params }: AdminUserDetailPag
                 lastName: member.lastName,
                 birthDate: member.birthDate ?? "",
                 componentType: member.componentType,
+                workgroup: member.workgroup,
               }}
             />
           </CardContent>

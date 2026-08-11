@@ -17,6 +17,8 @@ import { getCurrentProfile } from "@/lib/auth/session";
 import { isManagementRole, isAdminRole } from "@/lib/auth/roles";
 import { listProfiles } from "@/lib/profiles/queries";
 import { UserRoleSelect } from "@/app/admin/users/user-role-select";
+import { MemberComponentTypeSelect } from "@/app/admin/users/member-component-type-select";
+import { MemberWorkgroupSelect } from "@/app/admin/users/member-workgroup-select";
 import { MemberActiveToggle } from "@/app/admin/users/member-active-toggle";
 import { EmaillessAccountForm } from "@/app/admin/users/emailless-account-form";
 import { ResetPasswordButton } from "@/app/admin/users/reset-password-button";
@@ -65,6 +67,7 @@ export default async function AdminUsersPage() {
                 <TableRow>
                   <TableHead>Nombre</TableHead>
                   <TableHead>Componente</TableHead>
+                  <TableHead>Grupo de trabajo</TableHead>
                   <TableHead>Rol</TableHead>
                   <TableHead>Registro</TableHead>
                   <TableHead>Alta/Baja</TableHead>
@@ -81,7 +84,28 @@ export default async function AdminUsersPage() {
                         {member.firstName} {member.lastName}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{member.componentType}</Badge>
+                        {canManage ? (
+                          <MemberComponentTypeSelect
+                            userId={member.id}
+                            currentType={member.componentType}
+                            disableSelf={isSelf}
+                          />
+                        ) : (
+                          <Badge variant="outline">{member.componentType}</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {canManage ? (
+                          <MemberWorkgroupSelect
+                            userId={member.id}
+                            currentWorkgroup={member.workgroup}
+                            requiresWorkgroup={
+                              member.componentType === "music" || member.componentType === "dance"
+                            }
+                          />
+                        ) : (
+                          <Badge variant="outline">{member.workgroup}</Badge>
+                        )}
                       </TableCell>
                       <TableCell>
                         {canManage ? (

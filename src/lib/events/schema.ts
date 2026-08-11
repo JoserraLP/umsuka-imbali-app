@@ -3,7 +3,11 @@ import { z } from "zod";
 export const EVENT_TYPES = ["general", "meeting", "carnival", "work_shift"] as const;
 export type EventTypeValue = (typeof EVENT_TYPES)[number];
 
-const baseEventFields = {
+/** Workgroups a group-scoped event can target (excludes "ninguno"). */
+export const EVENT_WORKGROUPS = ["telas", "barra", "estandarte", "limpieza"] as const;
+export type EventWorkgroup = (typeof EVENT_WORKGROUPS)[number];
+
+const EVENT_FORM_FIELDS = {
   title: z
     .string()
     .trim()
@@ -38,22 +42,57 @@ const baseEventFields = {
     .refine((value) => value === null || (Number.isInteger(value) && value > 0), {
       message: "Capacity must be a positive whole number.",
     }),
-};
+  /**
+   * Target workgroup for `work_shift` events. Required for work_shift
+   * events (refined below), ignored for all other types.
+   */
+  workgroup: z
+    .enum(EVENT_WORKGROUPS)
+    .nullable()
+    .optional()
+    .transform((value) => value ?? null),
+} as const;
+
+function isWorkShift(data: { eventType?: string | null; workgroup?: string | null }): boolean {
+  return data.eventType === "work_shift";
+}
 
 /**
  * Shared shape used by the client-side form (React Hook Form + Zod). Both
  * create and update use this exact shape for the editable fields, so the
  * form component only ever needs one resolver type regardless of mode.
+ * Work_shift events require a target workgroup.
  */
-export const eventFormSchema = z.object(baseEventFields);
+export const eventFormSchema = z.object(EVENT_FORM_FIELDS).refine(
+  (data) => !isWorkShift(data) || data.workgroup !== null,
+  {
+    message: "For work shift events you must choose the target workgroup.",
+    path: ["workgroup"],
+  },
+);
 export type EventFormValues = z.infer<typeof eventFormSchema>;
 
-export const createEventSchema = eventFormSchema;
+export const createEventSchema = z.object(EVENT_FORM_FIELDS).refine(
+  (data) => !isWorkShift(data) || data.workgroup !== null,
+  {
+    message: "For work shift events you must choose the target workgroup.",
+    path: ["workgroup"],
+  },
+);
 export type CreateEventInput = z.infer<typeof createEventSchema>;
 
-export const updateEventSchema = eventFormSchema.extend({
-  id: z.string().uuid("id must be a valid UUID."),
-});
+export const updateEventSchema = z
+  .object({
+    ...EVENT_FORM_FIELDS,
+    id: z.string().uuid("id must be a valid UUID."),
+  })
+  .refine(
+    (data) => !isWorkShift(data) || data.workgroup !== null,
+    {
+      message: "For work shift events you must choose the target workgroup.",
+      path: ["workgroup"],
+    },
+  );
 export type UpdateEventInput = z.infer<typeof updateEventSchema>;
 
 export const deleteEventSchema = z.object({

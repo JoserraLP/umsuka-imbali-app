@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AppShell } from "@/components/layout/app-shell";
 import { getCurrentProfile } from "@/lib/auth/session";
-import { getUserShifts } from "@/lib/shifts/queries";
+import { getMyAssignedShifts } from "@/lib/shifts/assignments";
 
 export const metadata: Metadata = {
   title: "Mis turnos",
@@ -27,7 +27,7 @@ export default async function ProfileShiftsPage() {
     redirect("/auth/login");
   }
 
-  const shifts = await getUserShifts(profile.id);
+  const shifts = await getMyAssignedShifts(profile.id);
 
   return (
     <AppShell profile={profile}>

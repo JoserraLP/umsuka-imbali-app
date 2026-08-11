@@ -1,0 +1,83 @@
+{
+  "title": "Sprint 12 — Asociación de Personas a Turnos y Visibilidad por Grupo",
+  "description": "Permitir asociar personas concretas a cada turno de trabajo y limitar la visibilidad de los eventos de tipo trabajo a los miembros del grupo correspondiente. Solo los responsables de grupo pueden crear sus propios eventos de trabajo (marcados con created_by_workgroup / visible_to_group), y el feed de eventos se filtra por grupo. Incluye migración de BD, RLS, capa lib/shifts/assignments.ts, server actions, UI de asignación por toggles, y tests.",
+  "branch": "feature/sprint-12-shift-assignment-groups",
+  "status": "published",
+  "steps": [
+    {
+      "id": 1,
+      "name": "Migración de BD — shift_assignments",
+      "detail": "Añadir columnas confirmed (boolean default false) y created_by (uuid FK auth.users) a umsuka.shift_assignments. El índice único (shift_id, user_id) y el índice por user_id ya existían."
+    },
+    {
+      "id": 2,
+      "name": "Migración de BD — visibilidad de eventos",
+      "detail": "Añadir a umsuka.events: visible_to_group (umsuka.workgroup, null = todos) y created_by_workgroup (umsuka.workgroup) con índices."
+    },
+    {
+      "id": 3,
+      "name": "RLS — creación de eventos de grupo",
+      "detail": "Nuevas políticas INSERT/UPDATE/DELETE en events para que solo is_workgroup_lead(created_by_workgroup) pueda gestionar eventos work_shift de su grupo (UPDATE/DELETE además con created_by = auth.uid())."
+    },
+    {
+      "id": 4,
+      "name": "RLS — visibilidad de eventos",
+      "detail": "Sustituir la política SELECT de events: visible si visible_to_group IS NULL o visible_to_group = current_user_workgroup(), con excepción para management."
+    },
+    {
+      "id": 5,
+      "name": "Actualizar tipos",
+      "detail": "Actualizar src/types/database.types.ts con las nuevas columnas de events y shift_assignments."
+    },
+    {
+      "id": 6,
+      "name": "Capa lib/shifts/assignments.ts",
+      "detail": "Nuevas funciones assignMemberToShift, unassignMemberFromShift, getShiftAssignments, getMyAssignedShifts con helper puro canAssignToShift (lead del grupo del turno o management)."
+    },
+    {
+      "id": 7,
+      "name": "Server actions",
+      "detail": "assignMemberToShiftAction y unassignMemberFromShiftAction en shift-actions.ts; se eliminan assignMember/unassignMember antiguos (solo management)."
+    },
+    {
+      "id": 8,
+      "name": "UI: Gestión de asignación",
+      "detail": "ShiftAssignmentList ahora muestra los miembros del grupo con checkbox/toggle para asignar/desasignar al turno concreto."
+    },
+    {
+      "id": 9,
+      "name": "UI: Eventos por grupo",
+      "detail": "El formulario de evento incluye selector de grupo para work_shift; los leads no-management solo pueden crear work_shift de su grupo (locked)."
+    },
+    {
+      "id": 10,
+      "name": "Feed filtrado",
+      "detail": "La página de eventos y el calendario muestran solo eventos generales + eventos del grupo del usuario (filtrado por RLS). Badge de grupo en lista y detalle."
+    },
+    {
+      "id": 11,
+      "name": "Pruebas",
+      "detail": "Tests unitarios de schema de eventos (workgroup requerido en work_shift), helper de visibilidad isEventVisibleToGroup y autorización canAssignToShift."
+    }
+  ],
+  "acceptance_criteria": [
+    "Cada turno tiene asignados miembros concretos (no todo el grupo).",
+    "Solo el responsable del grupo puede crear eventos de tipo trabajo de su grupo.",
+    "Los eventos de tipo trabajo solo son visibles para los miembros del grupo correspondiente.",
+    "Un miembro no puede ver eventos de trabajo de otros grupos.",
+    "Un responsable no puede asignar miembros a turnos de otros grupos."
+  ],
+  "definition_of_done": [
+    "Migración SQL creada y aplicable (columnas + RLS).",
+    "Tipos de base de datos actualizados.",
+    "Capa lib/shifts/assignments.ts completa con queries, mutations y helper puro de autorización.",
+    "Server actions renombradas y con validación de lead del grupo del turno.",
+    "UI de asignación por toggles integrada en el detalle del turno.",
+    "Formulario de evento con selector de grupo para work_shift.",
+    "Feed de eventos filtrado por grupo vía RLS.",
+    "Tests unitarios pasando.",
+    "Security scan sin issues HIGH.",
+    "ADR documentado."
+  ],
+  "dependencies": ["Sprint 2 (Workgroup Roles)", "Sprint 8 (Shifts)"]
+}

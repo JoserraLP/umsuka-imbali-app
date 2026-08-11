@@ -1,11 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { updateMemberRole, updateMemberProfile, setMemberActive } from "@/lib/profiles/mutations";
+import { updateMemberRole, updateMemberProfile, setMemberActive, updateMemberComponentType, updateMemberWorkgroup } from "@/lib/profiles/mutations";
 import type {
   UpdateMemberRoleInput,
   UpdateMemberProfileInput,
   SetMemberActiveInput,
+  SetMemberComponentTypeInput,
+  SetMemberWorkgroupInput,
 } from "@/lib/profiles/schema";
 import type { MutationResult } from "@/lib/profiles/mutations";
 import { createEmaillessAccount } from "@/lib/auth/admin-create";
@@ -48,6 +50,32 @@ export async function setMemberActiveAction(
   input: SetMemberActiveInput,
 ): Promise<MutationResult> {
   const result = await setMemberActive(input);
+
+  if (result.success) {
+    revalidatePath("/admin/users");
+    revalidatePath(`/admin/users/${input.userId}`);
+  }
+
+  return result;
+}
+
+export async function updateMemberComponentTypeAction(
+  input: SetMemberComponentTypeInput,
+): Promise<MutationResult> {
+  const result = await updateMemberComponentType(input);
+
+  if (result.success) {
+    revalidatePath("/admin/users");
+    revalidatePath(`/admin/users/${input.userId}`);
+  }
+
+  return result;
+}
+
+export async function updateMemberWorkgroupAction(
+  input: SetMemberWorkgroupInput,
+): Promise<MutationResult> {
+  const result = await updateMemberWorkgroup(input);
 
   if (result.success) {
     revalidatePath("/admin/users");

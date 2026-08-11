@@ -16,6 +16,7 @@ import { getCurrentProfile } from "@/lib/auth/session";
 import { isManagementRole } from "@/lib/auth/roles";
 import { listEvents } from "@/lib/events/queries";
 import type { EventTypeValue } from "@/lib/events/schema";
+import type { Workgroup } from "@/types/database.types";
 
 export const metadata: Metadata = {
   title: "Eventos",
@@ -26,6 +27,14 @@ const EVENT_TYPE_LABELS: Record<EventTypeValue, string> = {
   meeting: "Reunión",
   carnival: "Carnaval",
   work_shift: "Turno de trabajo",
+};
+
+const WORKGROUP_LABELS: Record<Workgroup, string> = {
+  telas: "Telas",
+  barra: "Barra",
+  estandarte: "Estandarte",
+  limpieza: "Limpieza",
+  ninguno: "Ninguno",
 };
 
 const DATE_FORMATTER = new Intl.DateTimeFormat("es-ES", {
@@ -41,7 +50,10 @@ export default async function EventsPage() {
   }
 
   const canManage = isManagementRole(profile.role) || profile.isWorkgroupLead;
-  const events = await listEvents();
+  const events = await listEvents(undefined, {
+    workgroup: profile.workgroup,
+    isManagement: isManagementRole(profile.role),
+  });
 
   return (
     <AppShell profile={profile}>
@@ -84,7 +96,12 @@ export default async function EventsPage() {
                     </Link>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">{EVENT_TYPE_LABELS[event.eventType]}</Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">{EVENT_TYPE_LABELS[event.eventType]}</Badge>
+                      {event.visibleToGroup !== null && (
+                        <Badge variant="secondary">Grupo: {WORKGROUP_LABELS[event.visibleToGroup]}</Badge>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>{DATE_FORMATTER.format(new Date(event.eventDate))}</TableCell>
                   <TableCell className="text-muted-foreground">

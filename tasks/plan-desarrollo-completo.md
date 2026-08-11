@@ -128,7 +128,7 @@ Rediseñar la página principal (`/dashboard`) para mostrar: feed de los último
 | 1 | Integración Instagram API | Crear servicio `src/lib/social/instagram.ts` que obtenga los últimos posts usando Instagram Basic Display API o Graph API. |
 | 2 | Caché de posts | Almacenar posts en Supabase (`umsuka.instagram_posts`) con TTL para evitar rate limiting. |
 | 3 | Server component de feed | Crear `InstagramFeed` que renderice los últimos 6-9 posts en cuadrícula. |
-| 4 | Widget de notificaciones | Consultar `umsuka.notifications` (a implementar en Sprint 16) y mostrar las últimas 5 no leídas. |
+| 4 | Widget de notificaciones | Consultar `umsuka.notifications` (a implementar en Sprint 20) y mostrar las últimas 5 no leídas. |
 | 5 | Widget de calendario | Consultar `umsuka.events` ordenados por fecha ascendente, mostrar los próximos 3-5 eventos. |
 | 6 | Diseño de dashboard | Maquetar las 3 secciones en columnas: feed central (Instagram), sidebar derecha (notificaciones + calendario). |
 | 7 | Actualizar `dashboard/page.tsx` | Refactorizar para usar los nuevos widgets. |
@@ -136,7 +136,7 @@ Rediseñar la página principal (`/dashboard`) para mostrar: feed de los último
 
 ### Dependencias
 - Sprint 1 (UI/UX)
-- Sprint 16 (Notificaciones) — si se quiere integración real; si no, se puede hacer primero con datos mock.
+- Sprint 20 (Notificaciones) — si se quiere integración real; si no, se puede hacer primero con datos mock.
 
 ### Criterios de Aceptación
 - La página principal muestra los últimos posts de Instagram de @umsuka (o cuenta configurada).
@@ -184,7 +184,7 @@ Implementar un flujo donde cada nuevo usuario que se registra (vía Google OAuth
 | 4 | UI de pending | Página `/auth/pending` con mensaje informativo. |
 | 5 | Panel de administración | En `/admin/users`, añadir columna de status y botones "Aprobar"/"Suspender". |
 | 6 | Server actions | `approveUserAction`, `suspendUserAction` — solo super_admin. |
-| 7 | Notificación al usuario | Opcional: enviar notificación interna cuando el usuario sea aprobado (depende de Sprint 16). |
+| 7 | Notificación al usuario | Opcional: enviar notificación interna cuando el usuario sea aprobado (depende de Sprint 20). |
 | 8 | Pruebas | Tests de integración para el flujo completo de aprobación. |
 
 ### Dependencias
@@ -225,7 +225,7 @@ El super admin puede dar de alta a nuevos miembros en la aplicación sin necesid
 
 ### Dependencias
 - Sprint 6 (aprobación de usuarios + panel admin funcional)
-- Sprint 15 (perfiles con campos completos como username)
+- Sprint 19 (perfiles con campos completos como username)
 
 ### Criterios de Aceptación
 - El super admin puede crear una cuenta para un menor/miembro sin email desde el panel de administración.
@@ -274,7 +274,10 @@ Crear y administrar turnos asociados a eventos, incluyendo asignación de miembr
 
 ## Sprint 9 — Validación y Almacenamiento Seguro de Contraseñas
 
-**Rama:** `feature/sprint-09-password-validation`
+**Rama (histórica):** `feature/sprint-11-password-validation`
+
+### Estado
+✅ **Ejecutado.** Rama histórica del sprint completado (la rama real ya existe con este nombre).
 
 ### Descripción
 Implementar la comprobación y almacenamiento seguro de contraseñas para los usuarios creados sin correo electrónico (Sprint 7). Actualmente el login con usuario/contraseña no puede verificar si las credenciales introducidas son válidas porque el flujo de autenticación mediante Supabase Auth no está correctamente integrado. Este sprint completa la funcionalidad pendiente del Sprint 7 y asegura que las contraseñas se almacenen de forma segura (hash + salt) y se verifiquen correctamente en cada inicio de sesión.
@@ -314,7 +317,10 @@ Implementar la comprobación y almacenamiento seguro de contraseñas para los us
 
 ## Sprint 10 — Noticias: Publicación y Gestión
 
-**Rama:** `feature/sprint-10-news`
+**Rama (histórica):** `feature/sprint-13-news`
+
+### Estado
+✅ **Ejecutado.** Rama histórica del sprint completado (la rama real ya existe con este nombre).
 
 ### Descripción
 Sistema de publicación y gestión de noticias internas para los miembros.
@@ -329,12 +335,12 @@ Sistema de publicación y gestión de noticias internas para los miembros.
 | 4 | UI: Feed de noticias | Página `/news` con lista de noticias estilo red social (tarjetas con título, contenido truncado, autor, fecha). |
 | 5 | UI: Detalle de noticia | Página `/news/[id]` con contenido completo. |
 | 6 | UI: Crear/Editar noticia | Formulario para management, con editor de texto enriquecido (opcional). |
-| 7 | Notificaciones | Al crear una noticia, enviar notificación push/Interna a todos los miembros (depende de Sprint 16). |
+| 7 | Notificaciones | Al crear una noticia, enviar notificación push/Interna a todos los miembros (depende de Sprint 20). |
 | 8 | Pruebas | Tests unitarios e integración. |
 
 ### Dependencias
 - Sprint 1 (UI/UX)
-- Sprint 16 (Notificaciones — opcional para MVP)
+- Sprint 20 (Notificaciones — opcional para MVP)
 
 ### Criterios de Aceptación
 - Los management pueden crear, editar y eliminar noticias.
@@ -346,7 +352,10 @@ Sistema de publicación y gestión de noticias internas para los miembros.
 
 ## Sprint 11 — Preguntas: Consultas y Seguimiento
 
-**Rama:** `feature/sprint-11-questions`
+**Rama (histórica):** `feature/sprint-14-questions`
+
+### Estado
+✅ **Ejecutado.** Rama histórica del sprint completado (la rama real ya existe con este nombre).
 
 ### Descripción
 Módulo para realizar consultas internas, hacer seguimiento y marcar preguntas como resueltas.
@@ -375,9 +384,114 @@ Módulo para realizar consultas internas, hacer seguimiento y marcar preguntas c
 
 ---
 
-## Sprint 12 — Votaciones
+## Sprint 12 — Asociación de Personas a Turnos y Visibilidad por Grupo
 
-**Rama:** `feature/sprint-12-votings`
+**Rama (histórica):** `feature/sprint-12-shift-assignment-groups`
+
+### Estado
+✅ **Ejecutado.**
+
+### Descripción
+Permitir asociar personas concretas a cada turno de trabajo. Ya no se asume que todo el mundo del grupo (p. ej. toda la "barra") tiene que cubrir todos los turnos: cada turno se asigna a miembros específicos. Además, **solo los responsables de cada grupo de trabajo podrán crear sus propios eventos** de tipo trabajo, y **esos eventos solo serán visibles para los miembros que pertenecen a ese grupo**.
+
+### Pasos
+
+| # | Paso | Detalle |
+|---|---|---|
+| 1 | Migración de BD — shift_assignments | Revisar y completar `umsuka.shift_assignments` (id, shift_id, user_id, confirmed, created_by). Añadir índice único `(shift_id, user_id)` para evitar duplicados. |
+| 2 | Migración de BD — visibilidad de eventos | Añadir a `umsuka.events` las columnas `visible_to_group` (workgroup o null = todos) y `created_by_workgroup` para eventos de tipo `work_shift`. |
+| 3 | RLS — creación de eventos de grupo | Actualizar políticas para que solo `is_workgroup_lead(workgroup)` pueda INSERT/UPDATE/DELETE eventos de tipo `work_shift` donde `created_by_workgroup` coincida con su grupo. |
+| 4 | RLS — visibilidad de eventos | Añadir política SELECT que filtre: eventos con `visible_to_group = null` (visibles para todos) o `visible_to_group = current_user_workgroup()`. |
+| 5 | Actualizar tipos | Regenerar `src/types/database.types.ts`. |
+| 6 | Capa `lib/shifts/assignments.ts` | Queries y mutations para asignar/desasignar miembros a turnos concretos: `assignMemberToShift`, `unassignMemberFromShift`, `getShiftAssignments`, `getMyAssignedShifts`. |
+| 7 | Server actions | `assignMemberToShiftAction`, `unassignMemberFromShiftAction` — validan que el actor sea el lead del grupo del turno. |
+| 8 | UI: Gestión de asignación | En el detalle del turno, lista de miembros del grupo con checkbox/toggle para asignarlos a ese turno concreto. |
+| 9 | UI: Eventos por grupo | Al crear un evento de tipo trabajo, el responsable elige su grupo; el evento queda marcado con `visible_to_group` y solo lo ven los miembros de ese grupo. |
+| 10 | Feed filtrado | En la página de eventos, los miembros solo ven: eventos generales + eventos de su grupo de trabajo. |
+| 11 | Pruebas | Tests unitarios de RLS/visibilidad y de asignación. Tests de integración del flujo completo. |
+
+### Dependencias
+- Sprint 2 (Workgroup Roles — para `is_workgroup_lead` y `current_user_workgroup`)
+- Sprint 8 (Shifts — para la gestión base de turnos)
+
+### Criterios de Aceptación
+- Cada turno tiene asignados miembros concretos (no todo el grupo).
+- Solo el responsable del grupo puede crear eventos de tipo trabajo de su grupo.
+- Los eventos de tipo trabajo solo son visibles para los miembros del grupo correspondiente.
+- Un miembro no puede ver eventos de trabajo de otros grupos.
+- Un responsable no puede asignar miembros a turnos de otros grupos.
+
+---
+
+## Sprint 13 — Estadísticas para Responsables de Grupo
+
+**Rama:** `feature/sprint-13-workgroup-stats`
+
+### Descripción
+Nueva sección para los responsables de cada grupo de trabajo donde pueden ver estadísticas de su grupo: asistencia a eventos de trabajo, horas echadas y número de turnos realizados por cada persona del grupo.
+
+### Pasos
+
+| # | Paso | Detalle |
+|---|---|---|
+| 1 | Migración de BD — horas por turno | Añadir a `umsuka.shifts` las columnas `duration_hours` (calculada de start/end) o confirmar que se calcula en runtime. Añadir índice en `shift_assignments.user_id`. |
+| 2 | Capa `lib/workgroups/stats.ts` | Queries agregadas: `getGroupAttendanceStats(workgroup)`, `getGroupHoursStats(workgroup)`, `getMemberShiftCount(userId)`, `getMemberTotalHours(userId)`. |
+| 3 | Cálculo de estadísticas | Para cada miembro del grupo: nº de turnos asignados, nº de turnos con asistencia confirmada (vía `workgroup_attendance`), horas totales (suma de `duration_hours` de turnos asistidos), porcentaje de asistencia. |
+| 4 | Server actions | `getGroupStatsAction`, `getMemberStatsAction` — solo lead del grupo o super_admin. |
+| 5 | UI: Sección de estadísticas | Página `/workgroups/[grupo]/stats` con: tabla resumen por miembro (nombre, turnos hechos, horas, % asistencia) y gráficos simples (barras por miembro, evolución semanal/mensual). |
+| 6 | UI: Acceso desde dashboard | Enlace a la sección de estadísticas visible solo para responsables de grupo. |
+| 7 | UI: Detalle por miembro | Al hacer clic en un miembro, ver su desglose: lista de turnos asistidos con fecha, evento y horas. |
+| 8 | Pruebas | Tests unitarios para las queries agregadas y tests de integración. |
+
+### Dependencias
+- Sprint 12 (Asociación de personas a turnos — para tener asignaciones concretas)
+- Sprint 2 (Workgroup Roles — para los leads de grupo)
+
+### Criterios de Aceptación
+- Cada responsable de grupo ve una sección de estadísticas exclusiva de su grupo.
+- Se muestran por persona: nº de turnos hechos, horas totales y porcentaje de asistencia.
+- El responsable solo ve datos de los miembros de su propio grupo.
+- Super admin puede ver las estadísticas de todos los grupos.
+- Los datos se actualizan al marcar asistencia en los turnos.
+
+---
+
+## Sprint 14 — Listado de Miembros para Directiva y Responsables de Grupo
+
+**Rama:** `feature/sprint-14-member-list`
+
+### Descripción
+Sección donde la directiva y los responsables de cada grupo de trabajo pueden ver el listado de los usuarios dados de alta en la comparsa. La directiva (super admin/management) ve a todos los miembros; cada responsable de grupo ve únicamente los miembros de su propio grupo de trabajo.
+
+### Pasos
+
+| # | Paso | Detalle |
+|---|---|---|
+| 1 | Capa `lib/members/` | Queries: `getAllMembers()` (solo directiva/super_admin), `getWorkgroupMembers(workgroup)` (solo lead de ese grupo), `getMemberDetail(userId)` con datos de perfil. |
+| 2 | Server actions | `getMembersAction` con validación de rol: super_admin/management → todos los miembros; `is_workgroup_lead` → solo los de su grupo; resto → denegado. |
+| 3 | RLS check | Verificar las políticas SELECT en `umsuka.profiles` para que un responsable no pueda leer miembros de otros grupos mediante las queries existentes. |
+| 4 | UI: Página de listado | Página `/members` con tabla: nombre, componente, grupo de trabajo, rol, estado (pending/active/suspended), fecha de alta. Filtros por grupo, componente y estado, y búsqueda por nombre. |
+| 5 | UI: Vista por grupo | Para los responsables de grupo, la misma página muestra únicamente los miembros de su grupo (filtrada por su `workgroup`). Enlace visible en el dashboard solo para directiva y leads. |
+| 6 | UI: Detalle de miembro | Al hacer clic en un miembro, ver su ficha: datos de perfil, grupo de trabajo, turnos asignados y asistencia (reutilizando datos de sprints anteriores). |
+| 7 | Pruebas | Tests unitarios de las queries y validaciones de rol. Tests de integración: directiva ve todos, lead ve solo su grupo, lead no puede ver otros grupos. |
+
+### Dependencias
+- Sprint 2 (Workgroup Roles — para `is_workgroup_lead` y `current_user_workgroup`)
+- Sprint 19 (Perfiles y Componentes — para los campos completos del perfil)
+
+### Criterios de Aceptación
+- La directiva ve el listado de todos los usuarios dados de alta en la comparsa.
+- Cada responsable de grupo ve únicamente los miembros de su grupo de trabajo.
+- Un responsable no puede ver los miembros de otros grupos.
+- El listado muestra nombre, componente, grupo, rol, estado y fecha de alta.
+- Se puede buscar y filtrar por grupo, componente y estado.
+- La directiva puede ver el listado completo y el de cualquier grupo.
+
+---
+
+## Sprint 15 — Votaciones
+
+**Rama:** `feature/sprint-15-votings`
 
 ### Descripción
 Sistema de votación con opciones múltiples, control de voto único por usuario y visualización de resultados en tiempo real.
@@ -407,9 +521,9 @@ Sistema de votación con opciones múltiples, control de voto único por usuario
 
 ---
 
-## Sprint 13 — Gestión Documental (Supabase Storage)
+## Sprint 16 — Gestión Documental (Supabase Storage)
 
-**Rama:** `feature/sprint-13-document-management`
+**Rama:** `feature/sprint-16-document-management`
 
 ### Descripción
 Gestionar documentos usando Supabase Storage con categorías, permisos por rol y control de versiones.
@@ -436,9 +550,9 @@ Gestionar documentos usando Supabase Storage con categorías, permisos por rol y
 
 ---
 
-## Sprint 14 — Eventos: Mejora de Registro y Gestión
+## Sprint 17 — Eventos: Mejora de Registro y Gestión
 
-**Rama:** `feature/sprint-14-events-enhancement`
+**Rama:** `feature/sprint-17-events-enhancement`
 
 ### Descripción
 Mejorar la gestión de eventos: registro con campos adicionales, comentarios, capacidad máxima, y lista de espera.
@@ -465,9 +579,45 @@ Mejorar la gestión de eventos: registro con campos adicionales, comentarios, ca
 
 ---
 
-## Sprint 15 — Perfiles y Componentes
+## Sprint 18 — Segmentación de Audiencia en Eventos
 
-**Rama:** `feature/sprint-15-profiles-components`
+**Rama:** `feature/sprint-18-event-audience`
+
+### Descripción
+Al crear un evento, el creador podrá indicar a qué tipo de usuarios se mostrará: por grupo de trabajo (telas, barra, estandarte, limpieza), por tipo de miembro (rol/componente) o a usuarios concretos seleccionables. Los eventos con audiencia restringida solo aparecerán para los destinatarios indicados.
+
+### Pasos
+
+| # | Paso | Detalle |
+|---|---|---|
+| 1 | Migración de BD — events | Añadir a `umsuka.events`: `audience_type` (enum: `all`, `workgroup`, `member_type`, `specific_users`), `audience_workgroup` (text nullable), `audience_member_type` (text nullable). |
+| 2 | Migración de BD — event_audience_users | Crear `umsuka.event_audience_users` (event_id FK, user_id FK, PK compuesta) para la lista de usuarios concretos cuando `audience_type = 'specific_users'`. |
+| 3 | RLS — visibilidad por audiencia | Añadir política SELECT en `umsuka.events`: visible si `audience_type = 'all'` O (`audience_type = 'workgroup'` y `audience_workgroup = current_user_workgroup()`) O (`audience_type = 'member_type'` y `audience_member_type = current_user_component()`) O (`audience_type = 'specific_users'` y el usuario está en `event_audience_users`). |
+| 4 | Actualizar tipos | Regenerar `src/types/database.types.ts`. |
+| 5 | Capa `lib/events/audience.ts` | Schemas Zod (audienceSchema), queries (getVisibleEvents, getEventAudience), mutations (createEventWithAudience, updateEventAudience). |
+| 6 | Server actions | `createEventWithAudienceAction`, `updateEventAudienceAction`, `getVisibleEventsAction`. |
+| 7 | UI: Formulario de evento | En el formulario de creación/edición de evento, sección "¿A quién se muestra?" con selector de tipo (todos / por grupo / por tipo de miembro / usuarios concretos) y los selectores correspondientes (multi-select de usuarios con búsqueda). |
+| 8 | UI: Feed de eventos filtrado | La página de eventos solo muestra eventos visibles para el usuario según la audiencia configurada. |
+| 9 | UI: Badge de audiencia | En el detalle del evento, mostrar a qué audiencia está dirigido (visible para management). |
+| 10 | Pruebas | Tests unitarios de los schemas de audiencia. Tests de integración de las políticas de visibilidad. |
+
+### Dependencias
+- Sprint 2 (Workgroup Roles — para `current_user_workgroup()`)
+- Sprint 12 (Visibilidad por grupo de turnos — patrón de RLS similar)
+- Sprint 17 (Eventos — para el formulario de eventos)
+
+### Criterios de Aceptación
+- Al crear un evento se puede elegir: todos, un grupo de trabajo, un tipo de miembro o usuarios concretos.
+- Los eventos restringidos solo aparecen para sus destinatarios.
+- Un usuario no puede ver eventos dirigidos a otros grupos/tipos/usuarios.
+- El creador y management pueden ver la audiencia configurada de cada evento.
+- La configuración de audiencia puede modificarse después de crear el evento.
+
+---
+
+## Sprint 19 — Perfiles y Componentes
+
+**Rama:** `feature/sprint-19-profiles-components`
 
 ### Descripción
 Mejorar la gestión de perfiles de usuario: foto, biografía, componentes (telas, barra, etc.), habilidades, y historial de participación.
@@ -492,9 +642,9 @@ Mejorar la gestión de perfiles de usuario: foto, biografía, componentes (telas
 
 ---
 
-## Sprint 16 — Notificaciones
+## Sprint 20 — Notificaciones
 
-**Rama:** `feature/sprint-16-notifications`
+**Rama:** `feature/sprint-20-notifications`
 
 ### Descripción
 Sistema de notificaciones internas (en-app) y en tiempo real sobre eventos, noticias, votaciones y cambios relevantes.
@@ -523,9 +673,9 @@ Sistema de notificaciones internas (en-app) y en tiempo real sobre eventos, noti
 
 ---
 
-## Sprint 17 — Administración: Panel de Control
+## Sprint 21 — Administración: Panel de Control
 
-**Rama:** `feature/sprint-17-admin-panel`
+**Rama:** `feature/sprint-21-admin-panel`
 
 ### Descripción
 Panel de administración completo para gestión de usuarios, configuración global, permisos y auditoría.
@@ -545,7 +695,7 @@ Panel de administración completo para gestión de usuarios, configuración glob
 
 ### Dependencias
 - Sprint 6 (aprobación de usuarios)
-- Sprint 15 (perfiles completos)
+- Sprint 19 (perfiles completos)
 
 ### Criterios de Aceptación
 - Los super admin pueden ver y gestionar todos los usuarios (cambiar roles, activar/suspender).
@@ -555,9 +705,43 @@ Panel de administración completo para gestión de usuarios, configuración glob
 
 ---
 
-## Sprint 18 — PWA: Progressive Web App
+## Sprint 22 — Eliminación Permanente de Cuentas (Solo Super Admin)
 
-**Rama:** `feature/sprint-18-pwa`
+**Rama:** `feature/sprint-22-account-deletion`
+
+### Descripción
+Permitir que solo el super admin pueda eliminar cuentas de forma permanente, incluyendo el usuario de auth, su perfil y todos sus datos relacionados. Requiere confirmación explícita y registro de auditoría.
+
+### Pasos
+
+| # | Paso | Detalle |
+|---|---|---|
+| 1 | Auditoría de datos asociados | Identificar todas las tablas con FK al usuario (profiles, attendance, absences, shift_assignments, questions, voting_votes, event_registrations, notifications, etc.) y decidir estrategia de borrado por cada una (CASCADE, SET NULL o anonimización). |
+| 2 | Migración de BD — soft delete | Añadir columna `deleted_at` a `umsuka.profiles` como salvaguarda previa al borrado físico. |
+| 3 | Migración de BD — políticas RLS | Revisar que las políticas RLS excluyan perfiles con `deleted_at` no nulo. |
+| 4 | Servicio `lib/auth/delete-account.ts` | Implementar `deleteAccountPermanently(userId)`: (1) verificar rol super_admin, (2) ejecutar borrado en cascada de datos asociados, (3) eliminar el usuario de auth con `supabase.auth.admin.deleteUser()`, (4) registrar en `audit_logs`. |
+| 5 | Server action | `deleteAccountPermanentlyAction` — solo super_admin, con confirmación de doble paso. |
+| 6 | UI: Confirmación | En `/admin/users`, botón "Eliminar permanentemente" que abre diálogo con advertencia ("Esta acción no se puede deshacer"), pidiendo teclear el nombre del usuario o "ELIMINAR" para confirmar. |
+| 7 | UI: Feedback | Mensaje de éxito/error tras la eliminación, y actualización de la lista de usuarios. |
+| 8 | Pruebas | Tests unitarios del servicio de borrado. Tests de integración: solo super_admin puede eliminar, los datos asociados se limpian, no se puede eliminar el propio super admin. |
+
+### Dependencias
+- Sprint 21 (Admin Panel — para el panel de usuarios y audit_logs)
+- Sprint 6 (Registration Approval — para el estado de cuentas)
+
+### Criterios de Aceptación
+- Solo el super admin puede eliminar cuentas permanentemente.
+- La eliminación borra el usuario de auth, el perfil y todos sus datos asociados.
+- Se requiere confirmación explícita (doble paso) antes de eliminar.
+- La eliminación queda registrada en el log de auditoría.
+- Un super admin no puede eliminarse a sí mismo (protección).
+- El sistema avisa de las consecuencias irreversibles antes de confirmar.
+
+---
+
+## Sprint 23 — PWA: Progressive Web App
+
+**Rama:** `feature/sprint-23-pwa`
 
 ### Descripción
 Convertir la aplicación en una Progressive Web App instalable con soporte offline mediante Service Workers.
@@ -583,9 +767,9 @@ Convertir la aplicación en una Progressive Web App instalable con soporte offli
 
 ---
 
-## Sprint 19 — CI/CD y Despliegue Automático
+## Sprint 24 — CI/CD y Despliegue Automático
 
-**Rama:** `feature/sprint-19-cicd`
+**Rama:** `feature/sprint-24-cicd`
 
 ### Descripción
 Configurar GitHub Actions para linting, typecheck, tests, build y despliegue automático a Vercel desde la rama `main`.
@@ -612,9 +796,9 @@ Configurar GitHub Actions para linting, typecheck, tests, build y despliegue aut
 
 ---
 
-## Sprint 20 — Hardening Final
+## Sprint 25 — Hardening Final
 
-**Rama:** `feature/sprint-20-hardening`
+**Rama:** `feature/sprint-25-hardening`
 
 ### Descripción
 Auditorías finales de seguridad, rendimiento, accesibilidad y validación general para producción.
@@ -654,20 +838,25 @@ Auditorías finales de seguridad, rendimiento, accesibilidad y validación gener
 | Sprint 4 — Home Feed | `feature/sprint-04-home-feed` | Sprint 1 |
 | Sprint 5 — Asistencia y Ausencias | `feature/sprint-05-asistencia-ausencias` | ✅ Completado |
 | Sprint 6 — Registration Approval | `feature/sprint-06-registration-approval` | Sprint 5 |
-| Sprint 7 — Emailless Accounts | `feature/sprint-07-emailless-accounts` | Sprint 6, Sprint 15 |
+| Sprint 7 — Emailless Accounts | `feature/sprint-07-emailless-accounts` | Sprint 6, Sprint 19 |
 | Sprint 8 — Shifts | `feature/sprint-08-shifts` | Sprint 1, Sprint 6 |
-| **Sprint 9 — Password Validation** | `feature/sprint-09-password-validation` | **Sprint 7, Sprint 6** |
-| Sprint 10 — News | `feature/sprint-10-news` | Sprint 1 |
-| Sprint 11 — Questions | `feature/sprint-11-questions` | Sprint 1 |
-| Sprint 12 — Votings | `feature/sprint-12-votings` | Sprint 1, Sprint 6 |
-| Sprint 13 — Document Management | `feature/sprint-13-document-management` | Sprint 6 |
-| Sprint 14 — Events Enhancement | `feature/sprint-14-events-enhancement` | Sprint 1, Sprint 5 |
-| Sprint 15 — Profiles & Components | `feature/sprint-15-profiles-components` | Sprint 1 |
-| Sprint 16 — Notifications | `feature/sprint-16-notifications` | Múltiples |
-| Sprint 17 — Admin Panel | `feature/sprint-17-admin-panel` | Sprint 6, Sprint 15 |
-| Sprint 18 — PWA | `feature/sprint-18-pwa` | Sprint 1 |
-| Sprint 19 — CI/CD | `feature/sprint-19-cicd` | — |
-| Sprint 20 — Hardening | `feature/sprint-20-hardening` | Todos los anteriores |
+| **Sprint 9 — Password Validation** | `feature/sprint-11-password-validation` (histórica) | ✅ Ejecutado |
+| **Sprint 10 — News** | `feature/sprint-13-news` (histórica) | ✅ Ejecutado |
+| **Sprint 11 — Questions** | `feature/sprint-14-questions` (histórica) | ✅ Ejecutado |
+| **Sprint 12 — Shift Assignment Groups** | `feature/sprint-12-shift-assignment-groups` (histórica) | ✅ Ejecutado |
+| **Sprint 13 — Workgroup Stats** | `feature/sprint-13-workgroup-stats` | **Sprint 12, Sprint 2** |
+| **Sprint 14 — Member List** | `feature/sprint-14-member-list` | **Sprint 2, Sprint 19** |
+| Sprint 15 — Votings | `feature/sprint-15-votings` | Sprint 1, Sprint 6 |
+| Sprint 16 — Document Management | `feature/sprint-16-document-management` | Sprint 6 |
+| Sprint 17 — Events Enhancement | `feature/sprint-17-events-enhancement` | Sprint 1, Sprint 5 |
+| **Sprint 18 — Event Audience** | `feature/sprint-18-event-audience` | **Sprint 2, Sprint 12, Sprint 17** |
+| Sprint 19 — Profiles & Components | `feature/sprint-19-profiles-components` | Sprint 1 |
+| Sprint 20 — Notifications | `feature/sprint-20-notifications` | Múltiples |
+| Sprint 21 — Admin Panel | `feature/sprint-21-admin-panel` | Sprint 6, Sprint 19 |
+| **Sprint 22 — Account Deletion** | `feature/sprint-22-account-deletion` | **Sprint 21, Sprint 6** |
+| Sprint 23 — PWA | `feature/sprint-23-pwa` | Sprint 1 |
+| Sprint 24 — CI/CD | `feature/sprint-24-cicd` | — |
+| Sprint 25 — Hardening | `feature/sprint-25-hardening` | Todos los anteriores |
 
 ---
 

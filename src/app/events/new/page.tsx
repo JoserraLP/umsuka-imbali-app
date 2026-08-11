@@ -6,6 +6,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { isManagementRole } from "@/lib/auth/roles";
 import { EventForm } from "@/app/events/event-form";
+import type { EventWorkgroup } from "@/lib/events/schema";
 
 export const metadata: Metadata = {
   title: "Nuevo evento",
@@ -18,9 +19,12 @@ export default async function NewEventPage() {
     redirect("/auth/login");
   }
 
-  if (!isManagementRole(profile.role)) {
+  if (!isManagementRole(profile.role) && !profile.isWorkgroupLead) {
     redirect("/events");
   }
+
+  // Non-management leads can only create work_shift events for their own group.
+  const isManagement = isManagementRole(profile.role);
 
   return (
     <AppShell profile={profile}>
@@ -28,7 +32,9 @@ export default async function NewEventPage() {
         <div className="border-b border-border pb-4">
           <h1 className="text-xl font-bold tracking-tight">Nuevo evento</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Crea una actividad, reunión o fecha de carnaval.
+            {isManagement
+              ? "Crea una actividad, reunión o fecha de carnaval."
+              : "Crea un turno de trabajo para tu grupo."}
           </p>
           <Link href="/events" className="mt-2 inline-block text-sm text-muted-foreground hover:text-foreground">
             ← Volver a eventos
@@ -46,10 +52,12 @@ export default async function NewEventPage() {
               defaultValues={{
                 title: "",
                 description: "",
-                eventType: "general",
+                eventType: isManagement ? "general" : "work_shift",
                 eventDate: "",
                 capacity: null,
+                workgroup: (isManagement ? null : profile.workgroup) as EventWorkgroup | null,
               }}
+              leadWorkgroup={isManagement ? undefined : profile.workgroup}
             />
           </CardContent>
         </Card>

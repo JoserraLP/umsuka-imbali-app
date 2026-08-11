@@ -113,11 +113,14 @@ function CredentialsDisplay({
 export function EmaillessAccountForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [componentType, setComponentType] = useState<string>("");
   const [credentials, setCredentials] = useState<{
     username: string;
     password: string;
   } | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
+
+  const requiresWorkgroup = componentType === "music" || componentType === "dance";
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -140,6 +143,12 @@ export function EmaillessAccountForm() {
 
     if (workgroupValue && workgroupValue !== "ninguno") {
       input.workgroup = workgroupValue as CreateEmaillessAccountInput["workgroup"];
+    }
+
+    if (requiresWorkgroup && (!workgroupValue || workgroupValue === "ninguno")) {
+      setError("Música y baile requieren un grupo de trabajo obligatoriamente.");
+      setIsLoading(false);
+      return;
     }
 
     const result = await createEmaillessAccountAction(input);
@@ -219,7 +228,14 @@ export function EmaillessAccountForm() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="componentType">Componente</Label>
-          <Select id="componentType" name="componentType" required disabled={isLoading}>
+          <Select
+            id="componentType"
+            name="componentType"
+            required
+            disabled={isLoading}
+            value={componentType}
+            onChange={(e) => setComponentType(e.target.value)}
+          >
             <option value="">Seleccionar…</option>
             {COMPONENT_TYPE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -231,13 +247,19 @@ export function EmaillessAccountForm() {
 
         <div className="space-y-2">
           <Label htmlFor="workgroup">Grupo de trabajo</Label>
-          <Select id="workgroup" name="workgroup" disabled={isLoading}>
-            {WORKGROUP_OPTIONS.map((opt) => (
+          <Select id="workgroup" name="workgroup" required={requiresWorkgroup} disabled={isLoading}>
+            <option value="ninguno">Ninguno</option>
+            {WORKGROUP_OPTIONS.filter((opt) => opt.value !== "ninguno").map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>
             ))}
           </Select>
+          {requiresWorkgroup && (
+            <p className="text-xs text-muted-foreground">
+              Música y baile requieren un grupo de trabajo obligatoriamente.
+            </p>
+          )}
         </div>
       </div>
 

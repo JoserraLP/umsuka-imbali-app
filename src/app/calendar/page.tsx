@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AppShell } from "@/components/layout/app-shell";
 import { getCurrentProfile } from "@/lib/auth/session";
+import { isManagementRole } from "@/lib/auth/roles";
 import { listEvents, type EventListItem } from "@/lib/events/queries";
 import { buildMonthGrid, monthDateRange, dayKey } from "@/lib/events/calendar";
 import { cn } from "@/lib/utils";
@@ -65,7 +66,10 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
 
   const { year, month } = resolveYearMonth(await searchParams);
   const { from, to } = monthDateRange(year, month);
-  const events = await listEvents({ from, to });
+  const events = await listEvents(
+    { from, to },
+    { workgroup: profile.workgroup, isManagement: isManagementRole(profile.role) },
+  );
   const weeks = buildMonthGrid(year, month);
 
   const eventsByDay = new Map<string, EventListItem[]>();

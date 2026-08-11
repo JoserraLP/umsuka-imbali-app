@@ -2,13 +2,14 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { updateMemberProfileSchema, type UpdateMemberProfileInput } from "@/lib/profiles/schema";
 import { updateMemberProfileAction } from "@/app/admin/users/actions";
+import type { Workgroup } from "@/types/database.types";
 
 interface MemberEditFormProps {
   defaultValues: UpdateMemberProfileInput;
@@ -20,6 +21,14 @@ const COMPONENT_TYPE_LABELS: Record<UpdateMemberProfileInput["componentType"], s
   member: "Socio/a",
 };
 
+const WORKGROUP_LABELS: Record<Workgroup, string> = {
+  telas: "Telas",
+  barra: "Barra",
+  estandarte: "Estandarte",
+  limpieza: "Limpieza",
+  ninguno: "Ninguno",
+};
+
 export function MemberEditForm({ defaultValues }: MemberEditFormProps) {
   const [serverError, setServerError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<number | null>(null);
@@ -27,14 +36,29 @@ export function MemberEditForm({ defaultValues }: MemberEditFormProps) {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<UpdateMemberProfileInput>({
     resolver: zodResolver(updateMemberProfileSchema),
     defaultValues,
   });
 
+  const componentType = useWatch({ control, name: "componentType" });
+  const requiresWorkgroup = componentType === "music" || componentType === "dance";
+
   async function onSubmit(values: UpdateMemberProfileInput) {
     setServerError(null);
+
+    if (
+      requiresWorkgroup &&
+      (!values.workgroup || values.workgroup === "ninguno")
+    ) {
+      setServerError(
+        "Música y baile requieren un grupo de trabajo obligatoriamente. Asigna un grupo antes de guardar.",
+      );
+      return;
+    }
+
     const result = await updateMemberProfileAction(values);
 
     if (!result.success) {
@@ -86,6 +110,25 @@ export function MemberEditForm({ defaultValues }: MemberEditFormProps) {
           </Select>
           {errors.componentType && (
             <p className="text-xs text-destructive">{errors.componentType.message}</p>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="workgroup">Grupo de trabajo</Label>
+          <Select id="workgroup" {...register("workgroup")}>
+            {Object.entries(WORKGROUP_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </Select>
+          {requiresWorkgroup && (
+            <p className="text-xs text-muted-foreground">
+              Música y baile requieren un grupo de trabajo obligatoriamente.
+            </p>
+          )}
+          {errors.workgroup && (
+            <p className="text-xs text-destructive">{errors.workgroup.message}</p>
           )}
         </div>
       </div>

@@ -5,16 +5,17 @@ import {
   createShift,
   updateShift,
   deleteShift,
-  assignMember,
-  unassignMember,
 } from "@/lib/shifts/mutations";
+import {
+  assignMemberToShift,
+  unassignMemberFromShift,
+} from "@/lib/shifts/assignments";
 import type {
   CreateShiftInput,
   UpdateShiftInput,
-  AssignMemberInput,
-  UnassignMemberInput,
 } from "@/lib/shifts/schema";
 import type { MutationResult } from "@/lib/shifts/mutations";
+import type { AssignmentResult } from "@/lib/shifts/assignments";
 
 export async function createShiftAction(
   input: CreateShiftInput,
@@ -53,10 +54,10 @@ export async function deleteShiftAction(
   return result;
 }
 
-export async function assignMemberAction(
-  input: AssignMemberInput & { eventId: string },
-): Promise<MutationResult> {
-  const result = await assignMember({
+export async function assignMemberToShiftAction(
+  input: { shiftId: string; userId: string } & { eventId: string },
+): Promise<AssignmentResult> {
+  const result = await assignMemberToShift({
     shiftId: input.shiftId,
     userId: input.userId,
   });
@@ -68,10 +69,10 @@ export async function assignMemberAction(
   return result;
 }
 
-export async function unassignMemberAction(
-  input: UnassignMemberInput & { eventId: string },
-): Promise<MutationResult> {
-  const result = await unassignMember({
+export async function unassignMemberFromShiftAction(
+  input: { assignmentId: string } & { eventId: string },
+): Promise<AssignmentResult> {
+  const result = await unassignMemberFromShift({
     assignmentId: input.assignmentId,
   });
 

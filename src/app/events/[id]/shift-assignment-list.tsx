@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/select";
-import { assignMemberAction, unassignMemberAction } from "@/app/events/[id]/shift-actions";
+import { useState } from "react";
+import {
+  assignMemberToShiftAction,
+  unassignMemberFromShiftAction,
+} from "@/app/events/[id]/shift-actions";
 import type { AssignmentWithUser, MemberOption } from "@/lib/shifts/queries";
 import type { Workgroup } from "@/types/database.types";
 
@@ -28,134 +29,85 @@ export function ShiftAssignmentList({
   canManage,
 }: ShiftAssignmentListProps) {
   const router = useRouter();
-  const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
-  const [isAssigning, setIsAssigning] = useState(false);
-  const [unassigningId, setUnassigningId] = useState<string | null>(null);
-
   const isFull = maxAssignees !== null && assignments.length >= maxAssignees;
 
-  // Filter available members: exclude already assigned + respect workgroup filter
   const assignedUserIds = new Set(assignments.map((a) => a.userId));
+
+  // Sprint 12: each shift is covered by specific members of the group,
+  // so the selector lists the group's members (or all active members for
+  // shifts without a workgroup filter) with a toggle per member.
   const eligibleMembers = availableMembers.filter((m) => {
-    if (assignedUserIds.has(m.id)) return false;
     if (workgroupFilter && workgroupFilter !== "ninguno" && m.workgroup !== workgroupFilter) {
       return false;
     }
     return true;
   });
 
-  async function handleAssign() {
-    if (!selectedUserId) return;
-    setIsAssigning(true);
+  async function handleToggle(member: MemberOption, isAssigned: boolean) {
     setError(null);
-
-    const result = await assignMemberAction({
-      shiftId,
-      userId: selectedUserId,
-      eventId,
-    });
-
-    setIsAssigning(false);
-
-    if (result.success) {
-      setSelectedUserId("");
-      router.refresh();
-    } else {
-      setError(result.error ?? "Error al asignar miembro.");
-    }
-  }
-
-  async function handleUnassign(assignmentId: string) {
-    setUnassigningId(assignmentId);
-    setError(null);
-
-    const result = await unassignMemberAction({
-      assignmentId,
-      eventId,
-    });
-
-    setUnassigningId(null);
+    const result = isAssigned
+      ? await unassignMemberFromShiftAction({
+          assignmentId: assignments.find((a) => a.userId === member.id)?.id ?? "",
+          eventId,
+        })
+      : await assignMemberToShiftAction({ shiftId, userId: member.id, eventId });
 
     if (result.success) {
       router.refresh();
     } else {
-      setError(result.error ?? "Error al desasignar miembro.");
+      setError(result.error ?? "Error al actualizar la asignación.");
     }
   }
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">
-          {assignments.length}
-          {maxAssignees !== null ? ` / ${maxAssignees}` : ""} asignados
-          {workgroupFilter && workgroupFilter !== "ninguno" && ` · ${workgroupFilter}`}
-        </span>
-      </div>
+      <span className="text-xs text-muted-foreground">
+        {assignments.length}
+        {maxAssignees !== null ? ` / ${maxAssignees}` : ""} asignados
+        {workgroupFilter && workgroupFilter !== "ninguno" && ` · Grupo: ${workgroupFilter}`}
+      </span>
 
-      {/* Assignment list */}
-      {assignments.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Sin miembros asignados.</p>
+      {eligibleMembers.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          {workgroupFilter && workgroupFilter !== "ninguno"
+            ? "No hay miembros en este grupo."
+            : "No hay miembros disponibles."}
+        </p>
       ) : (
         <ul className="space-y-1">
-          {assignments.map((a) => (
-            <li
-              key={a.id}
-              className="flex items-center justify-between rounded-md bg-muted/30 px-3 py-1.5 text-sm"
-            >
-              <span>
-                {a.firstName} {a.lastName}
-              </span>
-              {canManage && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 text-xs text-destructive hover:text-destructive"
-                  disabled={unassigningId === a.id}
-                  onClick={() => handleUnassign(a.id)}
+          {eligibleMembers.map((member) => {
+            const isAssigned = assignedUserIds.has(member.id);
+            const canToggle = canManage && !(isFull && !isAssigned);
+            return (
+              <li
+                key={member.id}
+                className="flex items-center gap-2 rounded-md bg-muted/30 px-3 py-1.5 text-sm"
+              >
+                <input
+                  type="checkbox"
+                  id={`assign-${member.id}`}
+                  checked={isAssigned}
+                  disabled={!canToggle}
+                  onChange={() => handleToggle(member, isAssigned)}
+                  className="h-4 w-4 shrink-0 accent-primary"
+                />
+                <label
+                  htmlFor={`assign-${member.id}`}
+                  className={`flex-1 ${!canToggle && !isAssigned ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
                 >
-                  {unassigningId === a.id ? "…" : "Quitar"}
-                </Button>
-              )}
-            </li>
-          ))}
+                  {member.firstName} {member.lastName}
+                  {member.workgroup !== "ninguno" && (
+                    <span className="ml-1 text-xs text-muted-foreground">({member.workgroup})</span>
+                  )}
+                </label>
+                {isFull && !isAssigned && (
+                  <span className="text-xs text-muted-foreground">Turno completo</span>
+                )}
+              </li>
+            );
+          })}
         </ul>
-      )}
-
-      {/* Assign form */}
-      {canManage && (
-        <div className="flex items-end gap-2 pt-1">
-          <div className="flex-1">
-            <Select
-              value={selectedUserId}
-              onChange={(e) => setSelectedUserId(e.target.value)}
-            >
-              <option value="">Seleccionar miembro…</option>
-              {eligibleMembers.length === 0 ? (
-                <option value="" disabled>
-                  {isFull
-                    ? "Turno completo"
-                    : "No hay miembros disponibles"}
-                </option>
-              ) : (
-                eligibleMembers.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.firstName} {m.lastName}
-                    {m.workgroup !== "ninguno" ? ` (${m.workgroup})` : ""}
-                  </option>
-                ))
-              )}
-            </Select>
-          </div>
-          <Button
-            size="sm"
-            onClick={handleAssign}
-            disabled={!selectedUserId || isAssigning || isFull}
-          >
-            {isAssigning ? "…" : "Asignar"}
-          </Button>
-        </div>
       )}
 
       {error && <p className="text-xs text-destructive">{error}</p>}
