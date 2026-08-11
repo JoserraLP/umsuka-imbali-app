@@ -7,11 +7,13 @@ import {
   updateMemberProfileSchema,
   setMemberActiveSchema,
   setMemberComponentTypeSchema,
+  setMemberWorkgroupSchema,
   type UpdateOwnProfileInput,
   type UpdateMemberRoleInput,
   type UpdateMemberProfileInput,
   type SetMemberActiveInput,
   type SetMemberComponentTypeInput,
+  type SetMemberWorkgroupInput,
 } from "@/lib/profiles/schema";
 import type { AppRole, ComponentType, Workgroup } from "@/types/database.types";
 
@@ -275,6 +277,61 @@ export async function updateMemberComponentType(
   const { error } = await supabase
     .from("profiles")
     .update({ component_type: parsed.data.componentType })
+    .eq("id", parsed.data.userId);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+
+/**
+ * Admin-only: changes a member's workgroup from the directory table.
+ * Only touches workgroup — the music/dance-requires-workgroup rule is
+ * checked against the member's CURRENT component type, so a music/dance
+ * member cannot be moved to "ninguno".
+ */
+export async function updateMemberWorkgroup(
+  input: SetMemberWorkgroupInput,
+): Promise<MutationResult> {
+  const parsed = setMemberWorkgroupSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues.map((issue) => issue.message).join(", ") };
+  }
+
+  const actor = await requireAuthenticatedProfile();
+
+  try {
+    requireAdmin(actor.role);
+  } catch (err) {
+    if (err instanceof AuthorizationError) {
+      return { success: false, error: err.message };
+    }
+    throw err;
+  }
+
+  const supabase = await createClient();
+  const { data: targetProfile } = await supabase
+    .from("profiles")
+    .select("component_type")
+    .eq("id", parsed.data.userId)
+    .maybeSingle();
+
+  if (
+    targetProfile &&
+    !canSetComponentType(targetProfile.component_type as ComponentType, parsed.data.workgroup)
+  ) {
+    return {
+      success: false,
+      error:
+        "Música y baile requieren un grupo de trabajo obligatoriamente. Elige un grupo distinto de \"Ninguno\" para este miembro.",
+    };
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ workgroup: parsed.data.workgroup })
     .eq("id", parsed.data.userId);
 
   if (error) {

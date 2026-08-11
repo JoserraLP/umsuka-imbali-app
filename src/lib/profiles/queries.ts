@@ -7,6 +7,7 @@ export interface ProfileListItem {
   firstName: string;
   lastName: string;
   componentType: ComponentType;
+  workgroup: Workgroup;
   role: AppRole;
   isActive: boolean;
   status: UserStatus;
@@ -19,7 +20,6 @@ export interface ProfileDetail extends ProfileListItem {
   birthDate: string | null;
   username: string | null;
   authMethod: AuthMethod;
-  workgroup: Workgroup;
 }
 
 /**
@@ -33,7 +33,7 @@ export async function listProfiles(): Promise<ProfileListItem[]> {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, first_name, last_name, component_type, role, is_active, status, username, auth_method, created_at")
+    .select("id, first_name, last_name, component_type, workgroup, role, is_active, status, username, auth_method, created_at")
     .order("first_name", { ascending: true })
     .order("last_name", { ascending: true });
 
@@ -46,6 +46,7 @@ export async function listProfiles(): Promise<ProfileListItem[]> {
     firstName: row.first_name,
     lastName: row.last_name,
     componentType: row.component_type as ComponentType,
+    workgroup: row.workgroup ?? "ninguno",
     role: isValidRole(row.role) ? row.role : DEFAULT_ROLE,
     isActive: row.is_active,
     status: row.status as UserStatus,

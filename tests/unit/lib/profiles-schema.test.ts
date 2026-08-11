@@ -4,6 +4,7 @@ import {
   updateMemberRoleSchema,
   updateMemberProfileSchema,
   setMemberActiveSchema,
+  setMemberWorkgroupSchema,
 } from "@/lib/profiles/schema";
 
 describe("updateOwnProfileSchema", () => {
@@ -125,6 +126,68 @@ describe("updateMemberProfileSchema", () => {
       firstName: "",
       lastName: "García",
       componentType: "member",
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts a workgroup when the admin changes it", () => {
+    const result = updateMemberProfileSchema.safeParse({
+      userId: "123e4567-e89b-12d3-a456-426614174000",
+      firstName: "Ana",
+      lastName: "García",
+      componentType: "dance",
+      workgroup: "telas",
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an invalid workgroup value", () => {
+    const result = updateMemberProfileSchema.safeParse({
+      userId: "123e4567-e89b-12d3-a456-426614174000",
+      firstName: "Ana",
+      lastName: "García",
+      componentType: "member",
+      workgroup: "presidencia",
+    });
+
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("setMemberWorkgroupSchema", () => {
+  it("accepts a valid uuid and workgroup", () => {
+    const result = setMemberWorkgroupSchema.safeParse({
+      userId: "123e4567-e89b-12d3-a456-426614174000",
+      workgroup: "limpieza",
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts ninguno as a workgroup", () => {
+    const result = setMemberWorkgroupSchema.safeParse({
+      userId: "123e4567-e89b-12d3-a456-426614174000",
+      workgroup: "ninguno",
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an invalid workgroup value", () => {
+    const result = setMemberWorkgroupSchema.safeParse({
+      userId: "123e4567-e89b-12d3-a456-426614174000",
+      workgroup: "cocina",
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an invalid uuid", () => {
+    const result = setMemberWorkgroupSchema.safeParse({
+      userId: "not-a-uuid",
+      workgroup: "telas",
     });
 
     expect(result.success).toBe(false);

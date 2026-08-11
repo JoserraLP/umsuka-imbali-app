@@ -79,3 +79,17 @@ export const setMemberComponentTypeSchema = z.object({
 });
 
 export type SetMemberComponentTypeInput = z.infer<typeof setMemberComponentTypeSchema>;
+
+/**
+ * Admin-only: changes a member's workgroup from the directory table,
+ * without touching any other field. The music/dance-requires-workgroup
+ * rule is enforced against the member's CURRENT component type.
+ */
+export const setMemberWorkgroupSchema = z.object({
+  userId: z.string().uuid("userId must be a valid UUID."),
+  workgroup: z.enum(["telas", "barra", "estandarte", "limpieza", "ninguno"], {
+    errorMap: () => ({ message: "Workgroup must be one of telas, barra, estandarte, limpieza or ninguno." }),
+  }),
+});
+
+export type SetMemberWorkgroupInput = z.infer<typeof setMemberWorkgroupSchema>;
