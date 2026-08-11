@@ -136,7 +136,7 @@ export interface MemberHistory {
  * Member profile + assigned shifts + attendance history, reusing the
  * queries from previous sprints. Returns null when the profile does not
  * exist. Callers must gate access with canViewMemberDetail(); the RLS
- * policies added in migration 0043 let a lead read shifts/attendance of
+ * policies added in migration 0042 let a lead read shifts/attendance of
  * members of their own workgroup, and management reads everything.
  */
 export async function getMemberDetailWithHistory(userId: string): Promise<MemberHistory | null> {

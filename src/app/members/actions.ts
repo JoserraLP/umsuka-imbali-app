@@ -1,6 +1,7 @@
 "use server";
 
 import { requireAuthenticatedProfile } from "@/lib/auth/session";
+import { AuthorizationError } from "@/lib/auth/permissions";
 import {
   resolveMemberScope,
   canViewMemberDetail,
@@ -8,6 +9,7 @@ import {
 import {
   getAllMembers,
   getWorkgroupMembers,
+  getMemberDetail,
   getMemberDetailWithHistory,
   type MemberHistory,
 } from "@/lib/members/queries";
@@ -39,10 +41,11 @@ export async function getMembersAction(): Promise<MembersActionResult> {
 
     return { success: true, data: members };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Error inesperado al cargar los miembros.",
-    };
+    if (error instanceof AuthorizationError) {
+      return { success: false, error: error.message };
+    }
+    console.error("getMembersAction failed", error);
+    return { success: false, error: "Error inesperado al cargar los miembros." };
   }
 }
 
@@ -58,24 +61,26 @@ export async function getMemberDetailAction(
   try {
     const actor = await requireAuthenticatedProfile();
 
-    const history = await getMemberDetailWithHistory(userId);
+    const member = await getMemberDetail(userId);
 
-    if (!history) {
+    if (!member) {
       return { success: true, data: null };
     }
 
-    if (!canViewMemberDetail(actor, history.member.workgroup)) {
+    if (!canViewMemberDetail(actor, member.workgroup)) {
       return {
         success: false,
         error: "No tienes permisos para ver la ficha de este miembro.",
       };
     }
 
+    const history = await getMemberDetailWithHistory(userId);
     return { success: true, data: history };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Error inesperado al cargar el miembro.",
-    };
+    if (error instanceof AuthorizationError) {
+      return { success: false, error: error.message };
+    }
+    console.error("getMemberDetailAction failed", error);
+    return { success: false, error: "Error inesperado al cargar el miembro." };
   }
 }

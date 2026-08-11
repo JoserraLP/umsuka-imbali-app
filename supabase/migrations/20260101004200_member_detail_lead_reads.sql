@@ -1,5 +1,5 @@
 -- =========================================================
--- UMSUKA IMBALI APP — 0043: member detail lead reads (Sprint 14)
+-- UMSUKA IMBALI APP — 0042: member detail lead reads (Sprint 14)
 -- =========================================================
 -- Sprint 14: /members directory for management + workgroup leads.
 --
