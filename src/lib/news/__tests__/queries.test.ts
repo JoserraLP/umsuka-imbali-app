@@ -120,8 +120,8 @@ describe("getNewsFeed", () => {
 
     const result = await getNewsFeed(false);
     expect(result).toHaveLength(2);
-    expect(result[0].authorFirstName).toBe("Admin");
-    expect(result[1].authorFirstName).toBe("Admin");
+    expect(result[0]!.authorFirstName).toBe("Admin");
+    expect(result[1]!.authorFirstName).toBe("Admin");
   });
 
   it("returns all news when includeUnpublished is true", async () => {
@@ -155,8 +155,8 @@ describe("getNewsFeed", () => {
     });
 
     const result = await getNewsFeed(true);
-    expect(result[0].authorFirstName).toBe("Admin");
-    expect(result[0].authorLastName).toBe("Umsuka");
+    expect(result[0]!.authorFirstName).toBe("Admin");
+    expect(result[0]!.authorLastName).toBe("Umsuka");
   });
 
   it("uses fallback names when profile not found", async () => {
@@ -167,8 +167,8 @@ describe("getNewsFeed", () => {
     });
 
     const result = await getNewsFeed(true);
-    expect(result[0].authorFirstName).toBe("Miembro");
-    expect(result[0].authorLastName).toBe("");
+    expect(result[0]!.authorFirstName).toBe("Miembro");
+    expect(result[0]!.authorLastName).toBe("");
   });
 });
 
@@ -229,10 +229,10 @@ describe("getPinnedNews", () => {
 
     const result = await getPinnedNews();
     expect(result).toHaveLength(1);
-    expect(result[0].id).toBe("1");
-    expect(result[0].pinned).toBe(true);
-    expect(result[0].published).toBe(true);
-    expect(result[0].authorFirstName).toBe("Admin");
+    expect(result[0]!.id).toBe("1");
+    expect(result[0]!.pinned).toBe(true);
+    expect(result[0]!.published).toBe(true);
+    expect(result[0]!.authorFirstName).toBe("Admin");
   });
 
   it("returns empty array when no pinned news", async () => {

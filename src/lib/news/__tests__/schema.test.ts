@@ -28,7 +28,7 @@ describe("newsFormSchema", () => {
     const result = newsFormSchema.safeParse({ ...validPayload, title: "" });
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].path).toContain("title");
+      expect(result.error.issues[0]!.path).toContain("title");
     }
   });
 
@@ -36,7 +36,7 @@ describe("newsFormSchema", () => {
     const result = newsFormSchema.safeParse({ ...validPayload, title: "A".repeat(201) });
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].path).toContain("title");
+      expect(result.error.issues[0]!.path).toContain("title");
     }
   });
 
@@ -44,7 +44,7 @@ describe("newsFormSchema", () => {
     const result = newsFormSchema.safeParse({ ...validPayload, content: "" });
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].path).toContain("content");
+      expect(result.error.issues[0]!.path).toContain("content");
     }
   });
 
@@ -52,7 +52,7 @@ describe("newsFormSchema", () => {
     const result = newsFormSchema.safeParse({ ...validPayload, content: "A".repeat(10001) });
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].path).toContain("content");
+      expect(result.error.issues[0]!.path).toContain("content");
     }
   });
 
@@ -79,7 +79,7 @@ describe("newsFormSchema", () => {
     const result = newsFormSchema.safeParse({ ...validPayload, image_url: "not-a-url" });
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].path).toContain("image_url");
+      expect(result.error.issues[0]!.path).toContain("image_url");
     }
   });
 

@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
 
 // Mock the listEvents function so we don't need a real Supabase connection
 vi.mock("@/lib/events/queries", () => ({
