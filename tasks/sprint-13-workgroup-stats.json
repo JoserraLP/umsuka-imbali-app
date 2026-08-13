@@ -1,7 +1,7 @@
 {
   "title": "Sprint 13 — Estadísticas para Responsables de Grupo",
   "description": "Nueva sección para los responsables de cada grupo de trabajo donde pueden ver estadísticas de su grupo: asistencia a eventos de trabajo, horas echadas y número de turnos realizados por cada persona del grupo. El super admin puede ver las estadísticas de todos los grupos. Ruta principal: /workgroups/[grupo]/stats (o equivalente). Plan de referencia: tasks/plan-desarrollo-completo.md -> Sprint 13.",
-  "status": "documented",
+  "status": "published",
   "acceptance criteria": [
     "Cada responsable de grupo ve una sección de estadísticas exclusiva de su grupo.",
     "Se muestran por persona: nº de turnos hechos, horas totales y porcentaje de asistencia.",
