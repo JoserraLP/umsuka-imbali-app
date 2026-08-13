@@ -8,6 +8,7 @@ import {
   UserCheck,
   Newspaper,
   MessageSquare,
+  BarChart3,
   type LucideIcon,
 } from "lucide-react";
 import type { AppRole, ComponentType, Workgroup } from "@/types/database.types";
@@ -49,6 +50,13 @@ export const NAV_LINKS: NavLink[] = [
       isManagementRole(ctx.role) ||
       (ctx.isWorkgroupLead && ctx.workgroup !== "ninguno") ||
       ctx.componentLeadFor !== null,
+  },
+  {
+    href: "/workgroups",
+    label: "Estadísticas",
+    icon: BarChart3,
+    showFor: (ctx) =>
+      ctx.role === "super_admin" || (ctx.isWorkgroupLead && ctx.workgroup !== "ninguno"),
   },
   {
     href: "/admin/users",

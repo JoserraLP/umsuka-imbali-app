@@ -1,0 +1,25 @@
+{
+  "title": "Sprint 13 — Estadísticas para Responsables de Grupo",
+  "description": "Nueva sección para los responsables de cada grupo de trabajo donde pueden ver estadísticas de su grupo: asistencia a eventos de trabajo, horas echadas y número de turnos realizados por cada persona del grupo. El super admin puede ver las estadísticas de todos los grupos. Ruta principal: /workgroups/[grupo]/stats (o equivalente). Plan de referencia: tasks/plan-desarrollo-completo.md -> Sprint 13.",
+  "status": "published",
+  "acceptance criteria": [
+    "Cada responsable de grupo ve una sección de estadísticas exclusiva de su grupo.",
+    "Se muestran por persona: nº de turnos hechos, horas totales y porcentaje de asistencia.",
+    "El responsable solo ve datos de los miembros de su propio grupo.",
+    "Super admin puede ver las estadísticas de todos los grupos.",
+    "Los datos se actualizan al marcar asistencia en los turnos."
+  ],
+  "definition of done": [
+    "Migración SQL (si aplica) para duración de turnos e índices, registrada en supabase/migrations/.",
+    "Capa src/lib/workgroups/stats.ts (o src/lib/stats/) con queries agregadas: turnos asignados, turnos con asistencia confirmada, horas totales y % de asistencia por miembro.",
+    "Server actions getGroupStatsAction / getMemberStatsAction con validación: solo lead del grupo o super_admin (defensa en profundidad, estilo src/lib/members/authorization.ts).",
+    "UI: página de estadísticas por grupo con tabla resumen (nombre, turnos, horas, % asistencia) y desglose por miembro (turnos asistidos con fecha, evento y horas).",
+    "Enlace a la sección de estadísticas en nav (nav-links.ts) visible solo para leads de grupo y super_admin.",
+    "Envoltura con AppShell y guard de acceso (redirect si no autorizado).",
+    "Tests unitarios (funciones puras/schemas) con cobertura >= 90% en src/lib/** y tests de queries con mocks (estilo src/lib/members/__tests__/queries.test.ts).",
+    "Lint y typecheck pasan sin errores.",
+    "Security scan limpio (sin hallazgos HIGH).",
+    "ADR en docs/adr-sprint-13-workgroup-stats.md.",
+    "Rama feature/sprint-13-workgroup-stats con commits siguiendo docs/git-conventions.md. SIN PR: el usuario hará pruebas locales primero."
+  ]
+}
