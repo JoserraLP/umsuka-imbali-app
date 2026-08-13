@@ -10,6 +10,7 @@ export interface AuthenticatedProfile {
   componentType: ComponentType;
   workgroup: Workgroup;
   isWorkgroupLead: boolean;
+  componentLeadFor: ComponentType | null;
   birthDate: string | null;
   isActive: boolean;
   status: UserStatus;

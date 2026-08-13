@@ -33,7 +33,7 @@ describe("approveUser", () => {
 
     vi.mocked(createAdminClient).mockReturnValue({
       from: mockFrom,
-    } as any);
+    } as unknown as ReturnType<typeof createAdminClient>);
   });
 
   it("returns error for invalid input", async () => {
@@ -46,7 +46,7 @@ describe("approveUser", () => {
     vi.mocked(requireAuthenticatedProfile).mockResolvedValue({
       id: ANOTHER_UUID,
       role: "member",
-    } as any);
+    } as unknown as Awaited<ReturnType<typeof requireAuthenticatedProfile>>);
 
     const result = await approveUser({ userId: VALID_UUID });
     expect(result.success).toBe(false);
@@ -57,7 +57,7 @@ describe("approveUser", () => {
     vi.mocked(requireAuthenticatedProfile).mockResolvedValue({
       id: ANOTHER_UUID,
       role: "super_admin",
-    } as any);
+    } as unknown as Awaited<ReturnType<typeof requireAuthenticatedProfile>>);
 
     const result = await approveUser({ userId: VALID_UUID });
 
@@ -69,7 +69,7 @@ describe("approveUser", () => {
     vi.mocked(requireAuthenticatedProfile).mockResolvedValue({
       id: ANOTHER_UUID,
       role: "admin",
-    } as any);
+    } as unknown as Awaited<ReturnType<typeof requireAuthenticatedProfile>>);
 
     const result = await approveUser({ userId: VALID_UUID });
 
@@ -81,7 +81,7 @@ describe("approveUser", () => {
     vi.mocked(requireAuthenticatedProfile).mockResolvedValue({
       id: ANOTHER_UUID,
       role: "super_admin",
-    } as any);
+    } as unknown as Awaited<ReturnType<typeof requireAuthenticatedProfile>>);
 
     mockFrom.mockReturnValue({
       update: vi.fn().mockReturnThis(),
@@ -107,7 +107,7 @@ describe("suspendUser", () => {
 
     vi.mocked(createAdminClient).mockReturnValue({
       from: mockFrom,
-    } as any);
+    } as unknown as ReturnType<typeof createAdminClient>);
   });
 
   it("returns error for invalid input", async () => {
@@ -120,7 +120,7 @@ describe("suspendUser", () => {
     vi.mocked(requireAuthenticatedProfile).mockResolvedValue({
       id: ANOTHER_UUID,
       role: "board_member",
-    } as any);
+    } as unknown as Awaited<ReturnType<typeof requireAuthenticatedProfile>>);
 
     const result = await suspendUser({ userId: VALID_UUID });
     expect(result.success).toBe(false);
@@ -131,7 +131,7 @@ describe("suspendUser", () => {
     vi.mocked(requireAuthenticatedProfile).mockResolvedValue({
       id: VALID_UUID,
       role: "super_admin",
-    } as any);
+    } as unknown as Awaited<ReturnType<typeof requireAuthenticatedProfile>>);
 
     const result = await suspendUser({ userId: VALID_UUID });
     expect(result.success).toBe(false);
@@ -142,7 +142,7 @@ describe("suspendUser", () => {
     vi.mocked(requireAuthenticatedProfile).mockResolvedValue({
       id: ANOTHER_UUID,
       role: "super_admin",
-    } as any);
+    } as unknown as Awaited<ReturnType<typeof requireAuthenticatedProfile>>);
 
     const result = await suspendUser({ userId: VALID_UUID });
 
@@ -154,7 +154,7 @@ describe("suspendUser", () => {
     vi.mocked(requireAuthenticatedProfile).mockResolvedValue({
       id: ANOTHER_UUID,
       role: "super_admin",
-    } as any);
+    } as unknown as Awaited<ReturnType<typeof requireAuthenticatedProfile>>);
 
     mockFrom.mockReturnValue({
       update: vi.fn().mockReturnThis(),

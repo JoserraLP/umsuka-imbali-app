@@ -13,6 +13,8 @@ export interface ProfileListItem {
   status: UserStatus;
   username: string | null;
   authMethod: AuthMethod;
+  /** "music" / "dance" when the member is the responsible of that component. */
+  componentLeadFor: string | null;
   createdAt: string;
 }
 
@@ -33,7 +35,7 @@ export async function listProfiles(): Promise<ProfileListItem[]> {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, first_name, last_name, component_type, workgroup, role, is_active, status, username, auth_method, created_at")
+    .select("id, first_name, last_name, component_type, workgroup, role, is_active, status, username, auth_method, component_lead_for, created_at")
     .order("first_name", { ascending: true })
     .order("last_name", { ascending: true });
 
@@ -52,6 +54,7 @@ export async function listProfiles(): Promise<ProfileListItem[]> {
     status: row.status as UserStatus,
     username: row.username,
     authMethod: row.auth_method as AuthMethod,
+    componentLeadFor: (row.component_lead_for as string | null) ?? null,
     createdAt: row.created_at,
   }));
 }
@@ -67,7 +70,7 @@ export async function getProfileById(userId: string): Promise<ProfileDetail | nu
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, first_name, last_name, birth_date, component_type, role, is_active, status, username, auth_method, created_at, workgroup")
+    .select("id, first_name, last_name, birth_date, component_type, role, is_active, status, username, auth_method, created_at, workgroup, component_lead_for")
     .eq("id", userId)
     .maybeSingle();
 
@@ -91,6 +94,7 @@ export async function getProfileById(userId: string): Promise<ProfileDetail | nu
     username: data.username,
     authMethod: data.auth_method as AuthMethod,
     workgroup: data.workgroup ?? "ninguno",
+    componentLeadFor: (data.component_lead_for as string | null) ?? null,
     createdAt: data.created_at,
   };
 }

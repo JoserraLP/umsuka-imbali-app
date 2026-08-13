@@ -4,8 +4,8 @@
 
 UMSUKA Imbali App follows a layered, Clean-Architecture-inspired structure on
 top of the Next.js 15 App Router. Business modules (Events, Attendance,
-Shifts, News, Questions, Voting, Documents, Administration) are added inside
-this same structure — none of them change these boundaries.
+Shifts, News, Questions, Members, Voting, Documents, Administration) are
+added inside this same structure — none of them change these boundaries.
 
 ```mermaid
 flowchart TB
@@ -57,8 +57,12 @@ flowchart TB
 3. **`src/lib`** is the application layer: Supabase client factories, auth
    session/role resolution, environment validation, and (as modules are
    added) use-case functions per domain (e.g. `lib/events/`,
-   `lib/attendance/`). Each module's business logic belongs here, not in
-   components or routes.
+   `lib/attendance/`, `lib/members/`). Each module's business logic belongs
+   here, not in components or routes. The Members module
+   (`src/lib/members/`) follows this pattern: pure authorization helpers
+   (`authorization.ts`), Zod filter schemas (`schema.ts`) and anon-client
+   queries (`queries.ts`) behind the `/members` and `/members/[id]` routes
+   and their server actions.
 4. **`src/types`** holds domain contracts, kept framework-agnostic.
 5. **`supabase/migrations`** is the single source of truth for schema
    changes. No table is ever created directly through the Studio UI in a

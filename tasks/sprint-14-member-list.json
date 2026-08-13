@@ -1,0 +1,82 @@
+{
+  "title": "Sprint 14 — Listado de Miembros para Directiva y Responsables de Grupo (ampliado: responsables de música y baile)",
+  "description": "Sección donde la directiva (super_admin/management) y los responsables de cada grupo de trabajo pueden ver el listado de los usuarios dados de alta en la comparsa, con ampliación para responsables de componentes de música y baile. La directiva ve a todos los miembros y todos los componentes; cada responsable de grupo ve únicamente los miembros de su propio grupo de trabajo (pudiendo filtrar por componente); cada responsable de componente (nueva columna component_lead_for en profiles) ve únicamente los miembros de su componente (pudiendo filtrar por grupo de trabajo). Incluye migración de BD + RLS, capa lib/members/, server actions con validación de rol, página /members con tabla filtrable, vista por alcance para leads y responsables de componente, ficha de detalle de miembro, gestión del componente lead en /admin/users, y tests.",
+  "branch": "feature/sprint-14-member-list",
+  "status": "published",
+  "steps": [
+    {
+      "id": 1,
+      "name": "Capa lib/members/",
+      "detail": "Queries: getAllMembers() (solo directiva/super_admin), getWorkgroupMembers(workgroup) (solo lead de ese grupo), getComponentMembers(component) (solo responsable de ese componente), getMemberDetail(userId) con datos de perfil."
+    },
+    {
+      "id": 2,
+      "name": "Server actions",
+      "detail": "getMembersAction con validación de rol: super_admin/management → todos los miembros; is_workgroup_lead → solo los de su grupo; is_component_lead → solo los de su componente; resto → denegado."
+    },
+    {
+      "id": 3,
+      "name": "RLS check",
+      "detail": "Funcióon umsuka.is_component_lead(component text) (patrón de is_workgroup_lead) y políticas SELECT aditivas en shift_assignments y attendance para que el responsable de componente lea turnos/asistencia de miembros de su componente (detalle). Verificar que un responsable no pueda leer miembros fuera de su componente mediante las queries existentes."
+    },
+    {
+      "id": 4,
+      "name": "UI: Página de listado",
+      "detail": "Página /members con tabla: nombre, componente, grupo de trabajo, rol, estado (pending/active/suspended), fecha de alta. Filtros por grupo, componente y estado, y búsqueda por nombre. Para leads: grupo bloqueado, filtro de componente libre. Para responsables de componente: componente bloqueado, filtro de grupo libre."
+    },
+    {
+      "id": 5,
+      "name": "UI: Vista por alcance",
+      "detail": "La misma página muestra únicamente los miembros del alcance del actor (grupo para leads, componente para responsables de música/baile, todos para directiva). Enlace visible en el dashboard solo para directiva, jefes de grupo y responsables de componente."
+    },
+    {
+      "id": 6,
+      "name": "UI: Detalle de miembro",
+      "detail": "Al hacer clic en un miembro, ver su ficha: datos de perfil, grupo de trabajo, turnos asignados y asistencia (reutilizando datos de sprints anteriores). Acceso: directiva a cualquiera, lead a miembros de su grupo, responsable de componente a miembros de su componente."
+    },
+    {
+      "id": 7,
+      "name": "Pruebas",
+      "detail": "Tests unitarios de las queries y validaciones de rol (incluidos los nuevos scopes de componente). Tests de integración: directiva ve todos, lead ve solo su grupo, responsable de componente ve solo su componente, lead no puede ver otros grupos, responsable de música no puede ver baile."
+    },
+    {
+      "id": 8,
+      "name": "Migración BD — component_lead_for",
+      "detail": "Añadir columna component_lead_for (text nullable con CHECK music|dance, índice único parcial) a umsuka.profiles para marcar el responsable de cada componente. Crear función umsuka.is_component_lead(text) y políticas SELECT aditivas en shift_assignments/attendance para el detalle."
+    },
+    {
+      "id": 9,
+      "name": "Tipos y sesión",
+      "detail": "Añadir component_lead_for a src/types/database.types.ts, AuthenticatedProfile (src/types/auth.ts), MemberActor y al fetch de sesión (requireAuthenticatedProfile). NavLinkContext gana componentLeadFor para el enlace Directorio."
+    },
+    {
+      "id": 10,
+      "name": "UI: Gestión en /admin/users",
+      "detail": "Permitir al super admin asignar/quitar el responsable de música y de baile desde el panel de administración de usuarios."
+    }
+  ],
+  "acceptance_criteria": [
+    "La directiva ve el listado de todos los usuarios dados de alta en la comparsa y puede filtrar por cualquier grupo de trabajo y componente.",
+    "Cada responsable de grupo ve únicamente los miembros de su grupo de trabajo y puede filtrar por tipo de componente dentro de su grupo.",
+    "Cada responsable de música/baile ve únicamente los miembros de su componente y puede filtrar por grupo de trabajo dentro de su componente.",
+    "Un responsable no puede ver los miembros de otros grupos u otros componentes.",
+    "El listado muestra nombre, componente, grupo, rol, estado y fecha de alta.",
+    "Se puede buscar y filtrar por grupo, componente y estado.",
+    "El super admin puede designar al responsable de música y al de baile desde /admin/users."
+  ],
+  "definition_of_done": [
+    "Migración SQL: columna component_lead_for + CHECK + índice único parcial + función is_component_lead + políticas RLS aditivas.",
+    "Tipos de base de datos, AuthenticatedProfile y MemberActor actualizados con componentLeadFor.",
+    "Capa lib/members/ completa con getAllMembers, getWorkgroupMembers, getComponentMembers y getMemberDetail.",
+    "Server action getMembersAction con validación de rol correcta (all/workgroup/component).",
+    "RLS verificado: responsable de componente no lee miembros de otros componentes.",
+    "Página /members con tabla, filtros (grupo/componente bloqueados según alcance) y búsqueda.",
+    "Vista filtrada por alcance y enlace en dashboard solo para directiva, leads y responsables de componente.",
+    "Ficha de detalle de miembro con turnos y asistencia acorde al alcance.",
+    "Gestión del responsable de componente en /admin/users para super admin.",
+    "Tests unitarios y de integración pasando.",
+    "Security scan sin issues HIGH.",
+    "ADR documentado."
+  ],
+  "dependencies": ["Sprint 2 (Workgroup Roles)", "Sprint 14 base (Listado de Miembros)", "Sprint 19 (Perfiles y Componentes)"]
+}

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireAuthenticatedProfile } from "@/lib/auth/session";
+import type { Workgroup } from "@/types/database.types";
 import type {
   ActiveWorkgroup,
   BarraTask,
@@ -75,16 +76,27 @@ export async function getWorkgroupAttendanceByShift(
 
 /**
  * Returns all profiles that have a non-ninguno workgroup assignment.
+ * When `workgroup` is provided (e.g. a lead viewing their own group's
+ * panel), only members of that workgroup are returned. "ninguno" is
+ * ignored — the base query never returns unassigned members anyway.
  */
-export async function getAllWorkgroupMembers(): Promise<
+export async function getAllWorkgroupMembers(
+  workgroup?: Workgroup | null,
+): Promise<
   { userId: string; firstName: string; lastName: string; workgroup: ActiveWorkgroup }[]
 > {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("profiles")
     .select("id, first_name, last_name, workgroup")
-    .neq("workgroup", "ninguno")
+    .neq("workgroup", "ninguno");
+
+  if (workgroup && workgroup !== "ninguno") {
+    query = query.eq("workgroup", workgroup);
+  }
+
+  const { data, error } = await query
     .order("workgroup", { ascending: true })
     .order("first_name", { ascending: true });
 

@@ -458,10 +458,15 @@ Nueva sección para los responsables de cada grupo de trabajo donde pueden ver e
 
 ## Sprint 14 — Listado de Miembros para Directiva y Responsables de Grupo
 
-**Rama:** `feature/sprint-14-member-list`
+**Rama (histórica):** `feature/sprint-14-member-list`
+
+### Estado
+✅ **Ejecutado.**
 
 ### Descripción
 Sección donde la directiva y los responsables de cada grupo de trabajo pueden ver el listado de los usuarios dados de alta en la comparsa. La directiva (super admin/management) ve a todos los miembros; cada responsable de grupo ve únicamente los miembros de su propio grupo de trabajo.
+
+> **Extensión (2026-08-13):** añade responsables de componente (música/baile) — columna `component_lead_for`, scope por componente en `/members` y designación solo por super admin en `/admin/users`. Ver `docs/adr-sprint-14-member-list.md`.
 
 ### Pasos
 
@@ -845,7 +850,7 @@ Auditorías finales de seguridad, rendimiento, accesibilidad y validación gener
 | **Sprint 11 — Questions** | `feature/sprint-14-questions` (histórica) | ✅ Ejecutado |
 | **Sprint 12 — Shift Assignment Groups** | `feature/sprint-12-shift-assignment-groups` (histórica) | ✅ Ejecutado |
 | **Sprint 13 — Workgroup Stats** | `feature/sprint-13-workgroup-stats` | **Sprint 12, Sprint 2** |
-| **Sprint 14 — Member List** | `feature/sprint-14-member-list` | **Sprint 2, Sprint 19** |
+| **Sprint 14 — Member List** | `feature/sprint-14-member-list` (histórica) | ✅ Ejecutado |
 | Sprint 15 — Votings | `feature/sprint-15-votings` | Sprint 1, Sprint 6 |
 | Sprint 16 — Document Management | `feature/sprint-16-document-management` | Sprint 6 |
 | Sprint 17 — Events Enhancement | `feature/sprint-17-events-enhancement` | Sprint 1, Sprint 5 |

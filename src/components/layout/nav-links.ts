@@ -10,14 +10,27 @@ import {
   MessageSquare,
   type LucideIcon,
 } from "lucide-react";
-import type { AppRole } from "@/types/database.types";
+import type { AppRole, ComponentType, Workgroup } from "@/types/database.types";
 import { isManagementRole, isAdminRole } from "@/lib/auth/roles";
+
+/**
+ * Context evaluated by NavLink.showFor. Mirrors the authorization-relevant
+ * fields of AuthenticatedProfile so link visibility stays in sync with the
+ * route guards (see src/lib/members/authorization.ts).
+ */
+export interface NavLinkContext {
+  role: AppRole;
+  isWorkgroupLead: boolean;
+  workgroup: Workgroup;
+  /** "music" / "dance" when the user is the responsable of that component. */
+  componentLeadFor: ComponentType | null;
+}
 
 export interface NavLink {
   href: string;
   label: string;
   icon: LucideIcon;
-  showFor?: (role: AppRole) => boolean;
+  showFor?: (ctx: NavLinkContext) => boolean;
 }
 
 export const NAV_LINKS: NavLink[] = [
@@ -28,22 +41,31 @@ export const NAV_LINKS: NavLink[] = [
   { href: "/questions", label: "Preguntas", icon: MessageSquare },
   { href: "/profile", label: "Mi perfil", icon: User },
   { href: "/profile/history", label: "Historial", icon: Clock },
-  {
-    href: "/admin/users",
+{
+    href: "/members",
     label: "Miembros",
     icon: Users,
-    showFor: (role) => isManagementRole(role),
+    showFor: (ctx) =>
+      isManagementRole(ctx.role) ||
+      (ctx.isWorkgroupLead && ctx.workgroup !== "ninguno") ||
+      ctx.componentLeadFor !== null,
+  },
+  {
+    href: "/admin/users",
+    label: "Administración de miembros",
+    icon: Users,
+    showFor: (ctx) => isManagementRole(ctx.role),
   },
   {
     href: "/admin/registrations",
     label: "Aprobaciones",
     icon: UserCheck,
-    showFor: (role) => isAdminRole(role),
+    showFor: (ctx) => isAdminRole(ctx.role),
   },
 ];
 
-export function getVisibleLinks(role: AppRole): NavLink[] {
-  return NAV_LINKS.filter((link) => !link.showFor || link.showFor(role));
+export function getVisibleLinks(ctx: NavLinkContext): NavLink[] {
+  return NAV_LINKS.filter((link) => !link.showFor || link.showFor(ctx));
 }
 
 export function isLinkActive(href: string, pathname: string, allLinks: NavLink[]): boolean {

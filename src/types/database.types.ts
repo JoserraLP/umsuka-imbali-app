@@ -32,6 +32,7 @@ export interface Database {
           role: string;
           workgroup: Workgroup;
           is_workgroup_lead: boolean;
+          component_lead_for: string | null;
           is_active: boolean;
           status: UserStatus;
           auth_method: AuthMethod;
@@ -47,6 +48,7 @@ export interface Database {
           role?: string;
           workgroup?: Workgroup;
           is_workgroup_lead?: boolean;
+          component_lead_for?: string | null;
           is_active?: boolean;
           status?: UserStatus;   // default 'pending' in DB
           auth_method?: AuthMethod;  // default 'google' in DB
@@ -62,6 +64,7 @@ export interface Database {
           role?: string;
           workgroup?: Workgroup;
           is_workgroup_lead?: boolean;
+          component_lead_for?: string | null;
           is_active?: boolean;
           status?: UserStatus;
           auth_method?: AuthMethod;
@@ -520,6 +523,10 @@ export interface Database {
       };
       is_workgroup_lead: {
         Args: { check_workgroup: string };
+        Returns: boolean;
+      };
+      is_component_lead: {
+        Args: { check_component: string };
         Returns: boolean;
       };
       current_user_workgroup: {

@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isValidRole, DEFAULT_ROLE } from "@/lib/auth/roles";
 import { ensureProfileExists } from "@/lib/profiles/provisioning";
 import type { AuthenticatedProfile } from "@/types/auth";
+import type { ComponentType } from "@/types/database.types";
 
 /**
  * Returns the current authenticated user's session profile, joining
@@ -82,7 +83,7 @@ async function fetchProfileRow(userId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, first_name, last_name, birth_date, component_type, role, workgroup, is_workgroup_lead, is_active, status, username, auth_method, created_at")
+    .select("id, first_name, last_name, birth_date, component_type, role, workgroup, is_workgroup_lead, component_lead_for, is_active, status, username, auth_method, created_at")
     .eq("id", userId)
     .maybeSingle();
 
@@ -116,6 +117,7 @@ function buildAuthenticatedProfile(
     componentType: profile.component_type,
     workgroup: profile.workgroup ?? "ninguno",
     isWorkgroupLead: profile.is_workgroup_lead ?? false,
+    componentLeadFor: (profile.component_lead_for as ComponentType | null) ?? null,
     birthDate: profile.birth_date,
     isActive: profile.is_active,
     status: profile.status,
