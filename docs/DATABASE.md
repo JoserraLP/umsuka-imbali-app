@@ -123,6 +123,7 @@ erDiagram
 | `20260101004000_shift_assignment_groups.sql` | `shift_assignments.confirmed`/`created_by`, `events.visible_to_group`/`created_by_workgroup`, RLS de eventos y asignaciones por grupo |
 | `20260101004100_component_type_requires_workgroup.sql` | `profiles` CHECK: music/dance requieren workgroup; `create_emailless_profile` con validación explícita |
 | `20260101004200_member_detail_lead_reads.sql` | Políticas SELECT aditivas en `shift_assignments` y `attendance` para que un workgroup lead lea turnos/asistencia de los miembros de su propio grupo (Sprint 14) |
+| `20260101004300_component_lead_for.sql` | `profiles.component_lead_for` (TEXT, CHECK music/dance, índice único parcial: un responsable por componente), función `umsuka.is_component_lead(text)` y políticas SELECT aditivas en `shift_assignments`/`attendance` para responsables de componente (Sprint 14) |
 
 Apply locally with `npm run supabase:reset`; apply to a remote project with
 `supabase db push` (also run automatically by `deploy.yml` on merge to `main`).
@@ -157,6 +158,8 @@ role from within `umsuka.profiles` itself:
 - `umsuka.current_user_role()` — returns the caller's role or `null`.
 - `umsuka.is_admin()` — `true` for `super_admin`/`admin`.
 - `umsuka.is_management()` — `true` for `super_admin`/`admin`/`board_member`/`event_manager`.
+- `umsuka.is_workgroup_lead(check_workgroup text)` — `true` when the caller leads the given workgroup.
+- `umsuka.is_component_lead(check_component text)` — `true` when the caller is the responsable of the given component (`music`/`dance`); used by the Sprint 14 additive SELECT policies on `shift_assignments`/`attendance`.
 
 Baseline policy shape (tightened per-module as each is implemented, never
 loosened):
@@ -166,8 +169,8 @@ loosened):
 | `profiles` | any authenticated user | update: owner or admin · delete: admin · insert: trigger only |
 | `events` | any authenticated user, **or restricted to `visible_to_group` members; management always** | management roles only · plus workgroup leads for their own `work_shift` events |
 | `shifts`, `news`, `votings`, `voting_options` | any authenticated user | management roles only |
-| `shift_assignments` | owner or management (plus leads of the shift's event, plus workgroup leads for members of their own workgroup via `shift_assignments_select_lead_workgroup` — Sprint 14) | management roles only · plus leads for shifts on their own `work_shift` events matching their group |
-| `attendance` | owner or management (plus workgroup leads for members of their own workgroup via `attendance_select_lead_workgroup` — Sprint 14) | management roles only |
+| `shift_assignments` | owner or management (plus leads of the shift's event, plus workgroup leads for members of their own workgroup via `shift_assignments_select_lead_workgroup`, plus component leads for members of their own component via `shift_assignments_select_component_lead` — Sprint 14) | management roles only · plus leads for shifts on their own `work_shift` events matching their group |
+| `attendance` | owner or management (plus workgroup leads for members of their own workgroup via `attendance_select_lead_workgroup`, plus component leads for members of their own component via `attendance_select_component_lead` — Sprint 14) | management roles only |
 | `absences` | owner or management | insert: owner · update/delete: management |
 | `questions` | any authenticated user | insert: owner · update: owner or management · delete: management |
 | `voting_votes` | owner or management | insert: owner (immutable — no update policy) · delete: management |

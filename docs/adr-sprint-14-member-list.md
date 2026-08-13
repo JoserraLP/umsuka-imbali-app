@@ -5,7 +5,6 @@
 ---
 
 ## Context
-
 La directiva (roles `super_admin`/`admin`/`board_member`/`event_manager`) necesitaba un directorio de todos los miembros dados de alta en la comparsa (nombre, componente, grupo de trabajo, rol, estado y fecha de alta), mientras que cada responsable de grupo (`is_workgroup_lead`) solo debe ver **los miembros de su propio grupo de trabajo**. Un responsable no puede ver miembros de otros grupos.
 
 Requisitos:
@@ -106,6 +105,32 @@ Y su análoga `attendance_select_lead_workgroup` sobre `umsuka.attendance`. No s
 
 ---
 
+## Extension 2026-08-13 — Responsables de componente (música y baile)
+
+### Contexto
+
+La comparsa tiene dos cargos de responsabilidad adicionales: **responsable de música** y **responsable de baile**. Cada uno debe poder abrir `/members` y ver **solo los miembros de su componente** (pudiendo filtrar por grupo de trabajo dentro de él), y consultar la ficha de detalle (turnos/asistencia) de esos miembros. El cargo lo designa **únicamente el super admin** desde `/admin/users`; el resto de la directiva lo ve en solo lectura.
+
+### Decisión
+
+1. **Columna `component_lead_for` (TEXT nullable)** en `umsuka.profiles` con CHECK `('music','dance')`. Se eligió TEXT (no ENUM) para comparar directamente con el parámetro de la función helper sin cast — patrón más simple que el de `workgroup`, cuyo ENUM fue una decisión anterior.
+2. **Índice único parcial** `idx_profiles_component_lead_for` → a lo sumo un responsable por componente. La UI captura la violación (23505) y la traduce a un mensaje amigable en español; no se hacen queries de pre-chequeo (evita carreras y lecturas extra).
+3. **Función `umsuka.is_component_lead(text)`** — SECURITY DEFINER, `set search_path = umsuka, public`, `coalesce(..., false)`, `grant execute to authenticated`: mismo patrón que `is_workgroup_lead` (migración 0024).
+4. **Políticas SELECT aditivas** `shift_assignments_select_component_lead` y `attendance_select_component_lead`: un responsable de componente lee turnos/asistencia de miembros cuyo `component_type` coincide con su cargo. Igual que en 0042: no se toca ninguna política existente (PostgreSQL OR-ea las políticas SELECT) y la política de `profiles` permanece intacta.
+5. **Precedencia de alcance** en `src/lib/members/authorization.ts`: **management > componente > grupo**. `canViewMemberDetail(actor, { workgroup, componentType })` cambió su firma a un objeto con ambos atributos del miembro objetivo; un actor que sea a la vez lead de grupo y de componente queda regido por su cargo de componente.
+6. **UI `/members`**: para el responsable de componente se bloquea el filtro de componente (banner «Mostrando solo los miembros del componente: X») y queda libre el filtro de grupo; para el lead de grupo es al revés (como ya existía). `NavLinkContext` gana `componentLeadFor` para mostrar el enlace «Directorio».
+7. **Super admin**: `setComponentLeadAction(userId, component|null)` valida `role === "super_admin"`; el resto de la directiva ve el cargo en solo lectura (badge).
+
+### Alternativas consideradas
+
+| Alternativa | Motivo de rechazo |
+|---|---|
+| ENUM `component_lead` | TEXT + CHECK es suficiente; evita el cast ENUM↔text que obligó a la migración 0024 y añade complejidad de migración de tipos |
+| Pre-chequear el responsable actual antes del UPDATE | Carrera de condiciones entre dos admins; el índice único parcial + manejo de 23505 es atómico y más simple |
+| Extender la política SELECT de `profiles` para filtrar por componente | Mismo motivo que en la sección 3: rompería el enriquecimiento de noticias/preguntas/eventos |
+
+---
+
 ## Archivos
 
 | Archivo | Cambio |
@@ -123,3 +148,19 @@ Y su análoga `attendance_select_lead_workgroup` sobre `umsuka.attendance`. No s
 | `tasks/sprint-14-member-list.json` | CREATE — tarea del sprint |
 | `tasks/plan-desarrollo-completo.md` | MODIFY — Sprint 14 marcado ✅ Ejecutado |
 | `docs/DATABASE.md` | MODIFY — documentación |
+
+### Archivos de la extensión (responsables de componente)
+
+| Archivo | Cambio |
+|---|---|
+| `supabase/migrations/20260101004300_component_lead_for.sql` | CREATE — columna + CHECK + índice único parcial + `is_component_lead` + políticas aditivas |
+| `src/types/database.types.ts`, `src/types/auth.ts`, `src/lib/auth/session.ts` | MODIFY — `component_lead_for` / `componentLeadFor` |
+| `src/lib/members/authorization.ts` | MODIFY — `MemberActor.componentLeadFor`, scope `component`, precedencia management > componente > grupo, `isLeadOfComponent`, nueva firma de `canViewMemberDetail` |
+| `src/lib/members/schema.ts`, `queries.ts` | MODIFY — `componentLeadFor` en tipos/mapping + `getComponentMembers` |
+| `src/app/members/actions.ts`, `page.tsx`, `member-filters.tsx`, `[id]/page.tsx` | MODIFY — scope de componente, banner y filtro bloqueado |
+| `src/components/layout/nav-links.ts`, `app-shell.tsx`, `sidebar.tsx`, `bottom-nav.tsx` | MODIFY — `componentLeadFor` en el contexto de navegación |
+| `src/lib/profiles/queries.ts` | MODIFY — `componentLeadFor` en `ProfileListItem`/`ProfileDetail` |
+| `src/app/admin/users/actions.ts` | MODIFY — `setComponentLeadAction` (solo super admin, manejo de 23505) |
+| `src/app/admin/users/member-component-lead-select.tsx` | CREATE — select de cargo en la tabla de `/admin/users` |
+| `src/app/admin/users/page.tsx` | MODIFY — columna «Responsable» |
+| `src/lib/members/__tests__/*.test.ts`, `tests/unit/lib/admin-set-component-lead.test.ts` | MODIFY/CREATE — 24 tests nuevos (73 en `src/lib/members` + 6 de la acción admin) |
