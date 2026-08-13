@@ -129,6 +129,20 @@ La comparsa tiene dos cargos de responsabilidad adicionales: **responsable de m�
 | Pre-chequear el responsable actual antes del UPDATE | Carrera de condiciones entre dos admins; el índice único parcial + manejo de 23505 es atómico y más simple |
 | Extender la política SELECT de `profiles` para filtrar por componente | Mismo motivo que en la sección 3: rompería el enriquecimiento de noticias/preguntas/eventos |
 
+### Consecuencias
+
+- Precedencia de alcance **management > componente > grupo** aplicada en `resolveMemberScope` / `resolveMemberLocks` y revalidada en las queries (`isLeadOfGroup` / `isLeadOfComponent`): un actor que sea a la vez lead de grupo y de componente queda regido por su cargo de componente, y el filtro de grupo queda libre para él en `/members`.
+- Una política SELECT aditiva más por tabla (`shift_assignments` / `attendance`); ninguna política existente se modifica ni elimina, y `profiles` conserva su política SELECT original.
+- Sprint completo: **85 tests en total — 49 del alcance base + 36 de la extensión** (incluye el endurecimiento posterior al commit de documentación): 75 en `src/lib/members/__tests__` (11 schema + 20 queries + 44 autorización) y 10 en `tests/unit/lib/admin-set-component-lead.test.ts`, sin regresiones.
+
+### Notas de seguridad aceptadas (escaneo security-champion — sin hallazgos HIGH)
+
+El escaneo de seguridad de la extensión no reportó issues HIGH. Las notas restantes (dos MEDIUM y un LOW) se aceptan como trade-offs documentados:
+
+1. **`set search_path = umsuka, public` en helpers `SECURITY DEFINER`** — `umsuka.is_component_lead(text)` replica el patrón pre-existente de `is_workgroup_lead` (migraciones 0013/0024). Aceptado: las funciones son `stable`, de solo lectura sobre `umsuka.profiles` (vía `auth.uid()`), sin escritura, y `search_path` fija `umsuka` en primer lugar. Es el patrón conocido y consistente del proyecto.
+2. **`admin` puede escribir `component_lead_for` vía PostgREST** — la política UPDATE de `profiles` permite a management editar perfiles, mientras la app restringe la designación a `super_admin` (`setComponentLeadAction` valida `role === "super_admin"`). Aceptado como defensa en profundidad: el índice único parcial limita el impacto (a lo sumo un responsable por componente), un `admin` ya tiene capacidad equivalente sobre el resto de campos del perfil, y el scoping de `/members` se deriva siempre del actor de sesión (un valor incorrecto no expone datos ajenos). Endurecimiento futuro opcional: `REVOKE` a nivel de columna o guarda en el panel de `/admin/users`.
+3. **LOW — lead con `workgroup = "ninguno"` tratado como no-lead** — comportamiento ya documentado en la sección 1: un lead sin grupo real no obtiene scope de trabajo y `resolveMemberScope` lanza `AuthorizationError`. Aceptado: es el comportamiento deseado (el cargo no confiere acceso a un grupo inexistente).
+
 ---
 
 ## Archivos
@@ -163,4 +177,4 @@ La comparsa tiene dos cargos de responsabilidad adicionales: **responsable de m�
 | `src/app/admin/users/actions.ts` | MODIFY — `setComponentLeadAction` (solo super admin, manejo de 23505) |
 | `src/app/admin/users/member-component-lead-select.tsx` | CREATE — select de cargo en la tabla de `/admin/users` |
 | `src/app/admin/users/page.tsx` | MODIFY — columna «Responsable» |
-| `src/lib/members/__tests__/*.test.ts`, `tests/unit/lib/admin-set-component-lead.test.ts` | MODIFY/CREATE — 24 tests nuevos (73 en `src/lib/members` + 6 de la acción admin) |
+| `src/lib/members/__tests__/*.test.ts`, `tests/unit/lib/admin-set-component-lead.test.ts` | MODIFY/CREATE — 36 tests nuevos respecto al sprint base (75 en `src/lib/members` + 10 de la acción admin) |

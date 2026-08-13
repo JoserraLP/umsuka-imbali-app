@@ -466,6 +466,8 @@ Nueva sección para los responsables de cada grupo de trabajo donde pueden ver e
 ### Descripción
 Sección donde la directiva y los responsables de cada grupo de trabajo pueden ver el listado de los usuarios dados de alta en la comparsa. La directiva (super admin/management) ve a todos los miembros; cada responsable de grupo ve únicamente los miembros de su propio grupo de trabajo.
 
+> **Extensión (2026-08-13):** añade responsables de componente (música/baile) — columna `component_lead_for`, scope por componente en `/members` y designación solo por super admin en `/admin/users`. Ver `docs/adr-sprint-14-member-list.md`.
+
 ### Pasos
 
 | # | Paso | Detalle |
