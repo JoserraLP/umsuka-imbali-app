@@ -26,7 +26,7 @@ import { ResetPasswordButton } from "@/app/admin/users/reset-password-button";
 import { UnlockAccountButton } from "@/app/admin/users/unlock-account-button";
 
 export const metadata: Metadata = {
-  title: "Miembros",
+  title: "Administración de miembros",
 };
 
 export default async function AdminUsersPage() {
@@ -47,15 +47,15 @@ export default async function AdminUsersPage() {
     <AppShell profile={profile}>
       <div className="animate-fade-in space-y-4">
         <div className="border-b border-border pb-4">
-          <h1 className="text-xl font-bold tracking-tight">Miembros</h1>
+          <h1 className="text-xl font-bold tracking-tight">Administración de miembros</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Directorio de la asociación, roles (RBAC) y estado de alta/baja.
+            Gestión de los miembros de la asociación: roles (RBAC) y estado de alta/baja.
           </p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Directorio</CardTitle>
+            <CardTitle>Listado</CardTitle>
             <CardDescription>
               {canManage
                 ? "Puedes editar, cambiar el rol y dar de alta/baja a cualquier miembro salvo a ti mismo."

@@ -41,9 +41,9 @@ export const NAV_LINKS: NavLink[] = [
   { href: "/questions", label: "Preguntas", icon: MessageSquare },
   { href: "/profile", label: "Mi perfil", icon: User },
   { href: "/profile/history", label: "Historial", icon: Clock },
-  {
+{
     href: "/members",
-    label: "Directorio",
+    label: "Miembros",
     icon: Users,
     showFor: (ctx) =>
       isManagementRole(ctx.role) ||
@@ -52,7 +52,7 @@ export const NAV_LINKS: NavLink[] = [
   },
   {
     href: "/admin/users",
-    label: "Miembros",
+    label: "Administración de miembros",
     icon: Users,
     showFor: (ctx) => isManagementRole(ctx.role),
   },

@@ -16,7 +16,7 @@ export function DashboardNav({ currentRole }: DashboardNavProps) {
   ];
 
   if (isManagementRole(currentRole)) {
-    links.push({ href: "/admin/users", label: "Miembros" });
+    links.push({ href: "/admin/users", label: "Administración de miembros" });
   }
 
   return (

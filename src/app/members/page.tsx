@@ -20,7 +20,7 @@ import { MemberFilters as MemberFiltersControl } from "@/app/members/member-filt
 import type { MemberListItem } from "@/lib/members/schema";
 
 export const metadata: Metadata = {
-  title: "Directorio de miembros",
+  title: "Miembros",
 };
 
 interface PageProps {
@@ -118,7 +118,7 @@ export default async function MembersPage({ searchParams }: PageProps) {
     <AppShell profile={profile}>
       <div className="animate-fade-in space-y-4">
         <div className="border-b border-border pb-4">
-          <h1 className="text-xl font-bold tracking-tight">Directorio de miembros</h1>
+          <h1 className="text-xl font-bold tracking-tight">Miembros</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {scopeKind === "component"
               ? "Miembros de tu componente."
