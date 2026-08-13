@@ -2,12 +2,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   getAllMembers,
   getWorkgroupMembers,
+  getComponentMembers,
   getMemberDetail,
   getMemberDetailWithHistory,
 } from "@/lib/members/queries";
 import { AuthorizationError } from "@/lib/auth/permissions";
 import type { MemberActor } from "@/lib/members/authorization";
-import type { Workgroup } from "@/types/database.types";
+import type { ComponentType, Workgroup } from "@/types/database.types";
 
 // ── Mocks ──────────────────────────────────────────────
 
@@ -86,6 +87,7 @@ const sampleRows = [
     status: "active",
     username: null,
     auth_method: "google",
+    component_lead_for: "music",
     created_at: "2026-01-10T10:00:00Z",
   },
   {
@@ -99,11 +101,23 @@ const sampleRows = [
     status: "pending",
     username: "luis.g",
     auth_method: "email_alias",
+    component_lead_for: null,
     created_at: "2026-02-01T09:00:00Z",
   },
 ];
 
-const telasLead: MemberActor = { role: "member", isWorkgroupLead: true, workgroup: "telas" };
+const telasLead: MemberActor = {
+  role: "member",
+  isWorkgroupLead: true,
+  workgroup: "telas",
+  componentLeadFor: null,
+};
+const musicLead: MemberActor = {
+  role: "member",
+  isWorkgroupLead: false,
+  workgroup: "ninguno",
+  componentLeadFor: "music",
+};
 
 const sampleShifts = [
   {
@@ -195,7 +209,12 @@ describe("getWorkgroupMembers", () => {
 
   it("throws AuthorizationError for a plain member even when requesting their own group", async () => {
     setupProfilesMock({ data: sampleRows });
-    const member: MemberActor = { role: "member", isWorkgroupLead: false, workgroup: "telas" };
+    const member: MemberActor = {
+      role: "member",
+      isWorkgroupLead: false,
+      workgroup: "telas",
+      componentLeadFor: null,
+    };
 
     await expect(getWorkgroupMembers(member, "telas")).rejects.toThrow(AuthorizationError);
   });
@@ -228,6 +247,72 @@ describe("getWorkgroupMembers", () => {
   });
 });
 
+describe("getComponentMembers", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("throws AuthorizationError when the actor is not the lead of the requested component", async () => {
+    setupProfilesMock({ data: sampleRows });
+    const danceLead: MemberActor = {
+      role: "member",
+      isWorkgroupLead: false,
+      workgroup: "ninguno",
+      componentLeadFor: "dance",
+    };
+
+    await expect(getComponentMembers(musicLead, "dance" as ComponentType)).rejects.toThrow(
+      AuthorizationError,
+    );
+    await expect(getComponentMembers(danceLead, "music" as ComponentType)).rejects.toThrow(
+      AuthorizationError,
+    );
+    // Defense in depth: no DB query may run when the actor is not the lead.
+    expect(mockFrom).not.toHaveBeenCalled();
+  });
+
+  it("throws AuthorizationError for a plain member even when requesting a matching component", async () => {
+    setupProfilesMock({ data: sampleRows });
+    const member: MemberActor = {
+      role: "member",
+      isWorkgroupLead: false,
+      workgroup: "ninguno",
+      componentLeadFor: null,
+    };
+
+    await expect(getComponentMembers(member, "music" as ComponentType)).rejects.toThrow(
+      AuthorizationError,
+    );
+    expect(mockFrom).not.toHaveBeenCalled();
+  });
+
+  it("queries with .eq('component_type', actor's component) when the actor is the lead", async () => {
+    const builder = setupProfilesMock({ data: sampleRows });
+
+    const members = await getComponentMembers(musicLead, "music");
+
+    expect(builder.eq).toHaveBeenCalledWith("component_type", "music" satisfies ComponentType);
+    expect(members).toHaveLength(2);
+  });
+
+  it("maps results including componentLeadFor", async () => {
+    setupProfilesMock({ data: sampleRows });
+
+    const members = await getComponentMembers(musicLead, "music");
+
+    expect(members[0]!.componentLeadFor).toBe("music");
+    expect(members[1]!.componentLeadFor).toBeNull();
+  });
+
+  it("throws when the query fails", async () => {
+    setupProfilesMock({ data: [], error: new Error("DB error") });
+
+    await expect(getComponentMembers(musicLead, "music")).rejects.toThrow(
+      "Failed to list members of component music",
+    );
+  });
+});
+
 describe("getMemberDetail", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -252,6 +337,7 @@ describe("getMemberDetail", () => {
     expect(detail?.firstName).toBe("Ana");
     expect(detail?.birthDate).toBe("1990-05-20");
     expect(detail?.workgroup).toBe("telas");
+    expect(detail?.componentLeadFor).toBe("music");
   });
 
   it("throws when the query fails", async () => {

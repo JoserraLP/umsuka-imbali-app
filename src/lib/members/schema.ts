@@ -50,6 +50,7 @@ export interface MemberListItem {
   status: UserStatus;
   username: string | null;
   authMethod: AuthMethod;
+  componentLeadFor: ComponentType | null;
   createdAt: string;
 }
 

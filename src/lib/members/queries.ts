@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { isValidRole, DEFAULT_ROLE } from "@/lib/auth/roles";
 import { AuthorizationError } from "@/lib/auth/permissions";
-import { isLeadOfGroup, type MemberActor } from "@/lib/members/authorization";
+import { isLeadOfGroup, isLeadOfComponent, type MemberActor } from "@/lib/members/authorization";
 import type { MemberListItem, MemberDetail } from "@/lib/members/schema";
 import { getMyAssignedShifts, type MyAssignedShift } from "@/lib/shifts/assignments";
 import { getUserAttendance, type UserAttendanceRecord } from "@/lib/attendance/queries";
@@ -25,11 +25,12 @@ interface MemberRow {
   status: UserStatus;
   username: string | null;
   auth_method: AuthMethod;
+  component_lead_for: string | null;
   created_at: string;
 }
 
 const MEMBER_LIST_COLUMNS =
-  "id, first_name, last_name, component_type, workgroup, role, is_active, status, username, auth_method, created_at";
+  "id, first_name, last_name, component_type, workgroup, role, is_active, status, username, auth_method, component_lead_for, created_at";
 
 function mapMemberRow(row: MemberRow): MemberListItem {
   return {
@@ -43,6 +44,7 @@ function mapMemberRow(row: MemberRow): MemberListItem {
     status: row.status,
     username: row.username,
     authMethod: row.auth_method,
+    componentLeadFor: (row.component_lead_for as ComponentType | null) ?? null,
     createdAt: row.created_at,
   };
 }
@@ -99,6 +101,37 @@ export async function getWorkgroupMembers(
 }
 
 /**
+ * Lists only the members of a given component (music/dance) — for
+ * component leads. THROWS AuthorizationError unless the actor is the
+ * lead of that exact component (defense in depth: the requested
+ * component is never trusted on its own, it must match the actor's own
+ * componentLeadFor).
+ */
+export async function getComponentMembers(
+  actor: MemberActor,
+  component: ComponentType,
+): Promise<MemberListItem[]> {
+  if (!isLeadOfComponent(actor, component)) {
+    throw new AuthorizationError();
+  }
+
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select(MEMBER_LIST_COLUMNS)
+    .eq("component_type", component)
+    .order("first_name", { ascending: true })
+    .order("last_name", { ascending: true });
+
+  if (error) {
+    throw new Error(`Failed to list members of component ${component}: ${error.message}`);
+  }
+
+  return (data ?? []).map(mapMemberRow);
+}
+
+/**
  * Fetches a single member profile including birth_date. Returns null when
  * the id does not exist. Callers must still validate the viewer's access
  * with canViewMemberDetail() before rendering.
@@ -108,7 +141,7 @@ export async function getMemberDetail(userId: string): Promise<MemberDetail | nu
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, first_name, last_name, birth_date, component_type, workgroup, role, is_active, status, username, auth_method, created_at")
+    .select("id, first_name, last_name, birth_date, component_type, workgroup, role, is_active, status, username, auth_method, component_lead_for, created_at")
     .eq("id", userId)
     .maybeSingle();
 
