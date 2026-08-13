@@ -42,6 +42,10 @@ const PERCENT_FORMATTER = new Intl.NumberFormat("es-ES", {
   minimumFractionDigits: 1,
   maximumFractionDigits: 1,
 });
+const HOURS_FORMATTER = new Intl.NumberFormat("es-ES", {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+});
 
 const SHIFT_DATE_FORMATTER = new Intl.DateTimeFormat("es-ES", {
   dateStyle: "medium",
@@ -114,7 +118,7 @@ export default async function MemberStatsPage({ params }: PageProps) {
               <CardTitle className="text-base">Horas totales</CardTitle>
             </CardHeader>
             <CardContent className="text-2xl font-bold">
-              {PERCENT_FORMATTER.format(detail.totalHours)}
+              {HOURS_FORMATTER.format(detail.totalHours)}
             </CardContent>
           </Card>
           <Card>
@@ -177,7 +181,7 @@ export default async function MemberStatsPage({ params }: PageProps) {
                           <Badge variant="destructive">No</Badge>
                         )}
                       </TableCell>
-                      <TableCell>{PERCENT_FORMATTER.format(shift.hours)}</TableCell>
+                      <TableCell>{HOURS_FORMATTER.format(shift.hours)}</TableCell>
                       <TableCell>
                         {shift.barraTask ? (
                           <Badge variant="outline">{BARRATASK_LABELS[shift.barraTask]}</Badge>

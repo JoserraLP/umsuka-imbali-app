@@ -108,9 +108,10 @@ export function computeEffectiveHours(input: {
 }
 
 /**
- * True when the actor may view stats of `workgroup`. Mirrors the RLS
- * policy on workgroup_attendance: only super_admin (is_super_admin())
- * and the lead of that exact group pass; a plain admin does NOT.
+ * True when the actor may view stats of `workgroup`. Stricter than the
+ * current RLS on workgroup_attendance (defense in depth): only super_admin
+ * (is_super_admin()) and the lead of that exact group pass — a plain admin
+ * or a regular member does NOT.
  */
 export function canViewGroupStats(
   actor: StatsActor | null | undefined,

@@ -37,13 +37,17 @@ const PERCENT_FORMATTER = new Intl.NumberFormat("es-ES", {
   minimumFractionDigits: 1,
   maximumFractionDigits: 1,
 });
+const HOURS_FORMATTER = new Intl.NumberFormat("es-ES", {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+});
 
 function formatPercent(value: number | null): string {
   return value === null ? "—" : `${PERCENT_FORMATTER.format(value)} %`;
 }
 
 function formatHours(value: number): string {
-  return PERCENT_FORMATTER.format(value);
+  return HOURS_FORMATTER.format(value);
 }
 
 export default async function WorkgroupStatsPage({ params }: PageProps) {
