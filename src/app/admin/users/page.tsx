@@ -19,6 +19,7 @@ import { listProfiles } from "@/lib/profiles/queries";
 import { UserRoleSelect } from "@/app/admin/users/user-role-select";
 import { MemberComponentTypeSelect } from "@/app/admin/users/member-component-type-select";
 import { MemberWorkgroupSelect } from "@/app/admin/users/member-workgroup-select";
+import { MemberComponentLeadSelect } from "@/app/admin/users/member-component-lead-select";
 import { MemberActiveToggle } from "@/app/admin/users/member-active-toggle";
 import { EmaillessAccountForm } from "@/app/admin/users/emailless-account-form";
 import { ResetPasswordButton } from "@/app/admin/users/reset-password-button";
@@ -69,6 +70,7 @@ export default async function AdminUsersPage() {
                   <TableHead>Componente</TableHead>
                   <TableHead>Grupo de trabajo</TableHead>
                   <TableHead>Rol</TableHead>
+                  <TableHead>Responsable</TableHead>
                   <TableHead>Registro</TableHead>
                   <TableHead>Alta/Baja</TableHead>
                   {canManage && <TableHead>Acciones</TableHead>}
@@ -117,6 +119,23 @@ export default async function AdminUsersPage() {
                           />
                         ) : (
                           <Badge variant="secondary">{member.role}</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {profile.role === "super_admin" ? (
+                          <MemberComponentLeadSelect
+                            userId={member.id}
+                            currentLead={member.componentLeadFor}
+                            disableSelf={isSelf}
+                          />
+                        ) : (
+                          <Badge variant="outline">
+                            {member.componentLeadFor === "music"
+                              ? "Música"
+                              : member.componentLeadFor === "dance"
+                                ? "Baile"
+                                : "—"}
+                          </Badge>
                         )}
                       </TableCell>
                       <TableCell>

@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuthenticatedProfile } from "@/lib/auth/session";
 import { updateMemberRole, updateMemberProfile, setMemberActive, updateMemberComponentType, updateMemberWorkgroup } from "@/lib/profiles/mutations";
 import type {
   UpdateMemberRoleInput,
@@ -115,4 +117,63 @@ export async function unlockAccountAction(
   }
 
   return result;
+}
+
+const COMPONENT_LEAD_UNIQUE_VIOLATION_MESSAGE =
+  "Ya existe un responsable designado para ese componente. Quítale el cargo al responsable actual primero.";
+
+/**
+ * True when a Supabase/PostgREST error is the partial unique index
+ * violation on idx_profiles_component_lead_for (error code 23505 or a
+ * "duplicate key" message naming the index).
+ */
+function isComponentLeadUniqueViolation(error: {
+  code?: string;
+  message?: string;
+  details?: string;
+}): boolean {
+  if (error.code === "23505") return true;
+  const message = error.message ?? "";
+  return /idx_profiles_component_lead_for/i.test(message) || /duplicate key/i.test(message);
+}
+
+/**
+ * Super-admin only: designates (or removes, when component is null) the
+ * responsable of a component (music/dance). The DB partial unique index
+ * guarantees at most one lead per component; a violation is converted
+ * into a friendly Spanish message for the UI.
+ */
+export async function setComponentLeadAction(
+  userId: string,
+  component: "music" | "dance" | null,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const actor = await requireAuthenticatedProfile();
+
+    if (actor.role !== "super_admin") {
+      return {
+        success: false,
+        error: "Solo el super admin puede designar responsables de componente.",
+      };
+    }
+
+    const supabase = await createClient();
+    const { error } = await supabase
+      .from("profiles")
+      .update({ component_lead_for: component })
+      .eq("id", userId);
+
+    if (error) {
+      if (isComponentLeadUniqueViolation(error)) {
+        return { success: false, error: COMPONENT_LEAD_UNIQUE_VIOLATION_MESSAGE };
+      }
+      return { success: false, error: error.message };
+    }
+
+    revalidatePath("/admin/users");
+    return { success: true };
+  } catch (error) {
+    console.error("setComponentLeadAction failed", error);
+    return { success: false, error: "Error inesperado al actualizar el responsable." };
+  }
 }
