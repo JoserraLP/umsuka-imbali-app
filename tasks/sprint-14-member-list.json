@@ -2,7 +2,7 @@
   "title": "Sprint 14 — Listado de Miembros para Directiva y Responsables de Grupo (ampliado: responsables de música y baile)",
   "description": "Sección donde la directiva (super_admin/management) y los responsables de cada grupo de trabajo pueden ver el listado de los usuarios dados de alta en la comparsa, con ampliación para responsables de componentes de música y baile. La directiva ve a todos los miembros y todos los componentes; cada responsable de grupo ve únicamente los miembros de su propio grupo de trabajo (pudiendo filtrar por componente); cada responsable de componente (nueva columna component_lead_for en profiles) ve únicamente los miembros de su componente (pudiendo filtrar por grupo de trabajo). Incluye migración de BD + RLS, capa lib/members/, server actions con validación de rol, página /members con tabla filtrable, vista por alcance para leads y responsables de componente, ficha de detalle de miembro, gestión del componente lead en /admin/users, y tests.",
   "branch": "feature/sprint-14-member-list",
-  "status": "implemented",
+  "status": "validated",
   "steps": [
     {
       "id": 1,

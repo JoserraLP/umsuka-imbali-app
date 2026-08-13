@@ -13,8 +13,7 @@ import {
 } from "@/components/ui/table";
 import { AppShell } from "@/components/layout/app-shell";
 import { getCurrentProfile } from "@/lib/auth/session";
-import { isManagementRole } from "@/lib/auth/roles";
-import { canViewMembers } from "@/lib/members/authorization";
+import { canViewMembers, resolveMemberLocks } from "@/lib/members/authorization";
 import { getMembersAction } from "@/app/members/actions";
 import { memberFiltersSchema, type MemberFilters } from "@/lib/members/schema";
 import { MemberFilters as MemberFiltersControl } from "@/app/members/member-filters";
@@ -105,22 +104,11 @@ export default async function MembersPage({ searchParams }: PageProps) {
   });
   const filters: MemberFilters = parsed.success ? parsed.data : {};
 
-  const lockedWorkgroup = profile.isWorkgroupLead && !isManagementRole(profile.role)
-    ? profile.workgroup
-    : null;
-
-  // Component scope takes precedence over the workgroup scope for an
-  // actor holding both designations (mirrors resolveMemberScope).
-  const lockedComponent = profile.componentLeadFor !== null && !isManagementRole(profile.role)
-    ? profile.componentLeadFor
-    : null;
-  const scopeKind = isManagementRole(profile.role)
-    ? null
-    : lockedComponent
-      ? "component"
-      : lockedWorkgroup
-        ? "workgroup"
-        : null;
+  // Filter locks derive from the resolved scope ONLY (management >
+  // component > workgroup precedence), so a dual workgroup+component
+  // lead locks the component select and keeps the workgroup filter free.
+  const { lockedWorkgroup, lockedComponent } = resolveMemberLocks(profile);
+  const scopeKind = lockedComponent ? "component" : lockedWorkgroup ? "workgroup" : null;
 
   const members = result.success
     ? filterMembers(result.data, filters)

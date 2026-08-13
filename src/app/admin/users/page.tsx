@@ -124,6 +124,10 @@ export default async function AdminUsersPage() {
                       <TableCell>
                         {profile.role === "super_admin" ? (
                           <MemberComponentLeadSelect
+                            // Key includes the current value so the client
+                            // select re-syncs after revalidation when the
+                            // cargo moves to/from another row.
+                            key={`${member.id}:${member.componentLeadFor ?? "none"}`}
                             userId={member.id}
                             currentLead={member.componentLeadFor}
                             disableSelf={isSelf}

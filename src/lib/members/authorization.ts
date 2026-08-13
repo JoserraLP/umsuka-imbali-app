@@ -91,6 +91,43 @@ export function canViewMemberDetail(
 }
 
 /**
+ * The filter locks the /members page must apply to the actor's OWN view:
+ * exactly ONE lock can be set at most (the winning scope's dimension),
+ * so the other dimension stays free to filter within the scope. Mirrors
+ * the resolveMemberScope precedence (management > component > workgroup)
+ * without throwing — denied actors simply get no locks.
+ */
+export interface MemberLocks {
+  lockedWorkgroup: Workgroup | null;
+  lockedComponent: ComponentType | null;
+}
+
+/**
+ * Derives the filter locks for the /members page from the actor's scope:
+ * - management ("all") → no locks (both filters free).
+ * - component lead → the component select is locked; workgroup stays free.
+ * - workgroup lead → the workgroup select is locked; component stays free.
+ * - denied actors (members/guests, leads without a real group) → no locks.
+ * A dual workgroup+component lead is governed by the component scope, so
+ * their workgroup filter remains free (component wins).
+ */
+export function resolveMemberLocks(actor: MemberActor | null | undefined): MemberLocks {
+  if (!actor) {
+    return { lockedWorkgroup: null, lockedComponent: null };
+  }
+  if (isManagementRole(actor.role)) {
+    return { lockedWorkgroup: null, lockedComponent: null };
+  }
+  if (actor.componentLeadFor !== null) {
+    return { lockedWorkgroup: null, lockedComponent: actor.componentLeadFor };
+  }
+  if (actor.isWorkgroupLead && actor.workgroup !== "ninguno") {
+    return { lockedWorkgroup: actor.workgroup, lockedComponent: null };
+  }
+  return { lockedWorkgroup: null, lockedComponent: null };
+}
+
+/**
  * True when the actor is the lead of the given workgroup. Used by
  * getWorkgroupMembers as defense in depth — the requested workgroup is
  * never trusted on its own, it must match the actor's own group.

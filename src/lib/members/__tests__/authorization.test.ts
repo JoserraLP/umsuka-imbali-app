@@ -5,6 +5,7 @@ import {
   canViewMemberDetail,
   isLeadOfGroup,
   isLeadOfComponent,
+  resolveMemberLocks,
   type MemberActor,
 } from "@/lib/members/authorization";
 import { AuthorizationError } from "@/lib/auth/permissions";
@@ -265,5 +266,71 @@ describe("isLeadOfComponent", () => {
   it("returns false when componentLeadFor is null even for a management actor", () => {
     const admin = actor({ role: "super_admin", componentLeadFor: null });
     expect(isLeadOfComponent(admin, "music" as ComponentType)).toBe(false);
+  });
+});
+
+describe("resolveMemberLocks", () => {
+  it("returns nulls for every management role", () => {
+    for (const role of MANAGEMENT_ROLES) {
+      expect(resolveMemberLocks(actor({ role }))).toEqual({
+        lockedWorkgroup: null,
+        lockedComponent: null,
+      });
+    }
+  });
+
+  it("returns nulls for management even when both designations are set", () => {
+    expect(
+      resolveMemberLocks(
+        actor({ role: "admin", isWorkgroupLead: true, workgroup: "telas", componentLeadFor: "music" }),
+      ),
+    ).toEqual({ lockedWorkgroup: null, lockedComponent: null });
+  });
+
+  it("locks only the workgroup for a pure workgroup lead", () => {
+    expect(resolveMemberLocks(actor({ isWorkgroupLead: true, workgroup: "telas" }))).toEqual({
+      lockedWorkgroup: "telas",
+      lockedComponent: null,
+    });
+  });
+
+  it("locks only the component for a pure component lead", () => {
+    expect(resolveMemberLocks(actor({ componentLeadFor: "music" }))).toEqual({
+      lockedWorkgroup: null,
+      lockedComponent: "music",
+    });
+    expect(resolveMemberLocks(actor({ componentLeadFor: "dance" }))).toEqual({
+      lockedWorkgroup: null,
+      lockedComponent: "dance",
+    });
+  });
+
+  it("locks only the component for a dual workgroup+component lead (component wins)", () => {
+    expect(
+      resolveMemberLocks(
+        actor({ isWorkgroupLead: true, workgroup: "telas", componentLeadFor: "dance" }),
+      ),
+    ).toEqual({ lockedWorkgroup: null, lockedComponent: "dance" });
+  });
+
+  it("returns nulls for plain members and guests (they cannot view the directory)", () => {
+    for (const role of ["member", "guest"] as const) {
+      expect(resolveMemberLocks(actor({ role }))).toEqual({
+        lockedWorkgroup: null,
+        lockedComponent: null,
+      });
+    }
+  });
+
+  it("returns nulls for a lead whose workgroup is ninguno (treated as non-lead)", () => {
+    expect(resolveMemberLocks(actor({ isWorkgroupLead: true, workgroup: "ninguno" }))).toEqual({
+      lockedWorkgroup: null,
+      lockedComponent: null,
+    });
+  });
+
+  it("returns nulls for null or undefined actors", () => {
+    expect(resolveMemberLocks(null)).toEqual({ lockedWorkgroup: null, lockedComponent: null });
+    expect(resolveMemberLocks(undefined)).toEqual({ lockedWorkgroup: null, lockedComponent: null });
   });
 });
