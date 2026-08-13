@@ -109,6 +109,19 @@ export default async function MembersPage({ searchParams }: PageProps) {
     ? profile.workgroup
     : null;
 
+  // Component scope takes precedence over the workgroup scope for an
+  // actor holding both designations (mirrors resolveMemberScope).
+  const lockedComponent = profile.componentLeadFor !== null && !isManagementRole(profile.role)
+    ? profile.componentLeadFor
+    : null;
+  const scopeKind = isManagementRole(profile.role)
+    ? null
+    : lockedComponent
+      ? "component"
+      : lockedWorkgroup
+        ? "workgroup"
+        : null;
+
   const members = result.success
     ? filterMembers(result.data, filters)
     : [];
@@ -119,13 +132,22 @@ export default async function MembersPage({ searchParams }: PageProps) {
         <div className="border-b border-border pb-4">
           <h1 className="text-xl font-bold tracking-tight">Directorio de miembros</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {lockedWorkgroup
-              ? "Miembros de tu grupo de trabajo."
-              : "Listado de los miembros dados de alta en la comparsa."}
+            {scopeKind === "component"
+              ? "Miembros de tu componente."
+              : scopeKind === "workgroup"
+                ? "Miembros de tu grupo de trabajo."
+                : "Listado de los miembros dados de alta en la comparsa."}
           </p>
         </div>
 
-        {lockedWorkgroup && (
+        {scopeKind === "component" && lockedComponent && (
+          <div className="rounded-lg border border-brand/30 bg-brand/5 px-4 py-3 text-sm">
+            Mostrando solo los miembros del componente:{" "}
+            <span className="font-semibold">{COMPONENT_TYPE_LABELS[lockedComponent]}</span>
+          </div>
+        )}
+
+        {scopeKind === "workgroup" && lockedWorkgroup && (
           <div className="rounded-lg border border-brand/30 bg-brand/5 px-4 py-3 text-sm">
             Mostrando solo los miembros de tu grupo:{" "}
             <span className="font-semibold">{WORKGROUP_LABELS[lockedWorkgroup]}</span>
@@ -152,6 +174,7 @@ export default async function MembersPage({ searchParams }: PageProps) {
               status={parsed.success ? (filters.status ?? "all") : "all"}
               q={filters.q ?? ""}
               lockedWorkgroup={lockedWorkgroup}
+              lockedComponent={lockedComponent}
             />
             {members.length === 0 ? (
               <p className="text-sm text-muted-foreground">

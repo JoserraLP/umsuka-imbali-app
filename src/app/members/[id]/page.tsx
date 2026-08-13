@@ -80,8 +80,14 @@ export default async function MemberDetailPage({ params }: PageProps) {
 
   const { member, shifts, attendance } = result.data;
 
-  // Defense in depth: a lead must never see a member outside their group.
-  if (!canViewMemberDetail(profile, member.workgroup)) {
+  // Defense in depth: a lead must never see a member outside their
+  // group/component (component scope takes precedence when both apply).
+  if (
+    !canViewMemberDetail(profile, {
+      workgroup: member.workgroup,
+      componentType: member.componentType,
+    })
+  ) {
     notFound();
   }
 

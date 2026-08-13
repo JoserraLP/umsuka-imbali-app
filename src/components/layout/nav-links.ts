@@ -10,7 +10,7 @@ import {
   MessageSquare,
   type LucideIcon,
 } from "lucide-react";
-import type { AppRole, Workgroup } from "@/types/database.types";
+import type { AppRole, ComponentType, Workgroup } from "@/types/database.types";
 import { isManagementRole, isAdminRole } from "@/lib/auth/roles";
 
 /**
@@ -22,6 +22,8 @@ export interface NavLinkContext {
   role: AppRole;
   isWorkgroupLead: boolean;
   workgroup: Workgroup;
+  /** "music" / "dance" when the user is the responsable of that component. */
+  componentLeadFor: ComponentType | null;
 }
 
 export interface NavLink {
@@ -43,7 +45,10 @@ export const NAV_LINKS: NavLink[] = [
     href: "/members",
     label: "Directorio",
     icon: Users,
-    showFor: (ctx) => isManagementRole(ctx.role) || (ctx.isWorkgroupLead && ctx.workgroup !== "ninguno"),
+    showFor: (ctx) =>
+      isManagementRole(ctx.role) ||
+      (ctx.isWorkgroupLead && ctx.workgroup !== "ninguno") ||
+      ctx.componentLeadFor !== null,
   },
   {
     href: "/admin/users",

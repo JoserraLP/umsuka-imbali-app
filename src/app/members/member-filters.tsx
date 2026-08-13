@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { COMPONENT_TYPE_OPTIONS, STATUS_OPTIONS, WORKGROUP_OPTIONS } from "@/lib/members/schema";
-import type { Workgroup } from "@/types/database.types";
+import type { ComponentType, Workgroup } from "@/types/database.types";
 
 const WORKGROUP_LABELS: Record<string, string> = {
   telas: "Telas",
@@ -36,6 +36,9 @@ interface MemberFiltersProps {
   /** When set (workgroup leads), the group select is hidden and the list
    *  is locked to that group. */
   lockedWorkgroup?: Workgroup | null;
+  /** When set (component leads), the component select is hidden and the
+   *  list is locked to that component. */
+  lockedComponent?: ComponentType | null;
 }
 
 export function MemberFilters({
@@ -44,6 +47,7 @@ export function MemberFilters({
   status,
   q,
   lockedWorkgroup,
+  lockedComponent,
 }: MemberFiltersProps) {
   const router = useRouter();
   const [qInput, setQInput] = useState(q);
@@ -51,7 +55,7 @@ export function MemberFilters({
   function filterUrl(params: Record<string, string | undefined>): string {
     const sp = new URLSearchParams();
     const effectiveWorkgroup = lockedWorkgroup ?? params.workgroup ?? workgroup;
-    const effectiveComponentType = params.componentType ?? componentType;
+    const effectiveComponentType = lockedComponent ?? params.componentType ?? componentType;
     const effectiveStatus = params.status ?? status;
     const effectiveQ = params.q ?? q;
     if (effectiveWorkgroup && effectiveWorkgroup !== "all") sp.set("workgroup", effectiveWorkgroup);
@@ -87,19 +91,21 @@ export function MemberFilters({
         </Select>
       )}
 
-      <Select
-        aria-label="Filtrar por componente"
-        className="h-8 w-auto text-xs"
-        value={componentType}
-        onChange={(e) => router.push(filterUrl({ componentType: e.target.value }))}
-      >
-        <option value="all">Todos los componentes</option>
-        {COMPONENT_TYPE_OPTIONS.map((option) => (
-          <option key={option} value={option}>
-            {COMPONENT_TYPE_LABELS[option]}
-          </option>
-        ))}
-      </Select>
+      {!lockedComponent && (
+        <Select
+          aria-label="Filtrar por componente"
+          className="h-8 w-auto text-xs"
+          value={componentType}
+          onChange={(e) => router.push(filterUrl({ componentType: e.target.value }))}
+        >
+          <option value="all">Todos los componentes</option>
+          {COMPONENT_TYPE_OPTIONS.map((option) => (
+            <option key={option} value={option}>
+              {COMPONENT_TYPE_LABELS[option]}
+            </option>
+          ))}
+        </Select>
+      )}
 
       <Select
         aria-label="Filtrar por estado"
