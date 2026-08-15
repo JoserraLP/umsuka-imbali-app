@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { canAssignToShift } from "@/lib/shifts/assignments";
-import type { ActorAuthContext, ShiftAuthContext, EventAuthContext } from "@/lib/shifts/assignments";
+import type {
+  ActorAuthContext,
+  ShiftAuthContext,
+  EventAuthContext,
+} from "@/lib/shifts/assignments";
 
 function lead(overrides: Partial<ActorAuthContext> = {}): ActorAuthContext {
   return {
@@ -23,7 +27,13 @@ describe("canAssignToShift", () => {
   it("allows management to assign to any shift", () => {
     const admin = lead({ isWorkgroupLead: false, role: "super_admin", workgroup: "ninguno" });
     expect(canAssignToShift(admin, ownShift, ownEvent)).toBe(true);
-    expect(canAssignToShift(admin, { eventId: "e2", workgroup: null }, { eventType: "general", createdBy: "someone" })).toBe(true);
+    expect(
+      canAssignToShift(
+        admin,
+        { eventId: "e2", workgroup: null },
+        { eventType: "general", createdBy: "someone" },
+      ),
+    ).toBe(true);
     expect(canAssignToShift(admin, null, null)).toBe(true);
   });
 
@@ -58,5 +68,38 @@ describe("canAssignToShift", () => {
   it("blocks assignment when shift or event is missing", () => {
     expect(canAssignToShift(lead(), null, ownEvent)).toBe(false);
     expect(canAssignToShift(lead(), ownShift, null)).toBe(false);
+  });
+
+  // Sprint 17b: meeting/carnival events are attendance-only — shift
+  // assignment is unavailable for EVERYONE, management included.
+  it("blocks management from assigning to meeting events (attendance-only)", () => {
+    const admin = lead({ isWorkgroupLead: false, role: "super_admin", workgroup: "ninguno" });
+    expect(canAssignToShift(admin, ownShift, { eventType: "meeting", createdBy: "someone" })).toBe(
+      false,
+    );
+  });
+
+  it("blocks management from assigning to carnival events (attendance-only)", () => {
+    const admin = lead({ isWorkgroupLead: false, role: "super_admin", workgroup: "ninguno" });
+    expect(canAssignToShift(admin, ownShift, { eventType: "carnival", createdBy: "someone" })).toBe(
+      false,
+    );
+  });
+
+  it("keeps allowing management on general and work_shift events", () => {
+    const admin = lead({ isWorkgroupLead: false, role: "super_admin", workgroup: "ninguno" });
+    expect(canAssignToShift(admin, ownShift, { eventType: "general", createdBy: "someone" })).toBe(
+      true,
+    );
+    expect(canAssignToShift(admin, ownShift, ownEvent)).toBe(true); // work_shift
+  });
+
+  it("blocks leads even on attendance-only events they created", () => {
+    expect(canAssignToShift(lead(), ownShift, { eventType: "meeting", createdBy: "lead-1" })).toBe(
+      false,
+    );
+    expect(canAssignToShift(lead(), ownShift, { eventType: "carnival", createdBy: "lead-1" })).toBe(
+      false,
+    );
   });
 });
