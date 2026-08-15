@@ -7,6 +7,13 @@ import {
   registerForEventAction,
   unregisterFromEventAction,
 } from "@/app/events/[id]/registration-actions";
+import {
+  joinWaitlistAction,
+  leaveWaitlistAction,
+  setWaitlistEntryStatusAction,
+  removeWaitlistEntryAction,
+} from "@/app/events/[id]/waitlist-actions";
+import type { RegistrationStatus, WaitlistEntry } from "@/lib/events/queries";
 
 interface Attendee {
   registrationId: string;
@@ -17,35 +24,34 @@ interface Attendee {
 
 interface RegistrationPanelProps {
   eventId: string;
-  isViewerRegistered: boolean;
-  count: number;
-  capacity: number | null;
+  /** Derived state from computeRegistrationStatus (page-level). */
+  registrationStatus: RegistrationStatus;
   attendees: Attendee[];
+  /** Management-only: full event waitlist. Empty for regular members. */
+  waitlist: WaitlistEntry[];
   canManageAttendees: boolean;
 }
 
 export function RegistrationPanel({
   eventId,
-  isViewerRegistered,
-  count,
-  capacity,
+  registrationStatus,
   attendees,
+  waitlist,
   canManageAttendees,
 }: RegistrationPanelProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const isFull = capacity !== null && count >= capacity;
+  const { capacity, registeredCount, isFull, registrationOpen, viewerStatus } = registrationStatus;
 
-  function handleRegister() {
+  function run(action: () => Promise<{ success: boolean; error?: string }>) {
     setError(null);
     startTransition(async () => {
-      const result = await registerForEventAction({ eventId });
+      const result = await action();
 
       if (!result.success) {
-        console.error("Error al inscribirse en el evento:", result.error);
-        setError(result.error ?? "No se pudo completar la inscripción.");
+        setError(result.error ?? "No se pudo completar la operación.");
         return;
       }
 
@@ -53,48 +59,70 @@ export function RegistrationPanel({
     });
   }
 
-  function handleUnregister(targetUserId?: string) {
-    setError(null);
-    startTransition(async () => {
-      const result = await unregisterFromEventAction({ eventId, userId: targetUserId });
-
-      if (!result.success) {
-        console.error("Error al darse de baja del evento:", result.error);
-        setError(result.error ?? "No se pudo completar la baja.");
-        return;
-      }
-
-      router.refresh();
-    });
-  }
+  const viewerWaitlistPosition =
+    viewerStatus === "waitlisted" ? (registrationStatus.viewerWaitlistPosition ?? null) : null;
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          {capacity !== null ? `${count} / ${capacity} plazas` : `${count} inscritos`}
+          {capacity !== null
+            ? `${registeredCount} / ${capacity} plazas`
+            : `${registeredCount} inscritos`}
         </p>
-        {isViewerRegistered ? (
+        {viewerStatus === "registered" ? (
           <Button
             variant="outline"
             size="sm"
             disabled={isPending}
-            onClick={() => handleUnregister()}
+            onClick={() => void run(() => unregisterFromEventAction({ eventId }))}
           >
             {isPending ? "Guardando…" : "Darme de baja"}
           </Button>
+        ) : viewerStatus === "waitlisted" ? (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isPending}
+            onClick={() => void run(() => leaveWaitlistAction({ eventId }))}
+          >
+            {isPending
+              ? "Guardando…"
+              : viewerWaitlistPosition !== null
+                ? `Abandonar lista de espera (posición #${viewerWaitlistPosition})`
+                : "Abandonar lista de espera"}
+          </Button>
+        ) : registrationOpen ? (
+          <Button
+            size="sm"
+            disabled={isPending}
+            onClick={() => void run(() => registerForEventAction({ eventId }))}
+          >
+            {isPending ? "Guardando…" : "Apuntarme"}
+          </Button>
         ) : (
-          <Button size="sm" disabled={isPending || isFull} onClick={handleRegister}>
-            {isPending ? "Guardando…" : isFull ? "Sin plazas" : "Apuntarme"}
+          <Button
+            size="sm"
+            disabled={isPending}
+            onClick={() => void run(() => joinWaitlistAction({ eventId }))}
+          >
+            {isPending ? "Guardando…" : "Apuntarme a la lista de espera"}
           </Button>
         )}
       </div>
+
+      {isFull && (
+        <p className="text-xs text-muted-foreground">
+          El aforo está completo: al apuntarte entrarás en la lista de espera y ocuparás una plaza
+          si alguien se da de baja.
+        </p>
+      )}
 
       {capacity !== null && (
         <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
           <div
             className="h-full rounded-full bg-primary transition-all"
-            style={{ width: `${Math.min(100, (count / capacity) * 100)}%` }}
+            style={{ width: `${Math.min(100, (registeredCount / capacity) * 100)}%` }}
           />
         </div>
       )}
@@ -106,30 +134,95 @@ export function RegistrationPanel({
       )}
 
       {canManageAttendees && (
-        <div className="flex flex-col gap-2 border-t pt-4">
-          <p className="text-sm font-medium">Inscritos ({attendees.length})</p>
-          {attendees.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nadie se ha inscrito todavía.</p>
-          ) : (
-            <ul className="flex flex-col gap-1">
-              {attendees.map((attendee) => (
-                <li key={attendee.userId} className="flex items-center justify-between text-sm">
-                  <span>
-                    {attendee.firstName} {attendee.lastName}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    disabled={isPending}
-                    onClick={() => handleUnregister(attendee.userId)}
-                  >
-                    Quitar
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
+        <div className="flex flex-col gap-4 border-t pt-4">
+          <div className="flex flex-col gap-2">
+            <p className="text-sm font-medium">Inscritos ({attendees.length})</p>
+            {attendees.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nadie se ha inscrito todavía.</p>
+            ) : (
+              <ul className="flex flex-col gap-1">
+                {attendees.map((attendee) => (
+                  <li key={attendee.userId} className="flex items-center justify-between text-sm">
+                    <span>
+                      {attendee.firstName} {attendee.lastName}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={isPending}
+                      onClick={() =>
+                        void run(() =>
+                          unregisterFromEventAction({ eventId, userId: attendee.userId }),
+                        )
+                      }
+                    >
+                      Quitar
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <p className="text-sm font-medium">
+              Lista de espera ({waitlist.filter((entry) => entry.status === "waiting").length})
+            </p>
+            {waitlist.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No hay nadie en la lista de espera.</p>
+            ) : (
+              <ul className="flex flex-col gap-1">
+                {waitlist.map((entry) => (
+                  <li key={entry.id} className="flex items-center justify-between gap-2 text-sm">
+                    <span className="min-w-0">
+                      <span className="text-muted-foreground">#{entry.position}</span>{" "}
+                      <span>
+                        {entry.firstName} {entry.lastName}
+                      </span>
+                      {entry.status !== "waiting" && (
+                        <span className="ml-2 text-xs text-muted-foreground">({entry.status})</span>
+                      )}
+                    </span>
+                    {entry.status === "waiting" && (
+                      <span className="flex shrink-0 items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="default"
+                          size="sm"
+                          disabled={isPending}
+                          onClick={() =>
+                            void run(() =>
+                              setWaitlistEntryStatusAction({
+                                eventId,
+                                entryId: entry.id,
+                                status: "promoted",
+                              }),
+                            )
+                          }
+                        >
+                          Promover
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={isPending}
+                          onClick={() =>
+                            void run(() =>
+                              removeWaitlistEntryAction({ eventId, entryId: entry.id }),
+                            )
+                          }
+                        >
+                          Quitar
+                        </Button>
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       )}
     </div>

@@ -36,7 +36,10 @@ export default async function NewEventPage() {
               ? "Crea una actividad, reunión o fecha de carnaval."
               : "Crea un turno de trabajo para tu grupo."}
           </p>
-          <Link href="/events" className="mt-2 inline-block text-sm text-muted-foreground hover:text-foreground">
+          <Link
+            href="/events"
+            className="mt-2 inline-block text-sm text-muted-foreground hover:text-foreground"
+          >
             ← Volver a eventos
           </Link>
         </div>
@@ -55,6 +58,9 @@ export default async function NewEventPage() {
                 eventType: isManagement ? "general" : "work_shift",
                 eventDate: "",
                 capacity: null,
+                location: "",
+                imageUrl: "",
+                registrationDeadline: "",
                 workgroup: (isManagement ? null : profile.workgroup) as EventWorkgroup | null,
               }}
               leadWorkgroup={isManagement ? undefined : profile.workgroup}
