@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { clientEnv } from "@/lib/env.client";
 import { SERVER_AUTH_COOKIE_OPTIONS } from "@/lib/supabase/cookie-options";
+import { requiresWorkgroupOnboarding } from "@/lib/supabase/auth-gate";
 import type { Database } from "@/types/database.types";
 
 const PUBLIC_ROUTES = [
@@ -10,6 +11,7 @@ const PUBLIC_ROUTES = [
   "/auth/auth-code-error",
   "/auth/pending",
   "/auth/reset-password",
+  "/onboarding",
 ];
 
 function isPublicRoute(pathname: string): boolean {
@@ -51,7 +53,9 @@ export async function updateSession(request: NextRequest) {
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(cookiesToSet: Array<{ name: string; value: string; options?: Record<string, unknown> }>) {
+        setAll(
+          cookiesToSet: Array<{ name: string; value: string; options?: Record<string, unknown> }>,
+        ) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) => {
@@ -96,8 +100,19 @@ export async function updateSession(request: NextRequest) {
     const { data: userStatus } = await supabase.rpc("current_user_status");
 
     if (userStatus === "pending" || userStatus === "suspended") {
+      return redirectPreservingCookies(new URL("/auth/pending", request.url), supabaseResponse);
+    }
+
+    // ── Workgroup onboarding ────────────────────────────────────────
+    // First login: the member must choose their workgroup before using
+    // the app. Runs after the status check, so pending/suspended members
+    // see /auth/pending first. /onboarding itself is public, so the
+    // onboarding page never redirects back to itself.
+    const { data: userWorkgroup } = await supabase.rpc("current_user_workgroup");
+
+    if (requiresWorkgroupOnboarding(userWorkgroup)) {
       return redirectPreservingCookies(
-        new URL("/auth/pending", request.url),
+        new URL("/onboarding/workgroup", request.url),
         supabaseResponse,
       );
     }

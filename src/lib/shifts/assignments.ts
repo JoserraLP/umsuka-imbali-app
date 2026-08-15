@@ -3,6 +3,7 @@ import { requireAuthenticatedProfile } from "@/lib/auth/session";
 import { isManagementRole } from "@/lib/auth/roles";
 import { assignMemberSchema, unassignMemberSchema } from "@/lib/shifts/schema";
 import { checkShiftConflicts, type AssignmentWithUser } from "@/lib/shifts/queries";
+import { isAttendanceOnlyEventType, SHIFTS_UNAVAILABLE_MESSAGE } from "@/lib/events/policy";
 import type { Workgroup, AppRole } from "@/types/database.types";
 
 export interface AssignmentResult {
@@ -53,6 +54,9 @@ export function canAssignToShift(
   shift: ShiftAuthContext | null,
   event: EventAuthContext | null,
 ): boolean {
+  // Sprint 17b: meeting/carnival events are attendance-only — assignment
+  // is unavailable for EVERYONE, management included.
+  if (event && isAttendanceOnlyEventType(event.eventType)) return false;
   if (isManagementRole(actor.role)) return true;
   if (!actor.isWorkgroupLead || !shift || !event) return false;
 
@@ -90,6 +94,12 @@ async function assertCanAssign(shiftId: string): Promise<AssignmentResult | void
     event = data ? { eventType: data.event_type, createdBy: data.created_by } : null;
   }
 
+  // Meeting/carnival events are attendance-only: protecting assign/unassign
+  // with the policy message (instead of the generic permission error).
+  if (event && isAttendanceOnlyEventType(event.eventType)) {
+    return { success: false, error: SHIFTS_UNAVAILABLE_MESSAGE };
+  }
+
   if (!canAssignToShift(actor, { eventId: shift.event_id, workgroup: shift.workgroup }, event)) {
     return {
       success: false,
@@ -120,7 +130,9 @@ export async function getShiftAssignments(shiftId: string): Promise<AssignmentWi
     throw new Error(`Error al obtener asignaciones del turno: ${error.message}`);
   }
 
-  const userIds = [...new Set((assignments ?? []).map((a) => a.user_id).filter(Boolean))] as string[];
+  const userIds = [
+    ...new Set((assignments ?? []).map((a) => a.user_id).filter(Boolean)),
+  ] as string[];
   const profilesById = new Map<string, { first_name: string; last_name: string }>();
 
   if (userIds.length > 0) {

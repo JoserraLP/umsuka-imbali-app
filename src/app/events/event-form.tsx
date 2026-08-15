@@ -70,7 +70,13 @@ export function EventForm({ mode, eventId, defaultValues, leadWorkgroup }: Event
     // Doing this conversion server-side instead would use the server's
     // timezone (typically UTC on Vercel) rather than the user's.
     const isoEventDate = new Date(values.eventDate).toISOString();
-    const payload = { ...values, eventDate: isoEventDate };
+    const payload = {
+      ...values,
+      eventDate: isoEventDate,
+      registrationDeadline: values.registrationDeadline
+        ? new Date(values.registrationDeadline).toISOString()
+        : null,
+    };
 
     const result =
       mode === "create"
@@ -153,9 +159,36 @@ export function EventForm({ mode, eventId, defaultValues, leadWorkgroup }: Event
             placeholder="Sin límite"
             {...register("capacity", { valueAsNumber: true })}
           />
-          {errors.capacity && (
-            <p className="text-xs text-destructive">{errors.capacity.message}</p>
+          {errors.capacity && <p className="text-xs text-destructive">{errors.capacity.message}</p>}
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="location">Lugar (opcional)</Label>
+          <Input
+            id="location"
+            type="text"
+            placeholder="Ej. Plaza Mayor, 1"
+            {...register("location")}
+          />
+          {errors.location && <p className="text-xs text-destructive">{errors.location.message}</p>}
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="registrationDeadline">Fecha límite de inscripción (opcional)</Label>
+          <Input
+            id="registrationDeadline"
+            type="datetime-local"
+            {...register("registrationDeadline")}
+          />
+          {errors.registrationDeadline && (
+            <p className="text-xs text-destructive">{errors.registrationDeadline.message}</p>
           )}
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="imageUrl">Imagen (URL, opcional)</Label>
+          <Input id="imageUrl" type="url" placeholder="https://…" {...register("imageUrl")} />
+          {errors.imageUrl && <p className="text-xs text-destructive">{errors.imageUrl.message}</p>}
         </div>
 
         {showWorkgroupField && (

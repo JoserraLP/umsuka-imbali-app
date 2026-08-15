@@ -560,7 +560,7 @@ Gestionar documentos usando Supabase Storage con categorías, permisos por rol y
 **Rama:** `feature/sprint-17-events-enhancement`
 
 ### Descripción
-Mejorar la gestión de eventos: registro con campos adicionales, comentarios, capacidad máxima, y lista de espera.
+Mejorar la gestión de eventos: registro con campos adicionales, comentarios, capacidad máxima, y lista de espera. Además, se añade el flujo de **selección de grupo de trabajo en el primer inicio de sesión**: el usuario elige por primera vez el grupo al que pertenece (telas, barra, estandarte, limpieza); después, puede modificar su grupo desde su perfil y el super admin puede cambiarlo desde el panel de administración.
 
 ### Pasos
 
@@ -571,16 +571,29 @@ Mejorar la gestión de eventos: registro con campos adicionales, comentarios, ca
 | 3 | Lógica de lista de espera | Si el evento está lleno, los nuevos registros van a lista de espera (`umsuka.event_waitlist`). |
 | 4 | UI: Página de evento | Rediseñar `/events/[id]` con toda la info: fecha, lugar, aforo, botón de registro, comentarios. |
 | 5 | UI: Calendario de eventos | Vista de calendario mensual/semanal con todos los eventos. |
-| 6 | Pruebas | Tests de integración. |
+| 6 | Pruebas | Tests de integración (eventos) |
+| 7 | Migración de BD — grupo de trabajo | La columna `workgroup` ya existe en `umsuka.profiles` (Sprint 2). Verificar que el estado inicial para usuarios nuevos sea `ninguno` o null para detectar "sin grupo asignado". |
+| 8 | Onboarding: primer login | Detectar usuarios sin grupo asignado (workgroup = `ninguno` o null) y redirigirles a `/onboarding/workgroup` antes de que puedan acceder al resto de la app. |
+| 9 | Middleware update | En `middleware.ts`, bloquear el acceso a las páginas de la app (dashboard, eventos, perfil, etc.) hasta que el usuario haya elegido su grupo de trabajo. |
+| 10 | Server actions | `setMyWorkgroupAction` (el usuario elige por primera vez o modifica su grupo desde su perfil) y `setUserWorkgroupAction` (solo super admin, desde el panel de administración). |
+| 11 | UI: Página de onboarding | Página `/onboarding/workgroup` con selector de grupo (telas, barra, estandarte, limpieza) y confirmación obligatoria antes de continuar. |
+| 12 | UI: Perfil | En `/profile`, sección "Mi grupo de trabajo" con selector para modificar el grupo y nota de quién puede cambiarlo (el propio usuario y el super admin). |
+| 13 | UI: Panel admin | En `/admin/users`, selector de grupo de trabajo editable por el super admin para cualquier usuario. |
+| 14 | Pruebas | Tests unitarios de validación de roles. Tests de integración del flujo completo: primer login → onboarding → cambio desde perfil → cambio desde admin. |
 
 ### Dependencias
 - Sprint 1 (UI/UX)
 - Sprint 5 (asistencia)
+- Sprint 2 (Workgroup Roles — para la columna `workgroup` y los helpers `is_workgroup_lead`, `current_user_workgroup`)
 
 ### Criterios de Aceptación
 - Los eventos tienen capacidad máxima y fecha límite de registro.
 - Si el evento está lleno, los miembros pueden apuntarse a la lista de espera.
 - Se muestra claramente el estado del evento y del registro del usuario.
+- En el primer inicio de sesión, el usuario debe elegir su grupo de trabajo antes de poder usar la aplicación.
+- Sin grupo asignado, no se puede acceder al resto de funcionalidades (el middleware redirige al onboarding).
+- Cada usuario puede modificar su propio grupo de trabajo desde su perfil.
+- El super admin puede cambiar el grupo de trabajo de cualquier usuario desde el panel de administración.
 
 ---
 
@@ -853,7 +866,7 @@ Auditorías finales de seguridad, rendimiento, accesibilidad y validación gener
 | **Sprint 14 — Member List** | `feature/sprint-14-member-list` (histórica) | ✅ Ejecutado |
 | Sprint 15 — Votings | `feature/sprint-15-votings` | Sprint 1, Sprint 6 |
 | Sprint 16 — Document Management | `feature/sprint-16-document-management` | Sprint 6 |
-| Sprint 17 — Events Enhancement | `feature/sprint-17-events-enhancement` | Sprint 1, Sprint 5 |
+| Sprint 17 — Events Enhancement (+ Onboarding Grupo) | `feature/sprint-17-events-enhancement` | Sprint 1, Sprint 5, Sprint 2 |
 | **Sprint 18 — Event Audience** | `feature/sprint-18-event-audience` | **Sprint 2, Sprint 12, Sprint 17** |
 | Sprint 19 — Profiles & Components | `feature/sprint-19-profiles-components` | Sprint 1 |
 | Sprint 20 — Notifications | `feature/sprint-20-notifications` | Múltiples |

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireAuthenticatedProfile } from "@/lib/auth/session";
 import { requireManagement } from "@/lib/auth/permissions";
+import { rejectAttendanceOnlyEvent, SHIFTS_UNAVAILABLE_MESSAGE } from "@/lib/events/policy";
 import {
   createShiftSchema,
   updateShiftSchema,
@@ -67,6 +68,15 @@ export async function createShift(input: CreateShiftInput): Promise<MutationResu
     };
   }
 
+  // Meeting/carnival events are attendance-only: shifts are unavailable.
+  const eventTypeError = await rejectAttendanceOnlyEvent(
+    parsed.data.eventId,
+    SHIFTS_UNAVAILABLE_MESSAGE,
+  );
+  if (eventTypeError) {
+    return { success: false, error: eventTypeError };
+  }
+
   const authCheck = await assertCanManageShifts(parsed.data.eventId);
   if (authCheck && "success" in authCheck && !authCheck.success) {
     return authCheck;
@@ -102,12 +112,37 @@ export async function updateShift(input: UpdateShiftInput): Promise<MutationResu
     };
   }
 
-  const authCheck = await assertCanManageShifts(parsed.data.eventId);
+  // The source of truth is the shift's REAL event (from the DB), not the
+  // eventId coming from the client input.
+  const supabase = await createClient();
+  const { data: shift } = await supabase
+    .from("shifts")
+    .select("event_id")
+    .eq("id", parsed.data.id)
+    .single();
+
+  if (!shift) {
+    return { success: false, error: "Turno no encontrado." };
+  }
+
+  // Meeting/carnival events are attendance-only: shifts are unavailable.
+  if (shift.event_id) {
+    const eventTypeError = await rejectAttendanceOnlyEvent(
+      shift.event_id,
+      SHIFTS_UNAVAILABLE_MESSAGE,
+    );
+    if (eventTypeError) {
+      return { success: false, error: eventTypeError };
+    }
+  }
+
+  // Source of truth for the authorization check: the shift's REAL event
+  // from the DB, never the eventId coming from the client input.
+  const authCheck = await assertCanManageShifts(shift.event_id ?? undefined);
   if (authCheck && "success" in authCheck && !authCheck.success) {
     return authCheck;
   }
 
-  const supabase = await createClient();
   const { error } = await supabase
     .from("shifts")
     .update({
@@ -151,6 +186,17 @@ export async function deleteShift(input: DeleteShiftInput): Promise<MutationResu
     return { success: false, error: "Turno no encontrado." };
   }
 
+  // Meeting/carnival events are attendance-only: shifts are unavailable.
+  if (shift.event_id) {
+    const eventTypeError = await rejectAttendanceOnlyEvent(
+      shift.event_id,
+      SHIFTS_UNAVAILABLE_MESSAGE,
+    );
+    if (eventTypeError) {
+      return { success: false, error: eventTypeError };
+    }
+  }
+
   const authCheck = await assertCanManageShifts(shift.event_id ?? undefined);
   if (authCheck && "success" in authCheck && !authCheck.success) {
     return authCheck;
@@ -164,4 +210,3 @@ export async function deleteShift(input: DeleteShiftInput): Promise<MutationResu
 
   return { success: true };
 }
-

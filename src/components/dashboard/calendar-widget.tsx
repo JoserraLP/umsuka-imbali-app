@@ -73,13 +73,21 @@ export async function CalendarWidget({ limit = 5, visibility }: CalendarWidgetPr
         title="Próximos Eventos"
         icon={CalendarDays}
         action={
-          <Link
-            href="/events"
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Ver todos
-            <ArrowRight className="h-3 w-3" aria-hidden="true" />
-          </Link>
+          <span className="flex items-center gap-3">
+            <Link
+              href="/calendar"
+              className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Calendario
+            </Link>
+            <Link
+              href="/events"
+              className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Ver todos
+              <ArrowRight className="h-3 w-3" aria-hidden="true" />
+            </Link>
+          </span>
         }
       />
 
@@ -97,17 +105,20 @@ export async function CalendarWidget({ limit = 5, visibility }: CalendarWidgetPr
             <li key={event.id}>
               <Link
                 href={`/events/${event.id}`}
-                className="flex items-start justify-between gap-3 px-2 py-3 transition-colors hover:bg-accent/50 rounded-lg"
+                className="flex items-start justify-between gap-3 rounded-lg px-2 py-3 transition-colors hover:bg-accent/50"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium leading-tight text-foreground truncate">
+                  <p className="truncate text-sm font-medium leading-tight text-foreground">
                     {event.title}
                   </p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     {formatEventDate(event.eventDate)}
                   </p>
                 </div>
-                <Badge variant={EVENT_TYPE_VARIANTS[event.eventType] ?? "outline"} className="shrink-0 text-[10px]">
+                <Badge
+                  variant={EVENT_TYPE_VARIANTS[event.eventType] ?? "outline"}
+                  className="shrink-0 text-[10px]"
+                >
                   {EVENT_TYPE_LABELS[event.eventType] ?? event.eventType}
                 </Badge>
               </Link>

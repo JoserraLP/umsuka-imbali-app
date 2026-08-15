@@ -6,6 +6,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { ProfileForm } from "@/app/profile/profile-form";
 import { ChangePasswordForm } from "@/app/profile/change-password-form";
+import { WorkgroupSection } from "@/app/profile/workgroup-section";
 
 export const metadata: Metadata = {
   title: "Mi perfil",
@@ -45,6 +46,18 @@ export default async function ProfilePage() {
                 componentType: profile.componentType,
               }}
             />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Mi grupo de trabajo</CardTitle>
+            <CardDescription>
+              El grupo al que perteneces determina los turnos de trabajo y las tareas que ves.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <WorkgroupSection currentWorkgroup={profile.workgroup} />
           </CardContent>
         </Card>
 

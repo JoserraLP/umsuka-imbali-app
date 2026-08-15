@@ -24,6 +24,10 @@ export function requireAdmin(role: AppRole | null | undefined): void {
   requireRole(role, ADMIN_ROLES);
 }
 
+export function requireSuperAdmin(role: AppRole | null | undefined): void {
+  requireRole(role, ["super_admin"]);
+}
+
 export function requireManagement(role: AppRole | null | undefined): void {
   requireRole(role, MANAGEMENT_ROLES);
 }

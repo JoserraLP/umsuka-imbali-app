@@ -6,22 +6,28 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { AppShell } from "@/components/layout/app-shell";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { isManagementRole } from "@/lib/auth/roles";
-import { getEventById } from "@/lib/events/queries";
+import {
+  getEventById,
+  getEventComments,
+  getWaitlistForEvent,
+  getMyWaitlistEntry,
+  computeRegistrationStatus,
+} from "@/lib/events/queries";
 import { getEventRegistrationSummary } from "@/lib/registrations/queries";
 import { getEventAttendance, getEventAttendanceSummary } from "@/lib/attendance/queries";
 import { getEventAbsences, getUserAbsenceForEvent } from "@/lib/absences/queries";
-import {
-  getAllWorkgroupMembers,
-  getWorkgroupAttendanceByShift,
-} from "@/lib/workgroups/queries";
+import { getAllWorkgroupMembers, getWorkgroupAttendanceByShift } from "@/lib/workgroups/queries";
 import { getEventShifts, getAvailableMembers } from "@/lib/shifts/queries";
+import { isAttendanceOnlyEventType } from "@/lib/events/policy";
 import { EventForm } from "@/app/events/event-form";
 import { DeleteEventButton } from "@/app/events/[id]/delete-event-button";
 import { RegistrationPanel } from "@/app/events/[id]/registration-panel";
+import { CommentsSection } from "@/app/events/[id]/comments-section";
 import { AttendancePanel } from "@/app/events/[id]/attendance-panel";
 import { AbsencePanel } from "@/app/events/[id]/absence-panel";
 import { WorkgroupAttendancePanel } from "@/app/events/[id]/workgroup-panel";
 import { ShiftManagementPanel } from "@/app/events/[id]/shift-management-panel";
+import { CalendarClock, MapPin } from "lucide-react";
 import type { EventTypeValue, EventWorkgroup } from "@/lib/events/schema";
 
 export const metadata: Metadata = {
@@ -45,6 +51,11 @@ const WORKGROUP_LABELS: Record<string, string> = {
 
 const DATE_FORMATTER = new Intl.DateTimeFormat("es-ES", {
   dateStyle: "full",
+  timeStyle: "short",
+});
+
+const DEADLINE_FORMATTER = new Intl.DateTimeFormat("es-ES", {
+  dateStyle: "long",
   timeStyle: "short",
 });
 
@@ -83,31 +94,55 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   const canManage =
     isManagementRole(profile.role) ||
     (isWorkShift && profile.isWorkgroupLead && event.createdBy === profile.id);
+  // Sprint 17b: meeting/carnival events are attendance-only — they have
+  // no shifts (nor workgroup attendance) and no absences.
+  const canHaveShifts = !isAttendanceOnlyEventType(event.eventType);
+  const canHaveAbsences = event.eventType === "general";
   const registrationSummary = await getEventRegistrationSummary(event.id, profile.id);
+
+  const [comments, myWaitlistEntry] = await Promise.all([
+    getEventComments(event.id),
+    getMyWaitlistEntry(event.id, profile.id),
+  ]);
+  const waitlist = canManage ? await getWaitlistForEvent(event.id) : [];
+
+  const registrationStatus = computeRegistrationStatus({
+    capacity: registrationSummary.capacity,
+    registeredCount: registrationSummary.count,
+    registrationDeadline: event.registrationDeadline,
+    viewerRegistered: registrationSummary.isViewerRegistered,
+    viewerWaitlistPosition: myWaitlistEntry?.position ?? null,
+    now: new Date(),
+  });
 
   const [attendanceRecords, attendanceSummary, absences] = await Promise.all([
     canManage ? getEventAttendance(event.id) : [],
     canManage ? getEventAttendanceSummary(event.id) : null,
-    canManage ? getEventAbsences(event.id) : [],
+    canManage && canHaveAbsences ? getEventAbsences(event.id) : [],
   ]);
 
   const viewerAbsence = await (canManage
     ? Promise.resolve(absences.find((a) => a.userId === profile.id) ?? null)
-    : getUserAbsenceForEvent(profile.id, event.id));
+    : canHaveAbsences
+      ? getUserAbsenceForEvent(profile.id, event.id)
+      : Promise.resolve(null));
 
-  const [shifts, availableMembers] = await Promise.all([
-    getEventShifts(event.id),
-    getAvailableMembers(),
-  ]);
+  let shifts: Awaited<ReturnType<typeof getEventShifts>> = [];
+  let availableMembers: Awaited<ReturnType<typeof getAvailableMembers>> = [];
+
+  if (canHaveShifts) {
+    [shifts, availableMembers] = await Promise.all([
+      getEventShifts(event.id),
+      getAvailableMembers(),
+    ]);
+  }
   const firstShift = shifts[0] ?? null;
 
   const canViewWorkgroupPanel =
     profile.role === "super_admin" || profile.isWorkgroupLead || isWorkShift;
 
   let workgroupMembers: Awaited<ReturnType<typeof getAllWorkgroupMembers>> = [];
-  let workgroupAttendanceRecords: Awaited<
-    ReturnType<typeof getWorkgroupAttendanceByShift>
-  > = [];
+  let workgroupAttendanceRecords: Awaited<ReturnType<typeof getWorkgroupAttendanceByShift>> = [];
 
   if (canViewWorkgroupPanel && firstShift) {
     // A non-management lead only sees their own group's members in the
@@ -137,10 +172,43 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           <p className="text-sm text-muted-foreground">
             {DATE_FORMATTER.format(new Date(event.eventDate))}
           </p>
-          <Link href="/events" className="mt-2 inline-block text-sm text-muted-foreground hover:text-foreground">
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            {event.location !== null && (
+              <span className="flex items-center gap-1">
+                <MapPin className="h-4 w-4" aria-hidden="true" />
+                {event.location}
+              </span>
+            )}
+            {event.registrationDeadline !== null && (
+              <Badge
+                variant={registrationStatus.isDeadlinePassed ? "destructive" : "secondary"}
+                className="gap-1"
+              >
+                <CalendarClock className="h-3 w-3" aria-hidden="true" />
+                {registrationStatus.isDeadlinePassed
+                  ? "Inscripción cerrada"
+                  : `Inscripción hasta ${DEADLINE_FORMATTER.format(new Date(event.registrationDeadline))}`}
+              </Badge>
+            )}
+          </div>
+          <Link
+            href="/events"
+            className="mt-2 inline-block text-sm text-muted-foreground hover:text-foreground"
+          >
             ← Volver a eventos
           </Link>
         </div>
+
+        {event.imageUrl !== null && (
+          // The project does not use next/image remote patterns; a plain
+          // <img> keeps next.config.ts untouched (see migration comment).
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={event.imageUrl}
+            alt={event.title}
+            className="aspect-video w-full rounded-xl border border-border object-cover"
+          />
+        )}
 
         {canManage ? (
           <Card>
@@ -158,6 +226,11 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                   eventType: event.eventType,
                   eventDate: toDatetimeLocalValue(event.eventDate),
                   capacity: event.capacity,
+                  location: event.location ?? "",
+                  imageUrl: event.imageUrl ?? "",
+                  registrationDeadline: event.registrationDeadline
+                    ? toDatetimeLocalValue(event.registrationDeadline)
+                    : "",
                   workgroup: event.visibleToGroup as EventWorkgroup | null,
                 }}
                 leadWorkgroup={
@@ -180,7 +253,9 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="whitespace-pre-wrap text-sm">{event.description || "Sin descripción."}</p>
+              <p className="whitespace-pre-wrap text-sm">
+                {event.description || "Sin descripción."}
+              </p>
             </CardContent>
           </Card>
         )}
@@ -194,15 +269,29 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             <CardContent>
               <RegistrationPanel
                 eventId={event.id}
-                isViewerRegistered={registrationSummary.isViewerRegistered}
-                count={registrationSummary.count}
-                capacity={registrationSummary.capacity}
+                registrationStatus={registrationStatus}
                 attendees={registrationSummary.attendees}
+                waitlist={waitlist}
                 canManageAttendees={canManage}
               />
             </CardContent>
           </Card>
         )}
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Comentarios</CardTitle>
+            <CardDescription>Comenta sobre el evento: dudas, propuestas y avisos.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <CommentsSection
+              eventId={event.id}
+              comments={comments}
+              viewerId={profile.id}
+              canManage={canManage}
+            />
+          </CardContent>
+        </Card>
 
         {canManage && !isWorkShift && (
           <Card>
@@ -224,25 +313,29 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           </Card>
         )}
 
-        {/* Shift management panel — shown for all event types */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Gestión de turnos</CardTitle>
-            <CardDescription>
-              Crea turnos, asigna miembros y visualiza la línea temporal.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ShiftManagementPanel
-              eventId={event.id}
-              shifts={shifts}
-              availableMembers={availableMembers}
-              canManage={canManage}
-            />
-          </CardContent>
-        </Card>
+        {/* Shift management panel — shown for event types that support
+            shifts (general, work_shift); hidden for attendance-only
+            events (meeting, carnival). */}
+        {canHaveShifts && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Gestión de turnos</CardTitle>
+              <CardDescription>
+                Crea turnos, asigna miembros y visualiza la línea temporal.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ShiftManagementPanel
+                eventId={event.id}
+                shifts={shifts}
+                availableMembers={availableMembers}
+                canManage={canManage}
+              />
+            </CardContent>
+          </Card>
+        )}
 
-        {canViewWorkgroupPanel && firstShift && (
+        {canHaveShifts && canViewWorkgroupPanel && firstShift && (
           <Card>
             <CardHeader>
               <CardTitle>Asistencia por grupo de trabajo</CardTitle>
@@ -265,13 +358,11 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           </Card>
         )}
 
-        {!isWorkShift && (
+        {canHaveAbsences && (
           <Card>
             <CardHeader>
               <CardTitle>Ausencias</CardTitle>
-              <CardDescription>
-                Solicita tu ausencia o gestiona las solicitudes.
-              </CardDescription>
+              <CardDescription>Solicita tu ausencia o gestiona las solicitudes.</CardDescription>
             </CardHeader>
             <CardContent>
               <AbsencePanel

@@ -1,11 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { registerForEvent, unregisterFromEvent } from "@/lib/registrations/mutations";
+import {
+  registerForEvent,
+  unregisterFromEvent,
+  type MutationResult,
+  type RegisterForEventResult,
+} from "@/lib/registrations/mutations";
 import type { RegisterForEventInput, UnregisterFromEventInput } from "@/lib/registrations/schema";
-import type { MutationResult } from "@/lib/registrations/mutations";
 
-export async function registerForEventAction(input: RegisterForEventInput): Promise<MutationResult> {
+export async function registerForEventAction(
+  input: RegisterForEventInput,
+): Promise<RegisterForEventResult> {
   const result = await registerForEvent(input);
 
   if (result.success) {

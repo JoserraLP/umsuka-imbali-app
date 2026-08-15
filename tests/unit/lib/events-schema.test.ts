@@ -137,6 +137,134 @@ describe("eventFormSchema", () => {
 
     expect(result.success).toBe(false);
   });
+
+  it("normalizes an empty location to null", () => {
+    const result = eventFormSchema.safeParse({
+      title: "Evento",
+      eventType: "general",
+      eventDate: "2026-09-01T18:30",
+      location: "   ",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.location).toBeNull();
+    }
+  });
+
+  it("keeps a trimmed non-empty location", () => {
+    const result = eventFormSchema.safeParse({
+      title: "Evento",
+      eventType: "general",
+      eventDate: "2026-09-01T18:30",
+      location: "  Plaza Mayor, 1  ",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.location).toBe("Plaza Mayor, 1");
+    }
+  });
+
+  it("rejects a location longer than 300 characters", () => {
+    const result = eventFormSchema.safeParse({
+      title: "Evento",
+      eventType: "general",
+      eventDate: "2026-09-01T18:30",
+      location: "a".repeat(301),
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("normalizes an empty image URL to null", () => {
+    const result = eventFormSchema.safeParse({
+      title: "Evento",
+      eventType: "general",
+      eventDate: "2026-09-01T18:30",
+      imageUrl: "",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.imageUrl).toBeNull();
+    }
+  });
+
+  it("keeps a valid http(s) image URL", () => {
+    const result = eventFormSchema.safeParse({
+      title: "Evento",
+      eventType: "general",
+      eventDate: "2026-09-01T18:30",
+      imageUrl: "https://example.com/banner.jpg",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.imageUrl).toBe("https://example.com/banner.jpg");
+    }
+  });
+
+  it("rejects an image URL that is not http(s)", () => {
+    const result = eventFormSchema.safeParse({
+      title: "Evento",
+      eventType: "general",
+      eventDate: "2026-09-01T18:30",
+      imageUrl: "ftp://example.com/banner.jpg",
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a malformed image URL with whitespace", () => {
+    const result = eventFormSchema.safeParse({
+      title: "Evento",
+      eventType: "general",
+      eventDate: "2026-09-01T18:30",
+      imageUrl: "https://example.com/banner with spaces.jpg",
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("normalizes an empty registration deadline to null", () => {
+    const result = eventFormSchema.safeParse({
+      title: "Evento",
+      eventType: "general",
+      eventDate: "2026-09-01T18:30",
+      registrationDeadline: "",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.registrationDeadline).toBeNull();
+    }
+  });
+
+  it("keeps a valid registration deadline", () => {
+    const result = eventFormSchema.safeParse({
+      title: "Evento",
+      eventType: "general",
+      eventDate: "2026-09-01T18:30",
+      registrationDeadline: "2026-08-30T12:00",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.registrationDeadline).toBe("2026-08-30T12:00");
+    }
+  });
+
+  it("rejects an unparsable registration deadline", () => {
+    const result = eventFormSchema.safeParse({
+      title: "Evento",
+      eventType: "general",
+      eventDate: "2026-09-01T18:30",
+      registrationDeadline: "not-a-date",
+    });
+
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("createEventSchema", () => {
