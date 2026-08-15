@@ -88,8 +88,24 @@ export type SetMemberComponentTypeInput = z.infer<typeof setMemberComponentTypeS
 export const setMemberWorkgroupSchema = z.object({
   userId: z.string().uuid("userId must be a valid UUID."),
   workgroup: z.enum(["telas", "barra", "estandarte", "limpieza", "ninguno"], {
-    errorMap: () => ({ message: "Workgroup must be one of telas, barra, estandarte, limpieza or ninguno." }),
+    errorMap: () => ({
+      message: "Workgroup must be one of telas, barra, estandarte, limpieza or ninguno.",
+    }),
   }),
 });
 
 export type SetMemberWorkgroupInput = z.infer<typeof setMemberWorkgroupSchema>;
+
+/**
+ * A member chooses their own workgroup (first-time onboarding or a later
+ * change from /profile). "ninguno" is deliberately excluded — a real
+ * group is mandatory; unassigning is a super-admin decision, so it stays
+ * on setMemberWorkgroupSchema.
+ */
+export const setMyWorkgroupSchema = z.object({
+  workgroup: z.enum(["telas", "barra", "estandarte", "limpieza"], {
+    errorMap: () => ({ message: "Workgroup must be one of telas, barra, estandarte or limpieza." }),
+  }),
+});
+
+export type SetMyWorkgroupInput = z.infer<typeof setMyWorkgroupSchema>;

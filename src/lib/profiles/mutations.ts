@@ -8,12 +8,14 @@ import {
   setMemberActiveSchema,
   setMemberComponentTypeSchema,
   setMemberWorkgroupSchema,
+  setMyWorkgroupSchema,
   type UpdateOwnProfileInput,
   type UpdateMemberRoleInput,
   type UpdateMemberProfileInput,
   type SetMemberActiveInput,
   type SetMemberComponentTypeInput,
   type SetMemberWorkgroupInput,
+  type SetMyWorkgroupInput,
 } from "@/lib/profiles/schema";
 import type { AppRole, ComponentType, Workgroup } from "@/types/database.types";
 
@@ -127,7 +129,9 @@ export async function updateMemberRole(input: UpdateMemberRoleInput): Promise<Mu
  * birth date, component type). Never touches role or is_active — those
  * have their own dedicated, more tightly-scoped mutations below/above.
  */
-export async function updateMemberProfile(input: UpdateMemberProfileInput): Promise<MutationResult> {
+export async function updateMemberProfile(
+  input: UpdateMemberProfileInput,
+): Promise<MutationResult> {
   const parsed = updateMemberProfileSchema.safeParse(input);
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues.map((issue) => issue.message).join(", ") };
@@ -287,6 +291,33 @@ export async function updateMemberComponentType(
 }
 
 /**
+ * A member sets their own workgroup — used by the first-login onboarding
+ * (/onboarding/workgroup) and by the "Mi grupo de trabajo" section on
+ * /profile. Always scoped to the actor's own row; "ninguno" is rejected
+ * by setMyWorkgroupSchema (a real group is mandatory).
+ */
+export async function setMyWorkgroup(input: SetMyWorkgroupInput): Promise<MutationResult> {
+  const parsed = setMyWorkgroupSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues.map((issue) => issue.message).join(", ") };
+  }
+
+  const actor = await requireAuthenticatedProfile();
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update({ workgroup: parsed.data.workgroup })
+    .eq("id", actor.id);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+
+/**
  * Admin-only: changes a member's workgroup from the directory table.
  * Only touches workgroup — the music/dance-requires-workgroup rule is
  * checked against the member's CURRENT component type, so a music/dance
@@ -302,13 +333,15 @@ export async function updateMemberWorkgroup(
 
   const actor = await requireAuthenticatedProfile();
 
-  try {
-    requireAdmin(actor.role);
-  } catch (err) {
-    if (err instanceof AuthorizationError) {
-      return { success: false, error: err.message };
-    }
-    throw err;
+  // Decision #3: only the super admin may reassign another member's
+  // workgroup (workgroup drives access to group-scoped events and the
+  // attendance panels, so it is a privileged change — unlike the
+  // personal fields on updateMemberProfile, which stay admin-scoped).
+  if (actor.role !== "super_admin") {
+    return {
+      success: false,
+      error: "Solo el super admin puede cambiar el grupo de trabajo de un miembro.",
+    };
   }
 
   const supabase = await createClient();
@@ -325,7 +358,7 @@ export async function updateMemberWorkgroup(
     return {
       success: false,
       error:
-        "Música y baile requieren un grupo de trabajo obligatoriamente. Elige un grupo distinto de \"Ninguno\" para este miembro.",
+        'Música y baile requieren un grupo de trabajo obligatoriamente. Elige un grupo distinto de "Ninguno" para este miembro.',
     };
   }
 

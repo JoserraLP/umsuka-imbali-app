@@ -97,7 +97,7 @@ export default async function AdminUsersPage() {
                         )}
                       </TableCell>
                       <TableCell>
-                        {canManage ? (
+                        {profile.role === "super_admin" ? (
                           <MemberWorkgroupSelect
                             userId={member.id}
                             currentWorkgroup={member.workgroup}
@@ -143,14 +143,20 @@ export default async function AdminUsersPage() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={
-                          member.status === "active" ? "default" :
-                          member.status === "pending" ? "secondary" :
-                          "destructive"
-                        }>
-                          {member.status === "active" ? "Activo" :
-                           member.status === "pending" ? "Pendiente" :
-                           "Suspendido"}
+                        <Badge
+                          variant={
+                            member.status === "active"
+                              ? "default"
+                              : member.status === "pending"
+                                ? "secondary"
+                                : "destructive"
+                          }
+                        >
+                          {member.status === "active"
+                            ? "Activo"
+                            : member.status === "pending"
+                              ? "Pendiente"
+                              : "Suspendido"}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -172,13 +178,17 @@ export default async function AdminUsersPage() {
                             {member.authMethod === "email_alias" && !isSelf && (
                               <ResetPasswordButton
                                 profileId={member.id}
-                                username={member.username ?? `${member.firstName} ${member.lastName}`}
+                                username={
+                                  member.username ?? `${member.firstName} ${member.lastName}`
+                                }
                               />
                             )}
                             {profile.role === "super_admin" && !isSelf && (
                               <UnlockAccountButton
                                 profileId={member.id}
-                                username={member.username ?? `${member.firstName} ${member.lastName}`}
+                                username={
+                                  member.username ?? `${member.firstName} ${member.lastName}`
+                                }
                               />
                             )}
                           </div>
@@ -198,9 +208,9 @@ export default async function AdminUsersPage() {
               <CardTitle>Crear cuenta sin correo electrónico</CardTitle>
               <CardDescription>
                 Crea cuentas para miembros que no tengan email (ej. menores de edad). El sistema
-                genera un identificador interno y el miembro accede con usuario y contraseña.
-                La cuenta se crea en estado pendiente — un administrador debe aprobarla antes
-                de que pueda acceder.
+                genera un identificador interno y el miembro accede con usuario y contraseña. La
+                cuenta se crea en estado pendiente — un administrador debe aprobarla antes de que
+                pueda acceder.
               </CardDescription>
             </CardHeader>
             <CardContent>
