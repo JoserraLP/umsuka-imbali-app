@@ -1,0 +1,57 @@
+{
+  "title": "Sprint 17b — Eventos de Reunión y Carnaval: Solo Asistencia (sin Turnos ni Ausencias)",
+  "description": "Para los eventos de tipo meeting (reunión) y carnival (carnaval), la única operativa será la asistencia: se eliminan los turnos (umsuka.shifts + shift_assignments + workgroup_attendance asociada) y las ausencias (umsuka.absences) tanto en la UI como en la lógica de negocio y en los datos existentes. Los eventos de tipo general y work_shift conservan toda su funcionalidad actual (turnos, ausencias, asistencia según el comportamiento existente). Incluye: página de detalle de evento (ocultar paneles), validación a nivel servidor en mutations/server actions (turnos y ausencias rechazados para meeting/carnival), migración SQL de limpieza de datos existentes, y tests.",
+  "branch": "feature/sprint-17-events-enhancement",
+  "status": "documented",
+  "steps": [
+    {
+      "id": 1,
+      "name": "Análisis de restricciones actuales",
+      "detail": "En src/app/events/[id]/page.tsx: el panel 'Gestión de turnos' se muestra para TODOS los tipos (comentario 'shown for all event types'), el panel de 'Asistencia por grupo de trabajo' depende de firstShift, el panel 'Ausencias' se muestra para !isWorkShift. Definir la regla nueva: meeting/carnival → solo AttendancePanel (+ inscripción/comentarios existentes); general/work_shift → comportamiento actual sin cambios."
+    },
+    {
+      "id": 2,
+      "name": "UI: Página de detalle de evento",
+      "detail": "En page.tsx, condicionar: ShiftManagementPanel solo para tipos general/work_shift (y NO meeting/carnival); AbsencePanel solo para general/work_shift (excluir meeting/carnival); el panel 'Asistencia por grupo de trabajo' queda automáticamente fuera al no haber turnos. Mantener AttendancePanel para meeting/carnival/general como hoy. Revisar que las queries de shifts/absences no se ejecuten innecesariamente para meeting/carnival (evitar lecturas inútiles)."
+    },
+    {
+      "id": 3,
+      "name": "Servidor: validación de tipo de evento",
+      "detail": "En src/lib/shifts/mutations.ts (createShift, updateShift, deleteShift, assignMemberToShift, unassignMemberFromShift, createShiftFromEvent si existe) y src/lib/absences/mutations.ts (requestAbsence, updateAbsenceStatus, cancelAbsence): añadir validación que lea event_type del evento y rechace con error amigable si el evento es meeting/carnival (turnos/ausencias no disponibles para este tipo de evento). Revisar todas las server actions que las usan."
+    },
+    {
+      "id": 4,
+      "name": "Migración de limpieza de datos",
+      "detail": "Nueva migración SQL (20260101004800_*): eliminar shift_assignments, workgroup_attendance y shifts de eventos cuyo event_type IN ('meeting','carnival'); eliminar absences de esos eventos. Verificar FKs/cascades en migraciones existentes (20260101000300_shifts, 20260101000400_shift_assignments, 20260101000500_attendance, 20260101000600_absences, 20260101001800_workgroup_attendance) antes de escribir los DELETE. Hacer los borrados en orden respetando dependencias."
+    },
+    {
+      "id": 5,
+      "name": "Awaken de tipos y queries",
+      "detail": "Si hace falta, ajustar src/types/database.types.ts y las queries de eventos para exponer/ahorrar lecturas (getEventShifts solo se llamará para tipos permitidos). No cambiar el esquema de tablas (siguen existiendo para general/work_shift)."
+    },
+    {
+      "id": 6,
+      "name": "Pruebas",
+      "detail": "Tests unitarios de las validaciones nuevas: createShift rechazado para meeting/carnival y permitido para general/work_shift; requestAbsence rechazado para meeting/carnival y permitido para general; validación de roles intacta. Verificar que los tests existentes (shifts-conflicts, shifts-schema, absences-schema, attendance-schema) siguen pasando y actualizar los que asuman turnos en reuniones."
+    }
+  ],
+  "acceptance_criteria": [
+    "En la página de detalle de un evento de tipo reunión o carnaval NO aparecen los paneles de turnos ni de ausencias.",
+    "En la página de detalle de un evento de tipo reunión o carnaval SÍ aparece el panel de asistencia (marcar quién asistió).",
+    "Intentar crear turnos o solicitar ausencias para un evento meeting/carnival por API/server action devuelve error del servidor (no solo UI).",
+    "Los eventos de tipo general y work_shift conservan sus turnos, ausencias y asistencia sin cambios.",
+    "Los datos existentes (turnos, asignaciones, asistencia por grupo y ausencias) de eventos meeting/carnival quedan eliminados por migración.",
+    "Los turnos/ausencias ya asignados a eventos general/work_shift NO se tocan."
+  ],
+  "definition_of_done": [
+    "page.tsx condiciona ShiftManagementPanel y AbsencePanel a tipos general/work_shift.",
+    "Validación servidor en todas las mutations de shifts y absences (rechazo para meeting/carnival con mensaje claro).",
+    "Queries de shifts/absences no ejecutadas para meeting/carnival en la página de detalle.",
+    "Migración SQL de limpieza aplicable y con orden correcto de borrado (sin romper FKs).",
+    "Tests unitarios nuevos verdes + suite completa pasando (vitest run).",
+    "Typecheck (tsc --noEmit) y lint (eslint . --max-warnings=0) limpios.",
+    "Security scan sin issues HIGH.",
+    "ADR actualizado/creado en docs/."
+  ],
+  "dependencies": ["Sprint 17 (page de detalle de evento con paneles)", "Sprint 5 (asistencia/ausencias)", "Sprint 8 (shifts)", "Sprint 2/12 (workgroup_attendance)"]
+}
