@@ -2,6 +2,10 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAuthenticatedProfile } from "@/lib/auth/session";
 import { AuthorizationError } from "@/lib/auth/permissions";
 import {
+  rejectAttendanceOnlyEvent,
+  WORKGROUP_ATTENDANCE_UNAVAILABLE_MESSAGE,
+} from "@/lib/events/policy";
+import {
   markWorkgroupAttendanceSchema,
   updateWorkgroupAttendanceSchema,
   type MarkWorkgroupAttendanceInput,
@@ -19,24 +23,17 @@ export interface MutationResult {
  * Application-layer authorization guard: checks that the actor is
  * either a workgroup lead for the given workgroup OR a super_admin.
  */
-function assertCanManageWorkgroup(
-  workgroup: ActiveWorkgroup,
-  actor: AuthenticatedProfile,
-): void {
+function assertCanManageWorkgroup(workgroup: ActiveWorkgroup, actor: AuthenticatedProfile): void {
   if (actor.role === "super_admin") {
     return;
   }
 
   if (!actor.isWorkgroupLead) {
-    throw new AuthorizationError(
-      "Solo los responsables de grupo pueden marcar asistencia.",
-    );
+    throw new AuthorizationError("Solo los responsables de grupo pueden marcar asistencia.");
   }
 
   if (actor.workgroup !== workgroup) {
-    throw new AuthorizationError(
-      "No puedes marcar asistencia para un grupo que no es el tuyo.",
-    );
+    throw new AuthorizationError("No puedes marcar asistencia para un grupo que no es el tuyo.");
   }
 }
 
@@ -68,12 +65,33 @@ export async function markWorkgroupAttendance(
 
   const supabase = await createClient();
 
+  const { data: shift } = await supabase
+    .from("shifts")
+    .select("event_id")
+    .eq("id", parsed.data.shiftId)
+    .maybeSingle();
+
+  if (!shift) {
+    return { success: false, error: "Turno no encontrado." };
+  }
+
+  // Meeting/carnival events are attendance-only: workgroup attendance is
+  // unavailable for their shifts.
+  if (shift.event_id) {
+    const eventTypeError = await rejectAttendanceOnlyEvent(
+      shift.event_id,
+      WORKGROUP_ATTENDANCE_UNAVAILABLE_MESSAGE,
+    );
+    if (eventTypeError) {
+      return { success: false, error: eventTypeError };
+    }
+  }
+
   let error;
 
   if (parsed.data.workgroup === "barra") {
-    ({ error } = await supabase
-      .from("workgroup_attendance")
-      .upsert({
+    ({ error } = await supabase.from("workgroup_attendance").upsert(
+      {
         shift_id: parsed.data.shiftId,
         user_id: parsed.data.userId,
         workgroup: parsed.data.workgroup,
@@ -81,11 +99,12 @@ export async function markWorkgroupAttendance(
         marked_by: actor.id,
         barra_task: parsed.data.barraTask,
         hours_worked: null,
-      }, { onConflict: "shift_id, user_id, workgroup" }));
+      },
+      { onConflict: "shift_id, user_id, workgroup" },
+    ));
   } else {
-    ({ error } = await supabase
-      .from("workgroup_attendance")
-      .upsert({
+    ({ error } = await supabase.from("workgroup_attendance").upsert(
+      {
         shift_id: parsed.data.shiftId,
         user_id: parsed.data.userId,
         workgroup: parsed.data.workgroup,
@@ -93,7 +112,9 @@ export async function markWorkgroupAttendance(
         marked_by: actor.id,
         hours_worked: parsed.data.hoursWorked,
         barra_task: null,
-      }, { onConflict: "shift_id, user_id, workgroup" }));
+      },
+      { onConflict: "shift_id, user_id, workgroup" },
+    ));
   }
 
   if (error) {
@@ -107,6 +128,13 @@ export async function markWorkgroupAttendance(
  * Updates an existing workgroup attendance record by its primary key.
  * Fetches the record first to verify the actor has authority over the
  * workgroup.
+ *
+ * Note (Sprint 17b): intentionally has NO attendance-only guard — records
+ * for meeting/carnival shifts are removed by migration 0048 and the UI
+ * only renders this panel for shifts-capable events, so this legacy
+ * mutation is unreachable for attendance-only events. The guard lives in
+ * markWorkgroupAttendance, which is the entry point that can create new
+ * records.
  */
 export async function updateWorkgroupAttendance(
   input: UpdateWorkgroupAttendanceInput,
