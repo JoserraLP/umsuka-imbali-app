@@ -18,6 +18,7 @@ import { getEventAttendance, getEventAttendanceSummary } from "@/lib/attendance/
 import { getEventAbsences, getUserAbsenceForEvent } from "@/lib/absences/queries";
 import { getAllWorkgroupMembers, getWorkgroupAttendanceByShift } from "@/lib/workgroups/queries";
 import { getEventShifts, getAvailableMembers } from "@/lib/shifts/queries";
+import { isAttendanceOnlyEventType } from "@/lib/events/policy";
 import { EventForm } from "@/app/events/event-form";
 import { DeleteEventButton } from "@/app/events/[id]/delete-event-button";
 import { RegistrationPanel } from "@/app/events/[id]/registration-panel";
@@ -93,6 +94,10 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   const canManage =
     isManagementRole(profile.role) ||
     (isWorkShift && profile.isWorkgroupLead && event.createdBy === profile.id);
+  // Sprint 17b: meeting/carnival events are attendance-only — they have
+  // no shifts (nor workgroup attendance) and no absences.
+  const canHaveShifts = !isAttendanceOnlyEventType(event.eventType);
+  const canHaveAbsences = event.eventType === "general";
   const registrationSummary = await getEventRegistrationSummary(event.id, profile.id);
 
   const [comments, myWaitlistEntry] = await Promise.all([
@@ -113,17 +118,24 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   const [attendanceRecords, attendanceSummary, absences] = await Promise.all([
     canManage ? getEventAttendance(event.id) : [],
     canManage ? getEventAttendanceSummary(event.id) : null,
-    canManage ? getEventAbsences(event.id) : [],
+    canManage && canHaveAbsences ? getEventAbsences(event.id) : [],
   ]);
 
   const viewerAbsence = await (canManage
     ? Promise.resolve(absences.find((a) => a.userId === profile.id) ?? null)
-    : getUserAbsenceForEvent(profile.id, event.id));
+    : canHaveAbsences
+      ? getUserAbsenceForEvent(profile.id, event.id)
+      : Promise.resolve(null));
 
-  const [shifts, availableMembers] = await Promise.all([
-    getEventShifts(event.id),
-    getAvailableMembers(),
-  ]);
+  let shifts: Awaited<ReturnType<typeof getEventShifts>> = [];
+  let availableMembers: Awaited<ReturnType<typeof getAvailableMembers>> = [];
+
+  if (canHaveShifts) {
+    [shifts, availableMembers] = await Promise.all([
+      getEventShifts(event.id),
+      getAvailableMembers(),
+    ]);
+  }
   const firstShift = shifts[0] ?? null;
 
   const canViewWorkgroupPanel =
@@ -301,25 +313,29 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           </Card>
         )}
 
-        {/* Shift management panel — shown for all event types */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Gestión de turnos</CardTitle>
-            <CardDescription>
-              Crea turnos, asigna miembros y visualiza la línea temporal.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ShiftManagementPanel
-              eventId={event.id}
-              shifts={shifts}
-              availableMembers={availableMembers}
-              canManage={canManage}
-            />
-          </CardContent>
-        </Card>
+        {/* Shift management panel — shown for event types that support
+            shifts (general, work_shift); hidden for attendance-only
+            events (meeting, carnival). */}
+        {canHaveShifts && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Gestión de turnos</CardTitle>
+              <CardDescription>
+                Crea turnos, asigna miembros y visualiza la línea temporal.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ShiftManagementPanel
+                eventId={event.id}
+                shifts={shifts}
+                availableMembers={availableMembers}
+                canManage={canManage}
+              />
+            </CardContent>
+          </Card>
+        )}
 
-        {canViewWorkgroupPanel && firstShift && (
+        {canHaveShifts && canViewWorkgroupPanel && firstShift && (
           <Card>
             <CardHeader>
               <CardTitle>Asistencia por grupo de trabajo</CardTitle>
@@ -342,7 +358,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           </Card>
         )}
 
-        {!isWorkShift && (
+        {canHaveAbsences && (
           <Card>
             <CardHeader>
               <CardTitle>Ausencias</CardTitle>
