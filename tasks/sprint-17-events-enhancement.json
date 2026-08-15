@@ -1,0 +1,100 @@
+{
+  "title": "Sprint 17 — Eventos: Mejora de Registro y Gestión + Onboarding de Grupo de Trabajo",
+  "description": "Mejorar la gestión de eventos: campos adicionales (location, image_url, registration_deadline), comentarios en eventos, capacidad máxima ya existente (capacity) con lista de espera (event_waitlist) cuando el evento está lleno o el deadline ha pasado, y rediseño de la página de detalle de evento. Además, se añade el flujo de selección de grupo de trabajo en el primer inicio de sesión: el usuario elige por primera vez el grupo al que pertenece (telas, barra, estandarte, limpieza) en una página /onboarding/workgroup, el middleware bloquea el acceso a la app hasta tener grupo asignado, el usuario puede modificar su grupo desde su perfil (setMyWorkgroupAction) y el super admin puede cambiarlo desde el panel de administración (setUserWorkgroupAction, ya existe como updateMemberWorkgroupAction; verificar restricción a super_admin). Nota: capacity, event_registrations, vista de calendario mensual (/calendar) y el selector de grupo en /admin/users ya existen — el sprint debe completarlos sin duplicarlos.",
+  "branch": "feature/sprint-17-events-enhancement",
+  "status": "documented",
+  "steps": [
+    {
+      "id": 1,
+      "name": "Migración de BD — eventos",
+      "detail": "Añadir a umsuka.events: registration_deadline (timestamptz nullable), location (text nullable), image_url (text nullable). CHECK constraints (deadline null o mayor que created_at; url válida opcional). Crear umsuka.event_comments (id, event_id FK cascade, user_id FK, body text con CHECK no vacío, created_at) + índices + RLS (select: todos los auth; insert: auth.uid()=user_id; delete: autor o management)."
+    },
+    {
+      "id": 2,
+      "name": "Migración de BD — lista de espera",
+      "detail": "Crear umsuka.event_waitlist (id, event_id FK cascade, user_id FK cascade, position int, status enum 'waiting'|'promoted'|'declined'|'removed' default 'waiting', joined_at, promoted_at nullable, UNIQUE(event_id, user_id)). Índices por event_id/position y event_id/user_id. RLS: select/insert por auth.uid()=user_id, delete por auth.uid() o management."
+    },
+    {
+      "id": 3,
+      "name": "Revisar check_event_capacity",
+      "detail": "Revisar la función/trigger umsuka.check_event_capacity que hoy revienta con error 'capacity' cuando el evento está lleno. Ajustar el flujo de registro (registerForEvent) para que cuando el evento esté lleno o registration_deadline haya pasado, el registro vaya a la lista de espera en lugar de fallar (guardar en event_waitlist con posición calculada)."
+    },
+    {
+      "id": 4,
+      "name": "Capa lib/events/",
+      "detail": "Extender schemas existentes con location, imageUrl y registrationDeadline (eventFormSchema, createEventSchema, updateEventSchema). Nuevas secciones: schemas/queries/mutations para comentarios (listEventComments, addEventComment, deleteEventComment) y para waitlist (joinWaitlist, leaveWaitlist, getWaitlistStatus, getWaitlistForEvent con posición). Queries de estado del evento: capacity, filled count (registered + waitlist), deadline, posición del usuario."
+    },
+    {
+      "id": 5,
+      "name": "Server actions de eventos",
+      "detail": "Acciones con revalidación: addEventCommentAction, deleteEventCommentAction, joinWaitlistAction, leaveWaitlistAction. Actualizar registerForEventAction si hace falta para el flujo waitlist. Validar deadline y capacidad en servidor (nunca confiar solo en RLS)."
+    },
+    {
+      "id": 6,
+      "name": "UI: Página de evento",
+      "detail": "Rediseñar /events/[id] con toda la info: fecha, lugar (location), imagen (image_url), aforo (capacity + plazas ocupadas), deadline de registro, estado del registro del usuario (apuntado / en lista de espera con posición / plazas libres / lleno), botón de registro/lista de espera y sección de comentarios con formulario y lista."
+    },
+    {
+      "id": 7,
+      "name": "UI: Calendario",
+      "detail": "La vista mensual /calendar ya existe. Verificar que los nuevos campos no rompen listEvents y que hay enlace al calendario desde /events y dashboard. Ajustes menores si hacen falta."
+    },
+    {
+      "id": 8,
+      "name": "Migración de BD — grupo de trabajo defaults",
+      "detail": "Verificar que umsuka.profiles.workgroup nace con 'ninguno' o null para usuarios nuevos (trigger handle_new_user / provisioning). Añadir o ajustar lo necesario para detectar 'sin grupo asignado' de forma fiable."
+    },
+    {
+      "id": 9,
+      "name": "Onboarding: primer login",
+      "detail": "Crear ruta /onboarding/workgroup con selector de grupo (telas, barra, estandarte, limpieza) y confirmación obligatoria antes de continuar (no se permite 'ninguno'). setMyWorkgroupAction: el usuario elige por primera vez o modifica su grupo desde su perfil."
+    },
+    {
+      "id": 10,
+      "name": "Middleware update",
+      "detail": "En src/lib/supabase/middleware.ts, para usuarios autenticados con workgroup 'ninguno'/null (vía RPC current_user_workgroup o consulta), redirigir a /onboarding/workgroup desde cualquier ruta protegida. Excluir rutas públicas (auth/*) y la propia /onboarding/workgroup. Orden: status pending/suspended primero (auth/pending), luego onboarding."
+    },
+    {
+      "id": 11,
+      "name": "UI: Perfil — mi grupo de trabajo",
+      "detail": "En /profile, sección 'Mi grupo de trabajo': muestra el grupo actual, selector para modificarlo (setMyWorkgroupAction) y nota de quién puede cambiarlo (el propio usuario y el super admin)."
+    },
+    {
+      "id": 12,
+      "name": "UI: Panel admin — grupo de trabajo",
+      "detail": "El selector member-workgroup-select ya existe en /admin/users. Verificar que updateMemberWorkgroupAction está restringida a super_admin (o management si la política lo permite) y que el flujo setUserWorkgroupAction queda cubierto."
+    },
+    {
+      "id": 13,
+      "name": "Pruebas",
+      "detail": "Tests unitarios: schemas de eventos con nuevos campos, validación de roles (setMyWorkgroupAction vs setUserWorkgroupAction), lógica waitlist (posición, promoción). Tests de integración: registro con aforo lleno → waitlist, comentarios, flujo completo onboarding (primer login → elección de grupo → acceso → cambio desde perfil → cambio desde admin)."
+    }
+  ],
+  "acceptance_criteria": [
+    "Los eventos tienen capacidad máxima y fecha límite de registro (registration_deadline).",
+    "Si el evento está lleno o el deadline ha pasado, los miembros pueden apuntarse a la lista de espera con su posición visible.",
+    "La página de detalle de evento muestra: fecha, lugar, imagen, aforo, deadline y estado del registro del usuario.",
+    "Los miembros autenticados pueden comentar en los eventos; el autor y management pueden borrar comentarios.",
+    "En el primer inicio de sesión, el usuario debe elegir su grupo de trabajo antes de poder usar la aplicación.",
+    "Sin grupo asignado, no se puede acceder al resto de funcionalidades (el middleware redirige al onboarding).",
+    "Cada usuario puede modificar su propio grupo de trabajo desde su perfil.",
+    "El super admin puede cambiar el grupo de trabajo de cualquier usuario desde el panel de administración."
+  ],
+  "definition_of_done": [
+    "Migraciones SQL: columnas registration_deadline/location/image_url, tablas event_comments y event_waitlist con RLS, verificación de defaults de workgroup.",
+    "Schemas de eventos extendidos y validados (location, imageUrl, registrationDeadline).",
+    "Flujo waitlist completo: registro a lista de espera cuando está lleno, posición visible, salir de la lista.",
+    "Comentarios de eventos: listar, añadir, borrar (autor/management).",
+    "Página /events/[id] rediseñada con info completa, estado de registro y comentarios.",
+    "Calendario existente verificado y enlazado desde /events y dashboard.",
+    "Ruta /onboarding/workgroup con selección obligatoria de grupo.",
+    "Middleware redirige usuarios sin grupo a /onboarding/workgroup en rutas protegidas.",
+    "setMyWorkgroupAction disponible desde /profile (sección 'Mi grupo de trabajo').",
+    "updateMemberWorkgroupAction verificado como super admin-only (o policy existente documentada).",
+    "Tests unitarios e integración pasando (vitest run).",
+    "Typecheck (tsc --noEmit) y lint (eslint . --max-warnings=0) limpios.",
+    "Security scan sin issues HIGH.",
+    "ADR documentado en docs/adr-sprint-17-events-enhancement.md."
+  ],
+  "dependencies": ["Sprint 1 (UI/UX)", "Sprint 5 (asistencia)", "Sprint 2 (Workgroup Roles — columna workgroup y helpers is_workgroup_lead, current_user_workgroup)"]
+}
