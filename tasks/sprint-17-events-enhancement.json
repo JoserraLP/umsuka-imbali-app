@@ -2,7 +2,7 @@
   "title": "Sprint 17 — Eventos: Mejora de Registro y Gestión + Onboarding de Grupo de Trabajo",
   "description": "Mejorar la gestión de eventos: campos adicionales (location, image_url, registration_deadline), comentarios en eventos, capacidad máxima ya existente (capacity) con lista de espera (event_waitlist) cuando el evento está lleno o el deadline ha pasado, y rediseño de la página de detalle de evento. Además, se añade el flujo de selección de grupo de trabajo en el primer inicio de sesión: el usuario elige por primera vez el grupo al que pertenece (telas, barra, estandarte, limpieza) en una página /onboarding/workgroup, el middleware bloquea el acceso a la app hasta tener grupo asignado, el usuario puede modificar su grupo desde su perfil (setMyWorkgroupAction) y el super admin puede cambiarlo desde el panel de administración (setUserWorkgroupAction, ya existe como updateMemberWorkgroupAction; verificar restricción a super_admin). Nota: capacity, event_registrations, vista de calendario mensual (/calendar) y el selector de grupo en /admin/users ya existen — el sprint debe completarlos sin duplicarlos.",
   "branch": "feature/sprint-17-events-enhancement",
-  "status": "documented",
+  "status": "published",
   "steps": [
     {
       "id": 1,
