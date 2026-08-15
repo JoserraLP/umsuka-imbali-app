@@ -18,6 +18,7 @@ export type AppRole =
   | "event_manager"
   | "member"
   | "guest";
+export type WaitlistStatus = "waiting" | "promoted" | "declined" | "removed";
 
 export interface Database {
   umsuka: {
@@ -81,6 +82,9 @@ export interface Database {
           event_type: EventType;
           event_date: string;
           capacity: number | null;
+          registration_deadline: string | null;
+          location: string | null;
+          image_url: string | null;
           visible_to_group: Workgroup | null;
           created_by_workgroup: Workgroup | null;
           created_by: string | null;
@@ -93,6 +97,9 @@ export interface Database {
           event_type: EventType;
           event_date: string;
           capacity?: number | null;
+          registration_deadline?: string | null;
+          location?: string | null;
+          image_url?: string | null;
           visible_to_group?: Workgroup | null;
           created_by_workgroup?: Workgroup | null;
           created_by?: string | null;
@@ -105,6 +112,9 @@ export interface Database {
           event_type?: EventType;
           event_date?: string;
           capacity?: number | null;
+          registration_deadline?: string | null;
+          location?: string | null;
+          image_url?: string | null;
           visible_to_group?: Workgroup | null;
           created_by_workgroup?: Workgroup | null;
           created_by?: string | null;
@@ -414,6 +424,60 @@ export interface Database {
         };
         Relationships: [];
       };
+      event_comments: {
+        Row: {
+          id: string;
+          event_id: string;
+          user_id: string;
+          body: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          user_id: string;
+          body: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          event_id?: string;
+          user_id?: string;
+          body?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      event_waitlist: {
+        Row: {
+          id: string;
+          event_id: string;
+          user_id: string;
+          position: number;
+          status: WaitlistStatus;
+          joined_at: string;
+          promoted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          user_id: string;
+          position?: number;
+          status?: WaitlistStatus;
+          joined_at?: string;
+          promoted_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          event_id?: string;
+          user_id?: string;
+          position?: number;
+          status?: WaitlistStatus;
+          joined_at?: string;
+          promoted_at?: string | null;
+        };
+        Relationships: [];
+      };
       workgroup_attendance: {
         Row: {
           id: string;
@@ -564,6 +628,7 @@ export interface Database {
       event_type: EventType;
       user_status: UserStatus;
       auth_method: AuthMethod;
+      waitlist_status: WaitlistStatus;
     };
     CompositeTypes: Record<string, never>;
   };

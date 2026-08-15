@@ -9,6 +9,12 @@ export interface EventListItem {
   eventType: EventTypeValue;
   eventDate: string;
   capacity: number | null;
+  /** Optional free-text venue description shown on the detail page. */
+  location: string | null;
+  /** Optional hero image URL (http/https only, rendered with a plain <img>). */
+  imageUrl: string | null;
+  /** Optional cutoff instant for new registrations (ISO timestamp). */
+  registrationDeadline: string | null;
   /** Workgroup the event is restricted to. `null` = visible to everyone. */
   visibleToGroup: Workgroup | null;
   /** Workgroup of the lead who created the event (work_shift events only). */
@@ -37,11 +43,17 @@ interface EventRow {
   event_type: string;
   event_date: string;
   capacity: number | null;
+  location: string | null;
+  image_url: string | null;
+  registration_deadline: string | null;
   visible_to_group: Workgroup | null;
   created_by_workgroup: Workgroup | null;
   created_by: string | null;
   created_at: string;
 }
+
+const EVENT_SELECT =
+  "id, title, description, event_type, event_date, capacity, location, image_url, registration_deadline, visible_to_group, created_by_workgroup, created_by, created_at";
 
 function mapRow(row: EventRow): EventListItem {
   return {
@@ -51,6 +63,9 @@ function mapRow(row: EventRow): EventListItem {
     eventType: row.event_type as EventTypeValue,
     eventDate: row.event_date,
     capacity: row.capacity,
+    location: row.location,
+    imageUrl: row.image_url,
+    registrationDeadline: row.registration_deadline,
     visibleToGroup: row.visible_to_group,
     createdByWorkgroup: row.created_by_workgroup,
     createdBy: row.created_by,
@@ -90,12 +105,7 @@ export async function listEvents(
 ): Promise<EventListItem[]> {
   const supabase = await createClient();
 
-  let query = supabase
-    .from("events")
-    .select(
-      "id, title, description, event_type, event_date, capacity, visible_to_group, created_by_workgroup, created_by, created_at",
-    )
-    .order("event_date", { ascending: true });
+  let query = supabase.from("events").select(EVENT_SELECT).order("event_date", { ascending: true });
 
   if (options.from) {
     query = query.gte("event_date", options.from);
@@ -113,7 +123,9 @@ export async function listEvents(
   const events = (data ?? []).map(mapRow);
 
   if (visibility) {
-    return events.filter((event) => isEventVisibleToGroup(event, visibility.workgroup, visibility.isManagement));
+    return events.filter((event) =>
+      isEventVisibleToGroup(event, visibility.workgroup, visibility.isManagement),
+    );
   }
 
   return events;
@@ -127,9 +139,7 @@ export async function getEventById(
 
   const { data, error } = await supabase
     .from("events")
-    .select(
-      "id, title, description, event_type, event_date, capacity, visible_to_group, created_by_workgroup, created_by, created_at",
-    )
+    .select(EVENT_SELECT)
     .eq("id", id)
     .maybeSingle();
 
@@ -139,7 +149,11 @@ export async function getEventById(
 
   const event = data ? mapRow(data) : null;
 
-  if (event && visibility && !isEventVisibleToGroup(event, visibility.workgroup, visibility.isManagement)) {
+  if (
+    event &&
+    visibility &&
+    !isEventVisibleToGroup(event, visibility.workgroup, visibility.isManagement)
+  ) {
     return null;
   }
 
@@ -175,4 +189,233 @@ export async function getEventShifts(eventId: string): Promise<ShiftInfo[]> {
     startTime: row.start_time,
     endTime: row.end_time,
   }));
+}
+
+// ── Event comments ─────────────────────────────────────
+
+export interface EventComment {
+  id: string;
+  eventId: string;
+  userId: string;
+  body: string;
+  createdAt: string;
+  authorFirstName: string;
+  authorLastName: string;
+}
+
+/**
+ * Lists the comments of an event, newest first, enriching each row with
+ * the author's display name. Follows the questions/queries.ts pattern:
+ * umsuka.profiles references auth.users (no FK between event_comments and
+ * profiles), so names are fetched separately and merged by id in JS.
+ */
+export async function getEventComments(eventId: string): Promise<EventComment[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("event_comments")
+    .select("id, event_id, user_id, body, created_at")
+    .eq("event_id", eventId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error(`Failed to fetch comments for event ${eventId}: ${error.message}`);
+  }
+
+  const userIds = [...new Set((data ?? []).map((row) => row.user_id))];
+  const profilesById = new Map<string, { first_name: string; last_name: string }>();
+
+  if (userIds.length > 0) {
+    const { data: profiles, error: profilesError } = await supabase
+      .from("profiles")
+      .select("id, first_name, last_name")
+      .in("id", userIds);
+
+    if (profilesError) {
+      throw new Error(`Failed to fetch comment author profiles: ${profilesError.message}`);
+    }
+
+    for (const profile of profiles ?? []) {
+      profilesById.set(profile.id, {
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+      });
+    }
+  }
+
+  return (data ?? []).map((row) => {
+    const author = profilesById.get(row.user_id);
+    return {
+      id: row.id,
+      eventId: row.event_id,
+      userId: row.user_id,
+      body: row.body,
+      createdAt: row.created_at,
+      authorFirstName: author?.first_name ?? "Miembro",
+      authorLastName: author?.last_name ?? "",
+    };
+  });
+}
+
+// ── Event waitlist ────────────────────────────────────
+
+export interface WaitlistEntry {
+  id: string;
+  eventId: string;
+  userId: string;
+  position: number;
+  status: "waiting" | "promoted" | "declined" | "removed";
+  joinedAt: string;
+  promotedAt: string | null;
+  firstName: string;
+  lastName: string;
+}
+
+/**
+ * Full waitlist for an event, ordered by FIFO position (then joined_at
+ * as a tie-breaker). Access is management-only at the RLS level; caller
+ * pages must gate on a management role before calling.
+ */
+export async function getWaitlistForEvent(eventId: string): Promise<WaitlistEntry[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("event_waitlist")
+    .select("id, event_id, user_id, position, status, joined_at, promoted_at")
+    .eq("event_id", eventId)
+    .order("position", { ascending: true })
+    .order("joined_at", { ascending: true });
+
+  if (error) {
+    throw new Error(`Failed to fetch waitlist for event ${eventId}: ${error.message}`);
+  }
+
+  const userIds = [...new Set((data ?? []).map((row) => row.user_id))];
+  const profilesById = new Map<string, { first_name: string; last_name: string }>();
+
+  if (userIds.length > 0) {
+    const { data: profiles, error: profilesError } = await supabase
+      .from("profiles")
+      .select("id, first_name, last_name")
+      .in("id", userIds);
+
+    if (profilesError) {
+      throw new Error(`Failed to fetch waitlist member profiles: ${profilesError.message}`);
+    }
+
+    for (const profile of profiles ?? []) {
+      profilesById.set(profile.id, {
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+      });
+    }
+  }
+
+  return (data ?? []).map((row) => {
+    const member = profilesById.get(row.user_id);
+    return {
+      id: row.id,
+      eventId: row.event_id,
+      userId: row.user_id,
+      position: row.position,
+      status: row.status,
+      joinedAt: row.joined_at,
+      promotedAt: row.promoted_at,
+      firstName: member?.first_name ?? "Miembro",
+      lastName: member?.last_name ?? "",
+    };
+  });
+}
+
+/**
+ * The viewer's own waitlist entry for an event, or `null` when they are
+ * not on the list. Members can only ever see their own entry (RLS), so
+ * this returns `null` for everyone else's rows.
+ */
+export async function getMyWaitlistEntry(
+  eventId: string,
+  userId: string,
+): Promise<WaitlistEntry | null> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("event_waitlist")
+    .select("id, event_id, user_id, position, status, joined_at, promoted_at")
+    .eq("event_id", eventId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to fetch waitlist entry for event ${eventId}: ${error.message}`);
+  }
+
+  if (!data) return null;
+
+  return {
+    id: data.id,
+    eventId: data.event_id,
+    userId: data.user_id,
+    position: data.position,
+    status: data.status,
+    joinedAt: data.joined_at,
+    promotedAt: data.promoted_at,
+    firstName: "",
+    lastName: "",
+  };
+}
+
+// ── Registration status (pure helper) ──────────────────
+
+export interface RegistrationStatusInput {
+  capacity: number | null;
+  registeredCount: number;
+  registrationDeadline: string | null;
+  viewerRegistered: boolean;
+  viewerWaitlistPosition: number | null;
+  /** Clock injection point so tests can pin "now". */
+  now: Date;
+}
+
+export interface RegistrationStatus {
+  capacity: number | null;
+  registeredCount: number;
+  registrationDeadline: string | null;
+  isFull: boolean;
+  isDeadlinePassed: boolean;
+  /** True when new registrations are accepted (not full, deadline not passed). */
+  registrationOpen: boolean;
+  viewerStatus: "registered" | "waitlisted" | "none";
+  viewerWaitlistPosition: number | null;
+}
+
+/**
+ * Pure derived state for the event registration panel. Never touches the
+ * DB — callers compose it from getEventRegistrationSummary() plus the
+ * viewer's waitlist entry. A registered viewer always reports as
+ * "registered" even when the event is full.
+ */
+export function computeRegistrationStatus(input: RegistrationStatusInput): RegistrationStatus {
+  const isFull = input.capacity !== null && input.registeredCount >= input.capacity;
+
+  const isDeadlinePassed =
+    input.registrationDeadline !== null &&
+    !Number.isNaN(Date.parse(input.registrationDeadline)) &&
+    Date.parse(input.registrationDeadline) <= input.now.getTime();
+
+  const viewerStatus: RegistrationStatus["viewerStatus"] = input.viewerRegistered
+    ? "registered"
+    : input.viewerWaitlistPosition !== null
+      ? "waitlisted"
+      : "none";
+
+  return {
+    capacity: input.capacity,
+    registeredCount: input.registeredCount,
+    registrationDeadline: input.registrationDeadline,
+    isFull,
+    isDeadlinePassed,
+    registrationOpen: !isFull && !isDeadlinePassed,
+    viewerStatus,
+    viewerWaitlistPosition: input.viewerWaitlistPosition,
+  };
 }
