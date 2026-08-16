@@ -2,8 +2,8 @@
   "title": "Sprint 15 — Votaciones (Votings)",
   "description": "Sistema de votación con opciones múltiples, control de voto único por usuario y visualización de resultados. Incluye: revisión/ampliación del esquema votings/voting_options/voting_votes (ya existente), capa lib/votings/ (schemas Zod, queries getVotings/getVotingById/getResults, mutations createVoting/addOption/castVote/closeVoting), control de voto único (unique constraint voting_id+user_id), server actions con validación de rol (management para crear/cerrar, cualquier autenticado para votar), UI /votings (lista activas/cerradas), UI /votings/[id] (opciones, botón de voto, resultados ocultos hasta votar o una vez cerrada), UI de resultados con gráfico de barras o donut con porcentajes, y tests. NO crear pull request en esta ronda: el usuario quiere probar en local primero.",
   "branch": "feature/sprint-15-votings",
-  "status": "documented",
-  "documentation_notes": "ADR creado en docs/adr-sprint-15-votings.md (ADR-015, Accepted 2026-08-16). DATABASE.md actualizado (ERD voting_deadline, tabla de migraciones, RLS voting_votes insert, helpers get_voting_results). plan-desarrollo-completo.md: Sprint 15 marcado ✅ Ejecutado.",
+  "status": "published-local",
+  "publishing_notes": "Commit local en rama feature/sprint-15-votings (sin push, sin PR — decisión del usuario para probar en local). 5 commits convencionales: 5365f8a (migración), 36792f8 (lib), 0841d1a (UI+actions), b0e52e6 (tests), 1d5ae7f (docs). Working tree limpio. Para merge futuro: push + PR desde esta rama.",
   "steps": [
     {
       "id": 1,
