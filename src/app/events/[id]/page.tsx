@@ -18,8 +18,10 @@ import { getEventAttendance, getEventAttendanceSummary } from "@/lib/attendance/
 import { getEventAbsences, getUserAbsenceForEvent } from "@/lib/absences/queries";
 import { getAllWorkgroupMembers, getWorkgroupAttendanceByShift } from "@/lib/workgroups/queries";
 import { getEventShifts, getAvailableMembers } from "@/lib/shifts/queries";
+import { getAudienceOptions, getAudienceSummary, getEventAudience } from "@/lib/events/audience";
 import { isAttendanceOnlyEventType } from "@/lib/events/policy";
 import { EventForm } from "@/app/events/event-form";
+import { AudienceEditor } from "@/app/events/[id]/audience-editor";
 import { DeleteEventButton } from "@/app/events/[id]/delete-event-button";
 import { RegistrationPanel } from "@/app/events/[id]/registration-panel";
 import { CommentsSection } from "@/app/events/[id]/comments-section";
@@ -81,6 +83,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
 
   const event = await getEventById(id, {
     workgroup: profile.workgroup,
+    componentType: profile.componentType,
     isManagement: isManagementRole(profile.role),
   });
 
@@ -94,6 +97,14 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   const canManage =
     isManagementRole(profile.role) ||
     (isWorkShift && profile.isWorkgroupLead && event.createdBy === profile.id);
+
+  // Sprint 18: audience badge + quick editor are available to management
+  // and the event creator (for non-work_shift events that is management).
+  const canViewAudience =
+    isManagementRole(profile.role) || event.createdBy === profile.id;
+  const [eventAudience, audienceOptions] = canManage
+    ? await Promise.all([getEventAudience(event.id), getAudienceOptions()])
+    : [null, []];
   // Sprint 17b: meeting/carnival events are attendance-only — they have
   // no shifts (nor workgroup attendance) and no absences.
   const canHaveShifts = !isAttendanceOnlyEventType(event.eventType);
@@ -166,6 +177,11 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               {event.visibleToGroup !== null && (
                 <Badge variant="secondary">Grupo: {WORKGROUP_LABELS[event.visibleToGroup]}</Badge>
               )}
+              {canViewAudience && event.audienceType !== "all" && (
+                <Badge variant="outline">
+                  {getAudienceSummary(event, eventAudience?.users.length)}
+                </Badge>
+              )}
               <Badge variant="outline">{EVENT_TYPE_LABELS[event.eventType]}</Badge>
             </div>
           </div>
@@ -232,13 +248,30 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                     ? toDatetimeLocalValue(event.registrationDeadline)
                     : "",
                   workgroup: event.visibleToGroup as EventWorkgroup | null,
+                  audienceType: event.audienceType,
+                  audienceWorkgroup: event.audienceWorkgroup as EventWorkgroup | null,
+                  audienceMemberType: event.audienceMemberType,
+                  audienceUserIds: (eventAudience?.users ?? []).map((user) => user.id),
                 }}
                 leadWorkgroup={
                   !isManagementRole(profile.role) && profile.isWorkgroupLead
                     ? profile.workgroup
                     : undefined
                 }
+                audienceMembers={audienceOptions}
+                selectedAudienceUsers={eventAudience?.users ?? []}
+                canConfigureAudience={false}
               />
+              {canViewAudience && (
+                <div className="border-t pt-4">
+                  <AudienceEditor
+                    eventId={event.id}
+                    eventType={event.eventType}
+                    initial={eventAudience}
+                    members={audienceOptions}
+                  />
+                </div>
+              )}
               <div className="border-t pt-4">
                 <DeleteEventButton eventId={event.id} />
               </div>
