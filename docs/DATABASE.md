@@ -88,6 +88,7 @@ erDiagram
         text description
         uuid event_id FK
         boolean is_open
+        timestamptz voting_deadline
     }
     VOTING_OPTIONS {
         uuid id PK
@@ -124,6 +125,7 @@ erDiagram
 | `20260101004100_component_type_requires_workgroup.sql` | `profiles` CHECK: music/dance requieren workgroup; `create_emailless_profile` con validación explícita |
 | `20260101004200_member_detail_lead_reads.sql` | Políticas SELECT aditivas en `shift_assignments` y `attendance` para que un workgroup lead lea turnos/asistencia de los miembros de su propio grupo (Sprint 14) |
 | `20260101004300_component_lead_for.sql` | `profiles.component_lead_for` (TEXT, CHECK music/dance, índice único parcial: un responsable por componente), función `umsuka.is_component_lead(text)` y políticas SELECT aditivas en `shift_assignments`/`attendance` para responsables de componente (Sprint 14) |
+| `20260101004900_votings_enhancement.sql` | `votings.voting_deadline` (ficha límite opcional), índice único case-insensitive en `voting_options` (`voting_id, lower(option_text)`), función `umsuka.get_voting_results(uuid)` (SECURITY DEFINER: recuentos y porcentajes por opción, ocultos hasta votar/cerrar salvo management) y política INSERT de `voting_votes` endurecida (la opción debe pertenecer a la misma votación) — Sprint 15 |
 
 Apply locally with `npm run supabase:reset`; apply to a remote project with
 `supabase db push` (also run automatically by `deploy.yml` on merge to `main`).
@@ -160,6 +162,7 @@ role from within `umsuka.profiles` itself:
 - `umsuka.is_management()` — `true` for `super_admin`/`admin`/`board_member`/`event_manager`.
 - `umsuka.is_workgroup_lead(check_workgroup text)` — `true` when the caller leads the given workgroup.
 - `umsuka.is_component_lead(check_component text)` — `true` when the caller is the responsable of the given component (`music`/`dance`); used by the Sprint 14 additive SELECT policies on `shift_assignments`/`attendance`.
+- `umsuka.get_voting_results(p_voting_id uuid)` — SECURITY DEFINER, `stable`, read-only: per-option vote counts and percentages (one decimal). Returns an empty set while the voting is effectively open AND the caller has not voted AND the caller is not management; granted only to `authenticated` (Sprint 15).
 
 Baseline policy shape (tightened per-module as each is implemented, never
 loosened):
@@ -173,7 +176,7 @@ loosened):
 | `attendance` | owner or management (plus workgroup leads for members of their own workgroup via `attendance_select_lead_workgroup`, plus component leads for members of their own component via `attendance_select_component_lead` — Sprint 14) | management roles only |
 | `absences` | owner or management | insert: owner · update/delete: management |
 | `questions` | any authenticated user | insert: owner · update: owner or management · delete: management |
-| `voting_votes` | owner or management | insert: owner (immutable — no update policy) · delete: management |
+| `voting_votes` | owner or management | insert: owner — opción de la misma votación (`exists` sobre `voting_options`, Sprint 15) · immutable (no update policy) · delete: management |
 
 ## Extensibility
 

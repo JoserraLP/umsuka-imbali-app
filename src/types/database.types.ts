@@ -341,6 +341,7 @@ export interface Database {
           description: string | null;
           event_id: string | null;
           is_open: boolean;
+          voting_deadline: string | null;
           created_at: string;
         };
         Insert: {
@@ -349,6 +350,7 @@ export interface Database {
           description?: string | null;
           event_id?: string | null;
           is_open?: boolean;
+          voting_deadline?: string | null;
           created_at?: string;
         };
         Update: {
@@ -357,6 +359,7 @@ export interface Database {
           description?: string | null;
           event_id?: string | null;
           is_open?: boolean;
+          voting_deadline?: string | null;
           created_at?: string;
         };
         Relationships: [];
@@ -621,6 +624,16 @@ export interface Database {
           p_workgroup?: string | null;
         };
         Returns: void;
+      };
+      get_voting_results: {
+        Args: { p_voting_id: string };
+        Returns: Array<{
+          option_id: string;
+          option_text: string;
+          votes: number;
+          total_votes: number;
+          percentage: number;
+        }>;
       };
     };
     Enums: {
