@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AUDIENCE_FORM_FIELDS, audienceCrossFieldIssueFn } from "@/lib/events/audience";
 
 export const EVENT_TYPES = ["general", "meeting", "carnival", "work_shift"] as const;
 export type EventTypeValue = (typeof EVENT_TYPES)[number];
@@ -99,33 +100,39 @@ function isWorkShift(data: { eventType?: string | null; workgroup?: string | nul
  * Shared shape used by the client-side form (React Hook Form + Zod). Both
  * create and update use this exact shape for the editable fields, so the
  * form component only ever needs one resolver type regardless of mode.
- * Work_shift events require a target workgroup.
+ * Work_shift events require a target workgroup. The audience fields
+ * (Sprint 18) are spread from AUDIENCE_FORM_FIELDS with cross-field
+ * validation via audienceCrossFieldIssueFn.
  */
 export const eventFormSchema = z
-  .object(EVENT_FORM_FIELDS)
+  .object({ ...EVENT_FORM_FIELDS, ...AUDIENCE_FORM_FIELDS })
   .refine((data) => !isWorkShift(data) || data.workgroup !== null, {
     message: "For work shift events you must choose the target workgroup.",
     path: ["workgroup"],
-  });
+  })
+  .superRefine(audienceCrossFieldIssueFn);
 export type EventFormValues = z.infer<typeof eventFormSchema>;
 
 export const createEventSchema = z
-  .object(EVENT_FORM_FIELDS)
+  .object({ ...EVENT_FORM_FIELDS, ...AUDIENCE_FORM_FIELDS })
   .refine((data) => !isWorkShift(data) || data.workgroup !== null, {
     message: "For work shift events you must choose the target workgroup.",
     path: ["workgroup"],
-  });
+  })
+  .superRefine(audienceCrossFieldIssueFn);
 export type CreateEventInput = z.infer<typeof createEventSchema>;
 
 export const updateEventSchema = z
   .object({
     ...EVENT_FORM_FIELDS,
+    ...AUDIENCE_FORM_FIELDS,
     id: z.string().uuid("id must be a valid UUID."),
   })
   .refine((data) => !isWorkShift(data) || data.workgroup !== null, {
     message: "For work shift events you must choose the target workgroup.",
     path: ["workgroup"],
-  });
+  })
+  .superRefine(audienceCrossFieldIssueFn);
 export type UpdateEventInput = z.infer<typeof updateEventSchema>;
 
 export const deleteEventSchema = z.object({

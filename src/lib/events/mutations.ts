@@ -23,6 +23,7 @@ import {
   type SetWaitlistEntryStatusInput,
   type RemoveWaitlistEntryInput,
 } from "@/lib/events/schema";
+import { replaceAudienceUsers, resolveAudienceFields } from "@/lib/events/audience";
 import type { Workgroup, AppRole } from "@/types/database.types";
 export interface MutationResult {
   success: boolean;
@@ -104,6 +105,13 @@ export async function createEvent(input: CreateEventInput): Promise<MutationResu
   }
   const resolvedGroup: Workgroup | null = group === null ? null : group.group;
 
+  // Sprint 18: work_shift events always resolve to audience 'all'; any
+  // other event requires management and carries the requested audience.
+  const audience = resolveAudienceFields(actor, parsed.data);
+  if (!audience.success) {
+    return audience;
+  }
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("events")
@@ -119,12 +127,26 @@ export async function createEvent(input: CreateEventInput): Promise<MutationResu
       created_by: actor.id,
       visible_to_group: resolvedGroup,
       created_by_workgroup: resolvedGroup,
+      audience_type: audience.audience.audienceType,
+      audience_workgroup: audience.audience.audienceWorkgroup,
+      audience_member_type: audience.audience.audienceMemberType,
     })
     .select("id")
     .single();
 
   if (error) {
     return { success: false, error: error.message };
+  }
+
+  // Concrete audience rows (specific_users). On failure the just-created
+  // event is deleted again (compensation) so no half-configured event
+  // survives — the shift auto-creation below happens afterwards.
+  if (audience.audience.audienceUserIds.length > 0) {
+    const audienceError = await replaceAudienceUsers(data.id, audience.audience.audienceUserIds);
+    if (audienceError) {
+      await supabase.from("events").delete().eq("id", data.id);
+      return { success: false, error: "No se pudo guardar la audiencia del evento." };
+    }
   }
 
   // Auto-create a default shift for work_shift events so the
@@ -150,6 +172,16 @@ export async function createEvent(input: CreateEventInput): Promise<MutationResu
   return { success: true, id: data.id };
 }
 
+/**
+ * Documented alias of `createEvent` for callers that configure an
+ * audience (Sprint 18). The audience fields are part of CreateEventInput
+ * (spread from AUDIENCE_FORM_FIELDS into createEventSchema), so the
+ * schema, validation and behavior are identical.
+ */
+export function createEventWithAudience(input: CreateEventInput): Promise<MutationResult> {
+  return createEvent(input);
+}
+
 export async function updateEvent(input: UpdateEventInput): Promise<MutationResult> {
   const parsed = updateEventSchema.safeParse(input);
   if (!parsed.success) {
@@ -161,7 +193,7 @@ export async function updateEvent(input: UpdateEventInput): Promise<MutationResu
 
   const { data: existing } = await supabase
     .from("events")
-    .select("created_by, event_type")
+    .select("created_by, event_type, audience_type")
     .eq("id", parsed.data.id)
     .single();
 
@@ -171,6 +203,7 @@ export async function updateEvent(input: UpdateEventInput): Promise<MutationResu
 
   const isWorkShift = parsed.data.eventType === "work_shift";
   const wasWorkShift = existing.event_type === "work_shift";
+  const wasSpecificUsers = existing.audience_type === "specific_users";
 
   // Work_shift events: the creator (a workgroup lead) or management can
   // update them. A lead cannot convert their work_shift event into a
@@ -214,6 +247,14 @@ export async function updateEvent(input: UpdateEventInput): Promise<MutationResu
   }
   const resolvedGroup: Workgroup | null = group === null ? null : group.group;
 
+  // Sprint 18: work_shift events (both existing and new) always resolve
+  // to audience 'all' — their group is expressed via visible_to_group.
+  // Any other event requires management and carries the new audience.
+  const audience = resolveAudienceFields(actor, parsed.data);
+  if (!audience.success) {
+    return audience;
+  }
+
   const { error } = await supabase
     .from("events")
     .update({
@@ -227,11 +268,36 @@ export async function updateEvent(input: UpdateEventInput): Promise<MutationResu
       registration_deadline: parsed.data.registrationDeadline,
       visible_to_group: resolvedGroup,
       created_by_workgroup: resolvedGroup,
+      audience_type: audience.audience.audienceType,
+      audience_workgroup: audience.audience.audienceWorkgroup,
+      audience_member_type: audience.audience.audienceMemberType,
     })
     .eq("id", parsed.data.id);
 
   if (error) {
     return { success: false, error: error.message };
+  }
+
+  // Sync the concrete audience rows: full replace when the event targets
+  // specific users; otherwise drop stale rows from a previous
+  // specific_users configuration (RLS permits management/creator here).
+  if (audience.audience.audienceUserIds.length > 0) {
+    const audienceError = await replaceAudienceUsers(
+      parsed.data.id,
+      audience.audience.audienceUserIds,
+    );
+    if (audienceError) {
+      return { success: false, error: audienceError };
+    }
+  } else if (wasSpecificUsers) {
+    const { error: deleteError } = await supabase
+      .from("event_audience_users")
+      .delete()
+      .eq("event_id", parsed.data.id);
+
+    if (deleteError) {
+      return { success: false, error: deleteError.message };
+    }
   }
 
   return { success: true };
