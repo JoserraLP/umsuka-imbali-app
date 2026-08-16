@@ -1,0 +1,71 @@
+{
+  "title": "Sprint 15 — Votaciones (Votings)",
+  "description": "Sistema de votación con opciones múltiples, control de voto único por usuario y visualización de resultados. Incluye: revisión/ampliación del esquema votings/voting_options/voting_votes (ya existente), capa lib/votings/ (schemas Zod, queries getVotings/getVotingById/getResults, mutations createVoting/addOption/castVote/closeVoting), control de voto único (unique constraint voting_id+user_id), server actions con validación de rol (management para crear/cerrar, cualquier autenticado para votar), UI /votings (lista activas/cerradas), UI /votings/[id] (opciones, botón de voto, resultados ocultos hasta votar o una vez cerrada), UI de resultados con gráfico de barras o donut con porcentajes, y tests. NO crear pull request en esta ronda: el usuario quiere probar en local primero.",
+  "branch": "feature/sprint-15-votings",
+  "status": "documented",
+  "documentation_notes": "ADR creado en docs/adr-sprint-15-votings.md (ADR-015, Accepted 2026-08-16). DATABASE.md actualizado (ERD voting_deadline, tabla de migraciones, RLS voting_votes insert, helpers get_voting_results). plan-desarrollo-completo.md: Sprint 15 marcado ✅ Ejecutado.",
+  "steps": [
+    {
+      "id": 1,
+      "name": "Migración de BD",
+      "detail": "Las tablas umsuka.votings, umsuka.voting_options y umsuka.voting_votes ya existen (migraciones 20260101000900, 000900/0010/0011). Revisar si hace falta allow_multiple (voto a varias opciones) o voting_deadline (fecha límite). Evaluar si es necesaria una nueva migración (20260101004900_*) para añadir esas columnas con seguridad, o si se mantiene el esquema actual (una sola opción por voto). RLS vigente: votings/voting_options select para is_active_member, write para management; voting_votes insert con check user_id=auth.uid(), select own-or-management, delete management."
+    },
+    {
+      "id": 2,
+      "name": "Capa lib/votings/",
+      "detail": "Crear src/lib/votings/ con schema.ts (schemas Zod: createVotingSchema, addOptionSchema, castVoteSchema, closeVotingSchema + tipos), queries.ts (getVotings con estado activa/cerrada, getVotingById, getResults con recuento por opción y porcentajes, sepamos si el usuario actual ya votó) y mutations.ts (createVoting, addOption, castVote, closeVoting con validación de rol y de estado is_open). Seguir el patrón de lib/questions/ (MutationResult, requireAuthenticatedProfile, isManagementRole)."
+    },
+    {
+      "id": 3,
+      "name": "Control de voto único",
+      "detail": "El unique constraint (voting_id, user_id) ya existe en voting_votes. Garantizar que castVote valide que el usuario no haya votado ya (consulta previa) y que capture el error 23505 como defensa ante carreras, devolviendo mensaje amigable. Asegurar que una votación cerrada (is_open=false) rechace nuevos votos."
+    },
+    {
+      "id": 4,
+      "name": "Server actions",
+      "detail": "Crear src/app/votings/actions.ts con createVotingAction, addOptionAction (o incluir opciones en create), castVoteAction, closeVotingAction. Validación de rol: management para crear/cerrar/añadir opciones; cualquier autenticado para votar. revalidatePath de /votings y /votings/[id]."
+    },
+    {
+      "id": 5,
+      "name": "UI: Lista de votaciones",
+      "detail": "Página /votings (server component) con AppShell, guarda de login, listado de votaciones activas y cerradas (badges), enlace a crear votación para management, y enlace de navegación 'Votaciones' en nav-links (visible para todos los autenticados)."
+    },
+    {
+      "id": 6,
+      "name": "UI: Detalle de votación",
+      "detail": "Página /votings/[id] (server component) con opciones, botón de voto (o indicador 'Ya has votado'), estado abierta/cerrada, gestión para management (agregar opciones, cerrar votación). Los resultados se ocultan hasta que el usuario vote o la votación se cierre (según regla de negocio)."
+    },
+    {
+      "id": 7,
+      "name": "UI: Resultados",
+      "detail": "Componente de resultados con gráfico de barras o donut con porcentajes por opción (CSS puro o librería existente si ya está disponible). Reutilizar Spline/AreaChart de lucide o un componente basado en divs con ancho porcentual."
+    },
+    {
+      "id": 8,
+      "name": "Pruebas",
+      "detail": "Tests unitarios para lógica de voto único, validación de rol, cierre de votación y recuento de resultados. Tests existentes de la suite deben seguir pasando (vitest run). Typecheck (tsc --noEmit) y lint (eslint . --max-warnings=0) limpios."
+    }
+  ],
+  "acceptance_criteria": [
+    "Los management pueden crear votaciones con opciones.",
+    "Cada miembro autenticado puede votar una sola vez por votación.",
+    "Los resultados se muestran después de votar o al cerrar la votación.",
+    "Una vez cerrada, no se pueden añadir más votos.",
+    "El voto único está garantizado por constraint único en BD y validación en la capa de aplicación.",
+    "El botón de navegación 'Votaciones' es visible para todos los usuarios autenticados."
+  ],
+  "definition_of_done": [
+    "Capa lib/votings/ completa (schema, queries, mutations) siguiendo el patrón de lib/questions/.",
+    "Server actions con validación de rol y revalidación de rutas.",
+    "Páginas /votings y /votings/[id] funcionales con AppShell y guardas de login.",
+    "Resultados con gráfico de barras/donut y porcentajes.",
+    "Migración SQL aplicable si se añaden columnas nuevas (sin romper RLS).",
+    "Tests unitarios nuevos verdes + suite completa pasando (vitest run).",
+    "Typecheck (tsc --noEmit) y lint (eslint . --max-warnings=0) limpios.",
+    "Security scan sin issues HIGH.",
+    "ADR creado en docs/ (docs/adr-sprint-15-votings.md).",
+    "Task file actualizado en cada etapa del flujo.",
+    "NO se crea pull request: commit local en la rama feature/sprint-15-votings sin push."
+  ],
+  "dependencies": ["Sprint 1 (UI/UX para gráficos)", "Sprint 6 (management roles)"]
+}

@@ -864,7 +864,7 @@ Auditorías finales de seguridad, rendimiento, accesibilidad y validación gener
 | **Sprint 12 — Shift Assignment Groups** | `feature/sprint-12-shift-assignment-groups` (histórica) | ✅ Ejecutado |
 | **Sprint 13 — Workgroup Stats** | `feature/sprint-13-workgroup-stats` | **Sprint 12, Sprint 2** |
 | **Sprint 14 — Member List** | `feature/sprint-14-member-list` (histórica) | ✅ Ejecutado |
-| Sprint 15 — Votings | `feature/sprint-15-votings` | Sprint 1, Sprint 6 |
+| Sprint 15 — Votings | `feature/sprint-15-votings` | ✅ Ejecutado |
 | Sprint 16 — Document Management | `feature/sprint-16-document-management` | Sprint 6 |
 | Sprint 17 — Events Enhancement (+ Onboarding Grupo) | `feature/sprint-17-events-enhancement` | Sprint 1, Sprint 5, Sprint 2 |
 | **Sprint 18 — Event Audience** | `feature/sprint-18-event-audience` | **Sprint 2, Sprint 12, Sprint 17** |
