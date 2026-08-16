@@ -25,7 +25,11 @@ export default async function DashboardPage() {
     getInstagramProfile(),
     listEvents(
       { from: new Date().toISOString() },
-      { workgroup: profile.workgroup, isManagement: isManagementRole(profile.role) },
+      {
+        workgroup: profile.workgroup,
+        componentType: profile.componentType,
+        isManagement: isManagementRole(profile.role),
+      },
     ),
     getNewsFeed(false), // only published news for the dashboard
   ]);

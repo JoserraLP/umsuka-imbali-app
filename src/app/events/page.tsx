@@ -15,6 +15,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { isManagementRole } from "@/lib/auth/roles";
 import { listEvents } from "@/lib/events/queries";
+import { getAudienceSummary, getAudienceUserCounts } from "@/lib/events/audience";
 import type { EventTypeValue } from "@/lib/events/schema";
 import type { Workgroup } from "@/types/database.types";
 
@@ -52,8 +53,15 @@ export default async function EventsPage() {
   const canManage = isManagementRole(profile.role) || profile.isWorkgroupLead;
   const events = await listEvents(undefined, {
     workgroup: profile.workgroup,
+    componentType: profile.componentType,
     isManagement: isManagementRole(profile.role),
   });
+
+  // Concrete-user counts for the audience badges (ONE batched query).
+  const specificUsersEventIds = events
+    .filter((event) => event.audienceType === "specific_users")
+    .map((event) => event.id);
+  const audienceUserCounts = await getAudienceUserCounts(specificUsersEventIds);
 
   return (
     <AppShell profile={profile}>
@@ -101,6 +109,15 @@ export default async function EventsPage() {
                       {event.visibleToGroup !== null && (
                         <Badge variant="secondary">Grupo: {WORKGROUP_LABELS[event.visibleToGroup]}</Badge>
                       )}
+                      {(isManagementRole(profile.role) || event.createdBy === profile.id) &&
+                        event.audienceType !== "all" && (
+                          <Badge variant="outline">
+                            {getAudienceSummary(
+                              event,
+                              audienceUserCounts.get(event.id),
+                            )}
+                          </Badge>
+                        )}
                     </div>
                   </TableCell>
                   <TableCell>{DATE_FORMATTER.format(new Date(event.eventDate))}</TableCell>
