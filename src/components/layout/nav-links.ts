@@ -9,6 +9,7 @@ import {
   Newspaper,
   MessageSquare,
   BarChart3,
+  Vote,
   type LucideIcon,
 } from "lucide-react";
 import type { AppRole, ComponentType, Workgroup } from "@/types/database.types";
@@ -40,6 +41,7 @@ export const NAV_LINKS: NavLink[] = [
   { href: "/calendar", label: "Calendario", icon: CalendarDays },
   { href: "/news", label: "Noticias", icon: Newspaper },
   { href: "/questions", label: "Preguntas", icon: MessageSquare },
+  { href: "/votings", label: "Votaciones", icon: Vote },
   { href: "/profile", label: "Mi perfil", icon: User },
   { href: "/profile/history", label: "Historial", icon: Clock },
 {
