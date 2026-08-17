@@ -17,7 +17,7 @@ import {
 import { createEventWithAudienceAction } from "@/app/events/audience-actions";
 import { updateEventAction } from "@/app/events/actions";
 import { AudienceSelector } from "@/app/events/audience-selector";
-import type { AudienceMemberOption, AudienceUser } from "@/lib/events/audience";
+import type { AudienceMemberOption, AudienceUser } from "@/lib/events/audience-shared";
 import type { Workgroup } from "@/types/database.types";
 
 const EVENT_TYPE_LABELS: Record<EventTypeValue, string> = {

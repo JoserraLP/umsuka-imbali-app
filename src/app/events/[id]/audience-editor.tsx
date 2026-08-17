@@ -12,7 +12,7 @@ import {
   type AudienceMemberOption,
   type AudienceValues,
   type EventAudience,
-} from "@/lib/events/audience";
+} from "@/lib/events/audience-shared";
 import type { EventTypeValue } from "@/lib/events/schema";
 
 interface AudienceEditorProps {

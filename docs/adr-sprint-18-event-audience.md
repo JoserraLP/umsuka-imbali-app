@@ -130,7 +130,13 @@ audiencia de su evento (D4).
 
 ### D6 — Schemas: `AUDIENCE_FORM_FIELDS` en los schemas de evento existentes
 
-`src/lib/events/audience.ts` define y exporta:
+La capa de audiencia se divide en **dos módulos** para mantener el bundle del cliente libre de
+imports server-only (`next/headers` vía `@/lib/supabase/server`, `server-only` vía la cadena de
+auth): un componente cliente que importe `audience.ts` rompería el build ("You're importing a
+component that needs next/headers").
+
+- `src/lib/events/audience-shared.ts` — **client-safe (isomórfico)**, solo importa `zod` y tipos;
+  define y exporta:
 
 - `AUDIENCE_TYPES`, `AudienceTypeValue`, `AUDIENCE_MEMBER_TYPES`, `AudienceMemberType`,
   `AUDIENCE_WORKGROUPS` (espejo local de `EVENT_WORKGROUPS`, ver ciclo de módulos).
@@ -146,13 +152,19 @@ audiencia de su evento (D4).
 - `audienceSchema` / `AudienceValues` (sección standalone, usada por el editor rápido) y
   `updateEventAudienceSchema` / `UpdateEventAudienceInput`.
 
+`src/lib/events/audience.ts` (servidor) re-exporta todo lo anterior con `export * from
+"./audience-shared"` y añade las queries, la resolución (`resolveAudienceFields`,
+`replaceAudienceUsers`) y `updateEventAudience`, que requieren supabase/auth. Los componentes
+cliente importan **siempre** de `audience-shared`; los módulos de servidor y los tests pueden
+seguir importando de `audience` (vía re-export).
+
 `src/lib/events/schema.ts` extiende `eventFormSchema`, `createEventSchema` y `updateEventSchema`
 con `{ ...EVENT_FORM_FIELDS, ...AUDIENCE_FORM_FIELDS }` y encadena
 `.superRefine(audienceCrossFieldIssueFn)` **después** del `.refine` de `work_shift` existente.
 
-**Ciclo de módulos**: `schema.ts` importa valores runtime de `audience.ts`; por eso `audience.ts`
-NO importa valores runtime de `schema.ts` (solo type-only imports). El espejo `AUDIENCE_WORKGROUPS`
-evita el ciclo `schema → audience → schema`.
+**Ciclo de módulos**: `schema.ts` importa valores runtime de `audience-shared` (client-safe); por
+eso `audience-shared` y `audience.ts` NO importan valores runtime de `schema.ts` (solo type-only
+imports). El espejo `AUDIENCE_WORKGROUPS` evita el ciclo `schema → audience → schema`.
 
 ### D7 — Mutaciones
 
@@ -179,7 +191,8 @@ evita el ciclo `schema → audience → schema`.
 - `EventVisibility` gana `componentType: ComponentType` (**requerido**) — el typecheck encuentra
   todos los call sites del feed: `events/page.tsx`, `calendar/page.tsx`, `dashboard/page.tsx`
   (el widget de calendario recibe el objeto ya construido por prop).
-- `isEventVisibleToAudience(event, ctx)` — **espejo puro** de la policy RLS en `audience.ts`:
+- `isEventVisibleToAudience(event, ctx)` — **espejo puro** de la policy RLS, en `audience-shared.ts`
+  (re-exportado desde `audience.ts`):
   1. management → `true`;
   2. regla de grupo legacy (`visible_to_group`) primero: si difiere del grupo del viewer → `false`;
   3. switch por `audience_type`: `'all'` → `true`; `'workgroup'` → igualdad con
@@ -461,7 +474,8 @@ hand-reasoned. Checklist para la verificación manual antes del deploy:
 |---|---|
 | `supabase/migrations/20260101005000_event_audience.sql` | CREATE — enum `audience_type`, columnas `audience_*`, CHECKs, índices, `current_user_component()`, tabla `event_audience_users` + RLS, reescritura de `events_select_authenticated` |
 | `src/types/database.types.ts` | MODIFY — `AudienceType`, columnas en `events` (Row/Insert/Update), tabla `event_audience_users` (Relationships: []), `current_user_component` en Functions, `audience_type` en Enums |
-| `src/lib/events/audience.ts` | CREATE — constantes/etiquetas, `AUDIENCE_FORM_FIELDS`, `audienceCrossFieldIssueFn`, `audienceSchema`, `updateEventAudienceSchema`, `isEventVisibleToAudience`, `resolveAudienceFields`, `replaceAudienceUsers`, queries (`getMyAudienceEventIds`, `getEventAudienceUsers`, `getAudienceOptions`, `getAudienceUserCounts`, `getEventAudience`), `getAudienceSummary`, `updateEventAudience` |
+| `src/lib/events/audience-shared.ts` | CREATE — capa **client-safe** (isomórfica): constantes/etiquetas, `AUDIENCE_TYPES`, `AUDIENCE_MEMBER_TYPES`, `AUDIENCE_WORKGROUPS`, `AUDIENCE_FORM_FIELDS`, `audienceCrossFieldIssueFn`, `audienceSchema`, `updateEventAudienceSchema`, `isEventVisibleToAudience`, `getAudienceSummary` |
+| `src/lib/events/audience.ts` | MODIFY — parte **servidor** (supabase/auth): `resolveAudienceFields`, `replaceAudienceUsers`, queries (`getMyAudienceEventIds`, `getEventAudienceUsers`, `getAudienceOptions`, `getAudienceUserCounts`, `getEventAudience`), `updateEventAudience`; `export *` de `audience-shared` |
 | `src/lib/events/schema.ts` | MODIFY — spread `AUDIENCE_FORM_FIELDS` + `superRefine` en los tres schemas de evento |
 | `src/lib/events/queries.ts` | MODIFY — `audienceType`/`audienceWorkgroup`/`audienceMemberType` en `EventListItem`/`EventRow`/`EVENT_SELECT`/`mapRow`; `EventVisibility.componentType` (requerido); filtro no-management con `isEventVisibleToAudience` + fail closed; `getVisibleEvents` |
 | `src/lib/events/mutations.ts` | MODIFY — `createEvent`/`updateEvent` con resolución e inserción de audiencia, compensación, sync de filas; `createEventWithAudience` (alias documentado) |
@@ -488,4 +502,7 @@ hand-reasoned. Checklist para la verificación manual antes del deploy:
 | `tests/unit/lib/events-audience-mutations.test.ts` (CREATE) | 20 — create por tipo, filas insertadas, compensación, work_shift forzado/rechazado, update (replace/delete/forced-all), `updateEventAudience` (authz, work_shift, reemplazo) |
 
 **Total de la suite: 710 tests en 48 archivos, todos pasando** (`npx vitest run`).
-`npx tsc --noEmit` y `npx eslint . --max-warnings=0` limpios (exit 0 verificado en local).
+`npx tsc --noEmit`, `npx eslint . --max-warnings=0` y `npm run build` (producción) limpios en
+local tras la división de módulos client-safe (el build de producción fallaba antes del split con
+"You're importing a component that needs next/headers" por la cadena
+`audience.ts → supabase/server.ts → next/headers`).

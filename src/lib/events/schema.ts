@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AUDIENCE_FORM_FIELDS, audienceCrossFieldIssueFn } from "@/lib/events/audience";
+import { AUDIENCE_FORM_FIELDS, audienceCrossFieldIssueFn } from "@/lib/events/audience-shared";
 
 export const EVENT_TYPES = ["general", "meeting", "carnival", "work_shift"] as const;
 export type EventTypeValue = (typeof EVENT_TYPES)[number];

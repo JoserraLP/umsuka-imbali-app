@@ -14,7 +14,7 @@ import {
   type AudienceMemberType,
   type AudienceTypeValue,
   type AudienceWorkgroupValue,
-} from "@/lib/events/audience";
+} from "@/lib/events/audience-shared";
 
 /**
  * Minimal shape the selector needs from the parent form values: the four
