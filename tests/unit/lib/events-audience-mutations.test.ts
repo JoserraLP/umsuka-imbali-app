@@ -46,6 +46,10 @@ function makeActor(overrides: Partial<AuthenticatedProfile> = {}): Authenticated
     status: "active",
     username: null,
     authMethod: "google",
+    bio: null,
+    phone: null,
+    skills: [],
+    joinedAt: null,
     createdAt: "2026-01-01T00:00:00.000Z",
     ...overrides,
   };
