@@ -39,6 +39,11 @@ export interface Database {
           status: UserStatus;
           auth_method: AuthMethod;
           username: string | null;
+          avatar_url: string | null;
+          bio: string | null;
+          phone: string | null;
+          skills: string[];
+          joined_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -55,6 +60,11 @@ export interface Database {
           status?: UserStatus;   // default 'pending' in DB
           auth_method?: AuthMethod;  // default 'google' in DB
           username?: string | null;
+          avatar_url?: string | null;
+          bio?: string | null;
+          phone?: string | null;
+          skills?: string[];   // default '{}' in DB
+          joined_at?: string | null;
           created_at?: string;
         };
         Update: {
@@ -71,6 +81,11 @@ export interface Database {
           status?: UserStatus;
           auth_method?: AuthMethod;
           username?: string | null;
+          avatar_url?: string | null;
+          bio?: string | null;
+          phone?: string | null;
+          skills?: string[];
+          joined_at?: string | null;
           created_at?: string;
         };
         Relationships: [];
