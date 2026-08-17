@@ -2,7 +2,7 @@
   "title": "Sprint 18 — Segmentación de Audiencia en Eventos (Event Audience)",
   "description": "Al crear un evento, el creador podrá indicar a qué tipo de usuarios se mostrará: por grupo de trabajo (telas, barra, estandarte, limpieza), por tipo de miembro (component_type: music, dance, member) o a usuarios concretos seleccionables. Los eventos con audiencia restringida solo aparecerán para los destinatarios indicados. Implementación según el plan: migración de BD (audience_type enum, audience_workgroup, audience_member_type, tabla event_audience_users), política RLS de visibilidad sobre umsuka.events, regeneración/manual de src/types/database.types.ts, capa lib/events/audience.ts (schemas Zod, queries getVisibleEvents/getEventAudience, mutations createEventWithAudience/updateEventAudience), server actions (create/update/getVisibleEvents), UI del formulario de evento (sección '¿A quién se muestra?' con selector de tipo y multi-select de usuarios con búsqueda), feed de eventos filtrado por audiencia, badge de audiencia en el detalle (visible para management) y pruebas.",
   "branch": "feature/sprint-18-event-audience",
-  "status": "documented",
+  "status": "published",
   "steps": [
     {
       "id": 1,
