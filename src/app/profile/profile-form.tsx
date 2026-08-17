@@ -2,13 +2,16 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
+import { Avatar } from "@/components/feed/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { updateOwnProfileSchema, type UpdateOwnProfileInput } from "@/lib/profiles/schema";
+import { isAllowedAvatarUrl } from "@/lib/profiles/schema";
 import { updateOwnProfileAction } from "@/app/profile/actions";
+import { getSkillsErrorMessages, SkillsInput } from "@/app/profile/skills-input";
 
 interface ProfileFormProps {
   defaultValues: UpdateOwnProfileInput;
@@ -27,11 +30,17 @@ export function ProfileForm({ defaultValues }: ProfileFormProps) {
   const {
     register,
     handleSubmit,
+    control,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<UpdateOwnProfileInput>({
     resolver: zodResolver(updateOwnProfileSchema),
     defaultValues,
   });
+
+  const skills = useWatch({ control, name: "skills" }) ?? [];
+  const avatarUrl = useWatch({ control, name: "avatarUrl" }) ?? "";
+  const showAvatarPreview = Boolean(avatarUrl.trim()) && isAllowedAvatarUrl(avatarUrl.trim());
 
   async function onSubmit(values: UpdateOwnProfileInput) {
     setServerError(null);
@@ -48,6 +57,21 @@ export function ProfileForm({ defaultValues }: ProfileFormProps) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+      <div className="flex items-center gap-4">
+        <Avatar
+          src={showAvatarPreview ? avatarUrl : null}
+          fallback={`${defaultValues.firstName.charAt(0)}${defaultValues.lastName.charAt(0)}`}
+          size="lg"
+        />
+        <div className="flex flex-1 flex-col gap-1.5">
+          <Label htmlFor="avatarUrl">Foto de perfil (URL)</Label>
+          <Input id="avatarUrl" placeholder="https://…" {...register("avatarUrl")} />
+          {errors.avatarUrl && (
+            <p className="text-xs text-destructive">{errors.avatarUrl.message}</p>
+          )}
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="firstName">Nombre</Label>
@@ -60,9 +84,7 @@ export function ProfileForm({ defaultValues }: ProfileFormProps) {
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="lastName">Apellidos</Label>
           <Input id="lastName" {...register("lastName")} />
-          {errors.lastName && (
-            <p className="text-xs text-destructive">{errors.lastName.message}</p>
-          )}
+          {errors.lastName && <p className="text-xs text-destructive">{errors.lastName.message}</p>}
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -86,6 +108,43 @@ export function ProfileForm({ defaultValues }: ProfileFormProps) {
             <p className="text-xs text-destructive">{errors.componentType.message}</p>
           )}
         </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="phone">Teléfono</Label>
+          <Input id="phone" placeholder="+34 600 000 000" {...register("phone")} />
+          {errors.phone && <p className="text-xs text-destructive">{errors.phone.message}</p>}
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="joinedAt">Fecha de incorporación a la comparsa</Label>
+          <Input id="joinedAt" type="date" {...register("joinedAt")} />
+          {errors.joinedAt && <p className="text-xs text-destructive">{errors.joinedAt.message}</p>}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="bio">Biografía</Label>
+        <textarea
+          id="bio"
+          rows={4}
+          placeholder="Cuéntanos quién eres…"
+          {...register("bio")}
+          className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        />
+        {errors.bio && <p className="text-xs text-destructive">{errors.bio.message}</p>}
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="skills">Habilidades</Label>
+        <SkillsInput
+          value={skills}
+          onChange={(next) => setValue("skills", next, { shouldValidate: true })}
+        />
+        {getSkillsErrorMessages(errors.skills).map((message) => (
+          <p key={message} className="text-xs text-destructive">
+            {message}
+          </p>
+        ))}
       </div>
 
       {serverError && (
