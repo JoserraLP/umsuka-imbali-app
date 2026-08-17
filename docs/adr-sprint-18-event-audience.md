@@ -33,7 +33,7 @@ Se requería:
   hand-reasoned y queda **pendiente de verificación manual** (checklist en
   [Revisión SQL manual](#revisión-sql-manual-pendiente)); `src/types/database.types.ts` se edita
   a mano (nunca se regenera con el CLI).
-- `src/lib/events/actions.ts` (`createEventAction`/`updateEventAction`) se mantiene **sin
+- `src/app/events/actions.ts` (`createEventAction`/`updateEventAction`) se mantiene **sin
   cambios**: sigue exportado para las rutas legacy.
 
 ---
@@ -221,7 +221,7 @@ evita el ciclo `schema → audience → schema`.
 
 ### D10 — Nombrado y etiquetas
 
-La columna se llama **`audience_member_type`** (per el task file), sus valores son los de
+La columna se llama **`audience_member_type`** (según el task file), sus valores son los de
 `component_type` (`music`/`dance`/`member`), y las etiquetas reutilizan las existentes en español:
 "Música" / "Baile" / "Socio/a" (`AUDIENCE_MEMBER_TYPE_LABELS`). `AUDIENCE_TYPE_LABELS`:
 "Todos los miembros" / "Solo mi grupo de trabajo" / "Solo un tipo de miembro" / "Usuarios
@@ -258,6 +258,30 @@ create policy "events_select_authenticated"
 La regla es **intersección** (grupo AND audiencia): el `visible_to_group` sigue filtrando dentro
 de la rama no-management (los `work_shift` no cambian su comportamiento de Sprint 12) y la
 audiencia añade una segunda barrera para los eventos restringidos. Management sigue viéndolo todo.
+
+Derivación booleana de la política (`actor` = usuario autenticado, `e` = evento):
+
+```
+visible(actor, e)  = is_management(actor)
+                     OR ( grupo(actor, e) AND audiencia(actor, e) )
+
+grupo(actor, e)    = visible_to_group IS NULL
+                     OR visible_to_group = current_user_workgroup(actor)
+
+audiencia(actor,e) = audience_type = 'all'
+                     OR ( audience_type = 'workgroup'
+                          AND audience_workgroup = current_user_workgroup(actor) )
+                     OR ( audience_type = 'member_type'
+                          AND audience_member_type = current_user_component(actor) )
+                     OR ∃ r ∈ event_audience_users:
+                        r.event_id = e.id AND r.user_id = actor.id
+```
+
+El mirror `isEventVisibleToAudience` (D8) implementa exactamente esta tabla de verdad en JS,
+con fail closed en los bordes: tipo de audiencia desconocido → `false`, `audience_type` nulo →
+se comporta como `'all'` (la columna es NOT NULL con default), y `audience_workgroup = 'ninguno'`
+(dato corrupto) nunca matchea. La cláusula `∃ r …` del mirror se resuelve con
+`getMyAudienceEventIds` a través del cliente autenticado (RLS own-row, D4).
 
 ### Función `umsuka.current_user_component()`
 
@@ -321,6 +345,9 @@ badges de nombres. Al cambiar de tipo se limpian los campos del otro tipo (`setV
 | `CREATE CONSTRAINT ... IF NOT EXISTS` en los CHECK | No existe `IF NOT EXISTS` para constraints en PostgreSQL; el patrón de la migración 0044 (sin guarda) hace fallar limpiamente una re-ejecución, que es el comportamiento deseado. |
 | Feed filtrado solo por RLS (dejar que la BD devuelva solo lo visible) | La RLS sí filtra en la BD, pero el mirror puro en el servidor es la única forma de probar la regla sin BD, da errores 404 coherentes en el detalle y protege contra drift entre policy y aplicación. |
 | Editor de audiencia dentro del `EventForm` de edición del detalle | Duplicaría la superficie con el editor rápido (D9); el detalle usa el editor rápido y el formulario hace round-trip de los valores. |
+| Schema Zod separado para la audiencia (fusionado en el resolver en lugar de integrado) | Un schema aparte crearía dos caminos de validación divergentes y obligaría a mergear en cada mutación; el spread de `AUDIENCE_FORM_FIELDS` en los schemas existentes (D6) garantiza un solo resolver con validación cruzada única para los tres schemas de evento. |
+| Permitir segmentación de audiencia adicional en eventos `work_shift` | `visible_to_group` ya restringe por grupo; una audiencia extra crearía un doble alcance ambiguo (grupo AND audiencia) y complicaría las políticas de escritura lead de Sprint 12, que quedan intactas con la regla de pin `'all'` (D3). |
+| Conteo de badge `specific_users` con una query por evento (N+1) | El patrón del repo evita N+1 con 2 queries + Map; `getAudienceUserCounts` batchea con `in("event_id", ...)` en una sola query (D9). |
 | `service_role` para las filas de audiencia | No hace falta: el REPLACE se ejecuta con el cliente autenticado del actor (management/creador), que la RLS de D4/D5 autoriza. Cero grants `service_role` nuevos. |
 
 ---
@@ -332,6 +359,7 @@ badges de nombres. Al cambiar de tipo se limpian los campos del otro tipo (`setV
 | `work_shift` con audiencia manipulada (p. ej. `specific_users`) | Rechazado en servidor antes de tocar la BD: "Los eventos de trabajo solo pueden mostrarse a su grupo de trabajo." |
 | Lead no-management crea evento general | Rechazado (gestión requerida para audiencias + regla existente de creación). |
 | `specific_users` sin usuarios (o con UUID inválido) | Schema: "Debes seleccionar al menos un usuario." / "Cada usuario debe ser un UUID válido." |
+| Inserto duplicado en `event_audience_users` (23505, PK `(event_id, user_id)`) | En `createEvent` cae a la compensación (borrado del evento); en `updateEvent`/`updateEventAudience` se devuelve el error de `replaceAudienceUsers` ("No se pudo actualizar la audiencia del evento: …"). |
 | Fallo al insertar filas de audiencia al crear | Compensación: el evento recién creado se borra y se devuelve error ("No se pudo guardar la audiencia del evento."). |
 | Edición de un evento que era `specific_users` y deja de serlo | Delete-all de las filas antiguas (`.delete().eq("event_id", id)`). |
 | `getUser()` falla al filtrar el feed | Fail closed: lista vacía / evento no encontrado (nunca se filtra por un conjunto vacío en falso). |
@@ -380,6 +408,17 @@ badges de nombres. Al cambiar de tipo se limpian los campos del otro tipo (`setV
 - `docs/DATABASE.md` no se actualiza en este sprint (sigue el patrón de Sprints 17/17b, cuyas
   migraciones 0044–0048 tampoco están en la tabla de migraciones); actualización opcional en un
   chore posterior.
+- **Gaps conocidos de compensación (LOW risk, documentados, sin endurecer en este sprint)**:
+  - `updateEventAudience` (y `updateEvent`) escriben primero las columnas `audience_*` y después
+    reemplazan las filas de `event_audience_users`; si el reemplazo falla no hay compensación
+    hacia atrás (el evento queda con la nueva `audience_type` pero con filas antiguas/ausentes).
+    El error sí se devuelve al cliente, así que la inconsistencia solo persiste si el usuario
+    ignora el mensaje; el editor rápido hace `router.refresh()` y reflejaría el estado real.
+  - En `createEvent`, el borrado de compensación del evento recién creado es **best-effort**: no
+    se comprueba el error del propio `delete`, de modo que si ese delete fallara podría
+    sobrevivir un evento a medio configurar (sin filas de audiencia). Ambos requieren un fallo
+    transitorio de red/BD en una ventana mínima; endurecimiento futuro: envolver columnas + filas
+    en una transacción atómica.
 - `tasks/sprint-18-event-audience.json` y `tasks/plan-desarrollo-completo.md` no se tocan en los
   commits (los gestiona el orquestador).
 - Sin PR todavía: commits en `feature/sprint-18-event-audience` siguiendo `docs/git-conventions.md`;
