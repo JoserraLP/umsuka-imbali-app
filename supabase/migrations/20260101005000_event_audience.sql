@@ -210,8 +210,8 @@ create policy "events_select_authenticated"
       )
       and (
         audience_type = 'all'
-        or (audience_type = 'workgroup' and audience_workgroup = umsuka.current_user_workgroup())
-        or (audience_type = 'member_type' and audience_member_type = umsuka.current_user_component())
+        or (audience_type = 'workgroup' and audience_workgroup = umsuka.current_user_workgroup()::text)
+        or (audience_type = 'member_type' and audience_member_type = umsuka.current_user_component()::text)
         or exists (
           select 1 from umsuka.event_audience_users eau
           where eau.event_id = umsuka.events.id
