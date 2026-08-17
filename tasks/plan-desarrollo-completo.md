@@ -867,7 +867,7 @@ Auditorías finales de seguridad, rendimiento, accesibilidad y validación gener
 | Sprint 15 — Votings | `feature/sprint-15-votings` | ✅ Ejecutado |
 | Sprint 16 — Document Management | `feature/sprint-16-document-management` | Sprint 6 |
 | Sprint 17 — Events Enhancement (+ Onboarding Grupo) | `feature/sprint-17-events-enhancement` | Sprint 1, Sprint 5, Sprint 2 |
-| **Sprint 18 — Event Audience** | `feature/sprint-18-event-audience` | **Sprint 2, Sprint 12, Sprint 17** |
+| **Sprint 18 — Event Audience** | `feature/sprint-18-event-audience` | ✅ Ejecutado |
 | Sprint 19 — Profiles & Components | `feature/sprint-19-profiles-components` | Sprint 1 |
 | Sprint 20 — Notifications | `feature/sprint-20-notifications` | Múltiples |
 | Sprint 21 — Admin Panel | `feature/sprint-21-admin-panel` | Sprint 6, Sprint 19 |

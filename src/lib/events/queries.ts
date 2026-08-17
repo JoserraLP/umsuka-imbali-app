@@ -1,6 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import type { EventTypeValue } from "@/lib/events/schema";
-import type { Workgroup } from "@/types/database.types";
+import {
+  getMyAudienceEventIds,
+  isEventVisibleToAudience,
+  type AudienceTypeValue,
+} from "@/lib/events/audience";
+import type { ComponentType, Workgroup } from "@/types/database.types";
 
 export interface EventListItem {
   id: string;
@@ -19,6 +24,12 @@ export interface EventListItem {
   visibleToGroup: Workgroup | null;
   /** Workgroup of the lead who created the event (work_shift events only). */
   createdByWorkgroup: Workgroup | null;
+  /** Audience scope (all/workgroup/member_type/specific_users). */
+  audienceType: AudienceTypeValue;
+  /** Target workgroup when audienceType = "workgroup". */
+  audienceWorkgroup: Workgroup | null;
+  /** Target member type when audienceType = "member_type". */
+  audienceMemberType: ComponentType | null;
   createdBy: string | null;
   createdAt: string;
 }
@@ -30,9 +41,14 @@ export interface ListEventsOptions {
   to?: string;
 }
 
-/** Caller's group context, used to filter group-scoped events. */
+/**
+ * Caller's context, used to filter group-scoped and audience-scoped
+ * events (Sprint 18). `componentType` is required so the audience
+ * mirror can match member_type events.
+ */
 export interface EventVisibility {
   workgroup: Workgroup;
+  componentType: ComponentType;
   isManagement: boolean;
 }
 
@@ -48,12 +64,15 @@ interface EventRow {
   registration_deadline: string | null;
   visible_to_group: Workgroup | null;
   created_by_workgroup: Workgroup | null;
+  audience_type: string | null;
+  audience_workgroup: Workgroup | null;
+  audience_member_type: ComponentType | null;
   created_by: string | null;
   created_at: string;
 }
 
 const EVENT_SELECT =
-  "id, title, description, event_type, event_date, capacity, location, image_url, registration_deadline, visible_to_group, created_by_workgroup, created_by, created_at";
+  "id, title, description, event_type, event_date, capacity, location, image_url, registration_deadline, visible_to_group, created_by_workgroup, audience_type, audience_workgroup, audience_member_type, created_by, created_at";
 
 function mapRow(row: EventRow): EventListItem {
   return {
@@ -68,6 +87,9 @@ function mapRow(row: EventRow): EventListItem {
     registrationDeadline: row.registration_deadline,
     visibleToGroup: row.visible_to_group,
     createdByWorkgroup: row.created_by_workgroup,
+    audienceType: (row.audience_type as AudienceTypeValue) ?? "all",
+    audienceWorkgroup: row.audience_workgroup,
+    audienceMemberType: row.audience_member_type,
     createdBy: row.created_by,
     createdAt: row.created_at,
   };
@@ -95,9 +117,14 @@ export function isEventVisibleToGroup(
  * here. Pass `from`/`to` to scope to a date range (e.g. one calendar
  * month); omit both to list every event.
  *
- * When `visibility` is provided, group-scoped events are filtered with
- * `isEventVisibleToGroup` (same rule as the RLS policy), so a barra
- * member only sees barra work_shift events and general events.
+ * When `visibility` is provided, events are filtered with the same "pure
+ * mirror" of the RLS policy:
+ * - management keeps the legacy group-only filter (isEventVisibleToGroup
+ *   always returns true for management, so this is a no-op pass),
+ * - non-management callers additionally fetch their own concrete
+ *   audience rows (getMyAudienceEventIds) and run the full audience
+ *   mirror (isEventVisibleToAudience). A getUser() failure fails closed
+ *   (empty list).
  */
 export async function listEvents(
   options: ListEventsOptions = {},
@@ -123,8 +150,25 @@ export async function listEvents(
   const events = (data ?? []).map(mapRow);
 
   if (visibility) {
+    if (visibility.isManagement) {
+      return events.filter((event) =>
+        isEventVisibleToGroup(event, visibility.workgroup, true),
+      );
+    }
+
+    const userId = await getViewerUserId(supabase);
+    if (userId === null) {
+      return []; // fail closed: cannot determine the viewer's audience set
+    }
+    const audienceEventIds = await getMyAudienceEventIds(userId, supabase);
+
     return events.filter((event) =>
-      isEventVisibleToGroup(event, visibility.workgroup, visibility.isManagement),
+      isEventVisibleToAudience(event, {
+        userWorkgroup: visibility.workgroup,
+        userComponent: visibility.componentType,
+        audienceEventIds,
+        isManagement: false,
+      }),
     );
   }
 
@@ -149,15 +193,63 @@ export async function getEventById(
 
   const event = data ? mapRow(data) : null;
 
-  if (
-    event &&
-    visibility &&
-    !isEventVisibleToGroup(event, visibility.workgroup, visibility.isManagement)
-  ) {
-    return null;
+  if (event && visibility) {
+    if (visibility.isManagement) {
+      if (!isEventVisibleToGroup(event, visibility.workgroup, true)) {
+        return null;
+      }
+      return event;
+    }
+
+    const userId = await getViewerUserId(supabase);
+    if (userId === null) {
+      return null; // fail closed: cannot determine the viewer's audience set
+    }
+    const audienceEventIds = await getMyAudienceEventIds(userId, supabase);
+
+    if (
+      !isEventVisibleToAudience(event, {
+        userWorkgroup: visibility.workgroup,
+        userComponent: visibility.componentType,
+        audienceEventIds,
+        isManagement: false,
+      })
+    ) {
+      return null;
+    }
   }
 
   return event;
+}
+
+/**
+ * Reads the authenticated user id through the same client used for the
+ * query. Returns `null` when the session cannot be resolved (fail closed).
+ */
+async function getViewerUserId(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+): Promise<string | null> {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return null;
+  }
+  return user.id;
+}
+
+/**
+ * Alias of listEvents used by the Sprint 18 feed paths / server action
+ * (getVisibleEventsAction). Kept as its own name so the audience-aware
+ * feed is discoverable without changing established call sites.
+ */
+export async function getVisibleEvents(
+  options: ListEventsOptions = {},
+  visibility?: EventVisibility,
+): Promise<EventListItem[]> {
+  return listEvents(options, visibility);
 }
 
 export interface ShiftInfo {

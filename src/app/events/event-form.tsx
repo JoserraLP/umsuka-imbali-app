@@ -14,7 +14,10 @@ import {
   type EventTypeValue,
   type EventWorkgroup,
 } from "@/lib/events/schema";
-import { createEventAction, updateEventAction } from "@/app/events/actions";
+import { createEventWithAudienceAction } from "@/app/events/audience-actions";
+import { updateEventAction } from "@/app/events/actions";
+import { AudienceSelector } from "@/app/events/audience-selector";
+import type { AudienceMemberOption, AudienceUser } from "@/lib/events/audience-shared";
 import type { Workgroup } from "@/types/database.types";
 
 const EVENT_TYPE_LABELS: Record<EventTypeValue, string> = {
@@ -41,9 +44,26 @@ interface EventFormProps {
    * hidden, workgroup selector locked).
    */
   leadWorkgroup?: Workgroup | null;
+  /** Active members available for the specific_users selector (Sprint 18). */
+  audienceMembers: AudienceMemberOption[];
+  /** Preloaded audience users in edit mode (Sprint 18). */
+  selectedAudienceUsers?: AudienceUser[];
+  /**
+   * True when the acting user may configure the audience (management;
+   * leads always see the section hidden with audience forced to 'all').
+   */
+  canConfigureAudience: boolean;
 }
 
-export function EventForm({ mode, eventId, defaultValues, leadWorkgroup }: EventFormProps) {
+export function EventForm({
+  mode,
+  eventId,
+  defaultValues,
+  leadWorkgroup,
+  audienceMembers,
+  selectedAudienceUsers,
+  canConfigureAudience,
+}: EventFormProps) {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -80,7 +100,7 @@ export function EventForm({ mode, eventId, defaultValues, leadWorkgroup }: Event
 
     const result =
       mode === "create"
-        ? await createEventAction(payload)
+        ? await createEventWithAudienceAction(payload)
         : await updateEventAction({ ...payload, id: eventId as string });
 
     if (!result.success) {
@@ -212,6 +232,17 @@ export function EventForm({ mode, eventId, defaultValues, leadWorkgroup }: Event
             {errors.workgroup && (
               <p className="text-xs text-destructive">{errors.workgroup.message}</p>
             )}
+          </div>
+        )}
+
+        {canConfigureAudience && (
+          <div className="sm:col-span-2">
+            <AudienceSelector
+              control={control}
+              disabled={eventType === "work_shift"}
+              members={audienceMembers}
+              selectedMembers={selectedAudienceUsers ?? []}
+            />
           </div>
         )}
       </div>

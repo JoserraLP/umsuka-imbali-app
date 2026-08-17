@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { AppShell } from "@/components/layout/app-shell";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { isManagementRole } from "@/lib/auth/roles";
+import { getAudienceOptions } from "@/lib/events/audience";
 import { EventForm } from "@/app/events/event-form";
 import type { EventWorkgroup } from "@/lib/events/schema";
 
@@ -25,6 +26,7 @@ export default async function NewEventPage() {
 
   // Non-management leads can only create work_shift events for their own group.
   const isManagement = isManagementRole(profile.role);
+  const audienceMembers = isManagement ? await getAudienceOptions() : [];
 
   return (
     <AppShell profile={profile}>
@@ -62,8 +64,14 @@ export default async function NewEventPage() {
                 imageUrl: "",
                 registrationDeadline: "",
                 workgroup: (isManagement ? null : profile.workgroup) as EventWorkgroup | null,
+                audienceType: "all",
+                audienceWorkgroup: null,
+                audienceMemberType: null,
+                audienceUserIds: [],
               }}
               leadWorkgroup={isManagement ? undefined : profile.workgroup}
+              audienceMembers={audienceMembers}
+              canConfigureAudience={isManagement}
             />
           </CardContent>
         </Card>

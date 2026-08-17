@@ -19,6 +19,7 @@ export type AppRole =
   | "member"
   | "guest";
 export type WaitlistStatus = "waiting" | "promoted" | "declined" | "removed";
+export type AudienceType = "all" | "workgroup" | "member_type" | "specific_users";
 
 export interface Database {
   umsuka: {
@@ -87,6 +88,9 @@ export interface Database {
           image_url: string | null;
           visible_to_group: Workgroup | null;
           created_by_workgroup: Workgroup | null;
+          audience_type: AudienceType;
+          audience_workgroup: Workgroup | null;
+          audience_member_type: ComponentType | null;
           created_by: string | null;
           created_at: string;
         };
@@ -102,6 +106,9 @@ export interface Database {
           image_url?: string | null;
           visible_to_group?: Workgroup | null;
           created_by_workgroup?: Workgroup | null;
+          audience_type?: AudienceType;   // default 'all' in DB
+          audience_workgroup?: Workgroup | null;
+          audience_member_type?: ComponentType | null;
           created_by?: string | null;
           created_at?: string;
         };
@@ -117,8 +124,26 @@ export interface Database {
           image_url?: string | null;
           visible_to_group?: Workgroup | null;
           created_by_workgroup?: Workgroup | null;
+          audience_type?: AudienceType;
+          audience_workgroup?: Workgroup | null;
+          audience_member_type?: ComponentType | null;
           created_by?: string | null;
           created_at?: string;
+        };
+        Relationships: [];
+      };
+      event_audience_users: {
+        Row: {
+          event_id: string;
+          user_id: string;
+        };
+        Insert: {
+          event_id: string;
+          user_id: string;
+        };
+        Update: {
+          event_id?: string;
+          user_id?: string;
         };
         Relationships: [];
       };
@@ -600,6 +625,10 @@ export interface Database {
         Args: Record<string, never>;
         Returns: string;
       };
+      current_user_component: {
+        Args: Record<string, never>;
+        Returns: string;
+      };
       is_super_admin: {
         Args: Record<string, never>;
         Returns: boolean;
@@ -642,6 +671,7 @@ export interface Database {
       user_status: UserStatus;
       auth_method: AuthMethod;
       waitlist_status: WaitlistStatus;
+      audience_type: AudienceType;
     };
     CompositeTypes: Record<string, never>;
   };

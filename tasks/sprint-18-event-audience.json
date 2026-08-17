@@ -1,0 +1,79 @@
+{
+  "title": "Sprint 18 — Segmentación de Audiencia en Eventos (Event Audience)",
+  "description": "Al crear un evento, el creador podrá indicar a qué tipo de usuarios se mostrará: por grupo de trabajo (telas, barra, estandarte, limpieza), por tipo de miembro (component_type: music, dance, member) o a usuarios concretos seleccionables. Los eventos con audiencia restringida solo aparecerán para los destinatarios indicados. Implementación según el plan: migración de BD (audience_type enum, audience_workgroup, audience_member_type, tabla event_audience_users), política RLS de visibilidad sobre umsuka.events, regeneración/manual de src/types/database.types.ts, capa lib/events/audience.ts (schemas Zod, queries getVisibleEvents/getEventAudience, mutations createEventWithAudience/updateEventAudience), server actions (create/update/getVisibleEvents), UI del formulario de evento (sección '¿A quién se muestra?' con selector de tipo y multi-select de usuarios con búsqueda), feed de eventos filtrado por audiencia, badge de audiencia en el detalle (visible para management) y pruebas.",
+  "branch": "feature/sprint-18-event-audience",
+  "status": "published",
+  "steps": [
+    {
+      "id": 1,
+      "name": "Migración de BD — events",
+      "detail": "Añadir a umsuka.events: audience_type (enum 'all'|'workgroup'|'member_type'|'specific_users' default 'all'), audience_workgroup (text nullable), audience_member_type (text nullable). CHECK constraints coherentes: audience_workgroup solo no-null cuando audience_type='workgroup'; audience_member_type solo no-null cuando audience_type='member_type'. Índices. Nueva función SQL umsuka.current_user_component() (SECURITY DEFINER, igual patrón que current_user_workgroup) que devuelve el component_type del usuario."
+    },
+    {
+      "id": 2,
+      "name": "Migración de BD — event_audience_users",
+      "detail": "Crear umsuka.event_audience_users (event_id FK on delete cascade, user_id FK on delete cascade, PK compuesta (event_id, user_id)). RLS: select para management y creador del evento (para ver la audiencia configurada), insert/update/delete solo para management y creador del evento. La membresía se consulta desde la policy SELECT de umsuka.events."
+    },
+    {
+      "id": 3,
+      "name": "RLS — visibilidad por audiencia",
+      "detail": "Actualizar la política 'events_select_authenticated' de umsuka.events para que sea visible si: (visible_to_group es null o igual al grupo del usuario) Y (audience_type='all' O (audience_type='workgroup' y audience_workgroup = current_user_workgroup()) O (audience_type='member_type' y audience_member_type = current_user_component()) O (audience_type='specific_users' y el usuario está en event_audience_users)) O is_management(). Combinar con el filtro visible_to_group existente sin romper los work_shift de Sprint 12."
+    },
+    {
+      "id": 4,
+      "name": "Actualizar tipos",
+      "detail": "Actualizar src/types/database.types.ts a mano siguiendo el patrón actual (el archivo está hand-authored): nuevo enum AudienceType, columnas audience_type/audience_workgroup/audience_member_type en events (Row/Insert/Update), tabla event_audience_users, función current_user_component() en Functions."
+    },
+    {
+      "id": 5,
+      "name": "Capa lib/events/audience.ts",
+      "detail": "Schemas Zod (audienceSchema con tipo + valores según tipo, validación cruzada), queries (getVisibleEvents, getEventAudience con usuarios resueltos), mutations (createEventWithAudience, updateEventAudience que inserta/borra event_audience_users según el tipo). Lógica pura de visibilidad isEventVisibleToAudience como espejo de la policy RLS (reutilizable en tests)."
+    },
+    {
+      "id": 6,
+      "name": "Server actions",
+      "detail": "createEventWithAudienceAction, updateEventAudienceAction (con auditoría de autorización server-side, nunca confiar solo en RLS) y getVisibleEventsAction. Revalidación de rutas /events, /events/[id] y /calendar."
+    },
+    {
+      "id": 7,
+      "name": "UI: Formulario de evento",
+      "detail": "En src/app/events/event-form.tsx (o nuevo componente audience-selector), sección '¿A quién se muestra?' con selector de tipo (todos / por grupo / por tipo de miembro / usuarios concretos) y los selectores correspondientes: grupo (telas, barra, estandarte, limpieza), componente (music, dance, member) o multi-select de usuarios con búsqueda. Para leads (work_shift) considerar fijar la audiencia a su grupo y ocultar la sección."
+    },
+    {
+      "id": 8,
+      "name": "UI: Feed de eventos filtrado",
+      "detail": "src/app/events/page.tsx y el detalle (getEventById/listEvents con getVisibleEvents) solo muestran eventos visibles para el usuario según la audiencia configurada y su grupo. Incluir badge de audiencia en la lista para management."
+    },
+    {
+      "id": 9,
+      "name": "UI: Badge de audiencia",
+      "detail": "En la página de detalle /events/[id], mostrar a qué audiencia está dirigido el evento (visible para management y el creador)."
+    },
+    {
+      "id": 10,
+      "name": "Pruebas",
+      "detail": "Tests unitarios: schemas de audiencia (validación cruzada por tipo), lógica de visibilidad isEventVisibleToAudience, mutations (create/update/delete de event_audience_users). Tests de integración de las políticas de visibilidad (según el patrón de tests de eventos existente)."
+    }
+  ],
+  "acceptance_criteria": [
+    "Al crear un evento se puede elegir: todos, un grupo de trabajo, un tipo de miembro o usuarios concretos.",
+    "Los eventos restringidos solo aparecen para sus destinatarios.",
+    "Un usuario no puede ver eventos dirigidos a otros grupos/tipos/usuarios.",
+    "El creador y management pueden ver la audiencia configurada de cada evento.",
+    "La configuración de audiencia puede modificarse después de crear el evento."
+  ],
+  "definition_of_done": [
+    "Migraciones SQL: columnas audience_type/audience_workgroup/audience_member_type, tabla event_audience_users con RLS, función current_user_component().",
+    "Política RLS events_select_authenticated actualizada para combinar visible_to_group y la audiencia.",
+    "src/types/database.types.ts actualizado (hand-authored) consistente con las migraciones.",
+    "Capa lib/events/audience.ts con schemas, queries, mutations y lógica de visibilidad.",
+    "Server actions createEventWithAudienceAction/updateEventAudienceAction/getVisibleEventsAction.",
+    "Formulario de evento con sección '¿A quién se muestra?' completa (selector de tipo + selectores condicionales + multi-select de usuarios con búsqueda).",
+    "Feed y detalle de eventos filtrados por audiencia; badge de audiencia visible para management.",
+    "Tests unitarios pasando (npx vitest run).",
+    "Typecheck (tsc --noEmit) y lint (eslint . --max-warnings=0) limpios.",
+    "Security scan sin issues HIGH.",
+    "ADR documentado en docs/adr-sprint-18-event-audience.md."
+  ],
+  "dependencies": ["Sprint 2 (Workgroup Roles — current_user_workgroup, columna workgroup)", "Sprint 12 (Visibilidad por grupo — patrón RLS visible_to_group)", "Sprint 17 (Eventos — formulario y detalle de eventos)"]
+}

@@ -68,7 +68,11 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
   const { from, to } = monthDateRange(year, month);
   const events = await listEvents(
     { from, to },
-    { workgroup: profile.workgroup, isManagement: isManagementRole(profile.role) },
+    {
+      workgroup: profile.workgroup,
+      componentType: profile.componentType,
+      isManagement: isManagementRole(profile.role),
+    },
   );
   const weeks = buildMonthGrid(year, month);
 
