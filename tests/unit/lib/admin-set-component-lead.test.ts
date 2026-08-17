@@ -100,6 +100,10 @@ function superAdmin(): AuthenticatedProfile {
     status: "active",
     username: null,
     authMethod: "google",
+    bio: null,
+    phone: null,
+    skills: [],
+    joinedAt: null,
     createdAt: "2026-01-01T00:00:00Z",
   };
 }
