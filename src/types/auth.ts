@@ -5,6 +5,7 @@ export interface AuthenticatedProfile {
   firstName: string;
   lastName: string;
   email: string | null;
+  /** umsuka.profiles.avatar_url, falling back to the OAuth provider metadata. */
   avatarUrl: string | null;
   role: AppRole;
   componentType: ComponentType;
@@ -16,6 +17,10 @@ export interface AuthenticatedProfile {
   status: UserStatus;
   username: string | null;
   authMethod: AuthMethod;
+  bio: string | null;
+  phone: string | null;
+  skills: string[];
+  joinedAt: string | null;
   createdAt: string;
 }
 

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { isValidRole, DEFAULT_ROLE } from "@/lib/auth/roles";
 import { ensureProfileExists } from "@/lib/profiles/provisioning";
+import { isAllowedAvatarUrl } from "@/lib/profiles/schema";
 import type { AuthenticatedProfile } from "@/types/auth";
 import type { ComponentType } from "@/types/database.types";
 
@@ -83,7 +84,7 @@ async function fetchProfileRow(userId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, first_name, last_name, birth_date, component_type, role, workgroup, is_workgroup_lead, component_lead_for, is_active, status, username, auth_method, created_at")
+    .select("id, first_name, last_name, birth_date, component_type, role, workgroup, is_workgroup_lead, component_lead_for, is_active, status, username, auth_method, avatar_url, bio, phone, skills, joined_at, created_at")
     .eq("id", userId)
     .maybeSingle();
 
@@ -105,6 +106,17 @@ function buildAuthenticatedProfile(
 ): AuthenticatedProfile {
   const role = isValidRole(profile.role) ? profile.role : DEFAULT_ROLE;
 
+  // The DB column is the source of truth for the avatar; fall back to
+  // the OAuth provider metadata only when the member never set one.
+  // The metadata value is NOT trusted blindly: it must be an https URL
+  // on an allowlisted host before it is used (same rule as the form).
+  const metadataAvatar = user.user_metadata?.avatar_url;
+  const avatarUrl =
+    (profile.avatar_url as string | null) ??
+    (typeof metadataAvatar === "string" && isAllowedAvatarUrl(metadataAvatar)
+      ? metadataAvatar
+      : null);
+
   return {
     id: profile.id,
     firstName: profile.first_name,
@@ -112,7 +124,7 @@ function buildAuthenticatedProfile(
     // Never expose the internal email alias (user-{uuid}@umsuka.internal)
     // to any user, not even the account owner themselves.
     email: profile.auth_method === "email_alias" ? null : (user.email ?? null),
-    avatarUrl: (user.user_metadata?.avatar_url as string | undefined) ?? null,
+    avatarUrl,
     role,
     componentType: profile.component_type,
     workgroup: profile.workgroup ?? "ninguno",
@@ -123,6 +135,10 @@ function buildAuthenticatedProfile(
     status: profile.status,
     username: profile.username ?? null,
     authMethod: profile.auth_method,
+    bio: profile.bio,
+    phone: profile.phone,
+    skills: profile.skills ?? [],
+    joinedAt: profile.joined_at,
     createdAt: profile.created_at,
   };
 }

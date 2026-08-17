@@ -70,6 +70,11 @@ export async function updateOwnProfile(input: UpdateOwnProfileInput): Promise<Mu
       last_name: parsed.data.lastName,
       birth_date: parsed.data.birthDate,
       component_type: parsed.data.componentType,
+      avatar_url: parsed.data.avatarUrl,
+      bio: parsed.data.bio,
+      phone: parsed.data.phone,
+      skills: parsed.data.skills,
+      joined_at: parsed.data.joinedAt,
     })
     .eq("id", profile.id);
 
@@ -173,6 +178,11 @@ export async function updateMemberProfile(
       birth_date: parsed.data.birthDate,
       component_type: parsed.data.componentType,
       workgroup: effectiveWorkgroup,
+      avatar_url: parsed.data.avatarUrl,
+      bio: parsed.data.bio,
+      phone: parsed.data.phone,
+      skills: parsed.data.skills,
+      joined_at: parsed.data.joinedAt,
     })
     .eq("id", parsed.data.userId);
 
