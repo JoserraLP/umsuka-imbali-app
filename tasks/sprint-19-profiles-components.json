@@ -1,0 +1,63 @@
+{
+  "title": "Sprint 19 — Perfiles y Componentes (Enriched Profiles)",
+  "description": "Mejorar la gestión de perfiles de usuario: foto (avatar_url), biografía (bio), teléfono (phone), habilidades (skills text[]), fecha de incorporación (joined_at) e historial de participación (eventos, turnos y asistencia) visible en la página de perfil. Implementación según el plan: migración de BD sobre umsuka.profiles (columnas avatar_url, bio, phone, skills, joined_at con RLS ajustada si aplica), actualización de src/types/database.types.ts (hand-authored), ampliación de la capa src/lib/profiles/ (schema con nuevos campos validados, queries que devuelven los nuevos campos y resumen de historial), server action updateOwnProfileAction ampliada, rediseño de /profile (cabecera con avatar/bio/skills/contacto + sección de historial con enlaces a /profile/history y /profile/shifts existentes), formulario de edición completo con los nuevos campos, y pruebas unitarias.",
+  "branch": "feature/sprint-19-profiles-components",
+  "status": "documented",
+  "steps": [
+    {
+      "id": 1,
+      "name": "Migración de BD",
+      "detail": "Añadir a umsuka.profiles: avatar_url (text nullable), bio (text nullable), phone (text nullable), skills (text[] not null default '{}'), joined_at (date nullable). CHECK constraints coherentes (longitudes máximas si aplica). Índices opcionales. Evaluar si joined_at duplica created_at (fecha de alta ya usada en Sprint 14) y en ese caso documentar semántica (fecha de incorporación a la comparsa, editable) o descartarlo si es redundante. RLS: mantener política de edición propia existente (update own profile), verificar que las nuevas columnas no requieran políticas nuevas."
+    },
+    {
+      "id": 2,
+      "name": "Actualizar tipos",
+      "detail": "Actualizar src/types/database.types.ts a mano (hand-authored, nunca regenerar con CLI): añadir avatar_url/bio/phone/skills/joined_at en profiles (Row/Insert/Update)."
+    },
+    {
+      "id": 3,
+      "name": "Capa lib/profiles/",
+      "detail": "Ampliar src/lib/profiles/schema.ts: updateOwnProfileSchema con bio (máx. p.ej. 500), phone (validación razonable), skills (array de strings, máx. p.ej. 10, cada una máx. 50 chars, normalización trim + dedupe), avatarUrl (URL válida opcional, o path de storage), joinedAt si se mantiene el campo. Ampliar queries.ts: ProfileDetail con los nuevos campos; si aplica, getProfileSummaryByUserId con conteos de eventos/turnos/asistencias para la cabecera de historial. Mutaciones: updateOwnProfile ampliada para escribir las nuevas columnas (solo el propio usuario, patrón existente)."
+    },
+    {
+      "id": 4,
+      "name": "Server action",
+      "detail": "Ampliar updateOwnProfileAction en src/app/profile/actions.ts para aceptar los nuevos campos (bio, phone, skills, avatarUrl, joinedAt) con la autorización existente (solo propio perfil) y revalidatePath('/profile')."
+    },
+    {
+      "id": 5,
+      "name": "UI: Página de perfil rediseñada",
+      "detail": "Rediseñar src/app/profile/page.tsx: cabecera con avatar (imagen circular si avatarUrl existe, iniciales como fallback), nombre completo, badges (rol, componente, grupo de trabajo), bio, skills como badges/tags, datos de contacto (email, teléfono), fecha de incorporación, y sección 'Historial' con resumen (conteos de asistencia/ausencias/turnos/eventos) y enlaces a /profile/history y /profile/shifts (ya existentes)."
+    },
+    {
+      "id": 6,
+      "name": "UI: Formulario de edición completo",
+      "detail": "Ampliar src/app/profile/profile-form.tsx con los nuevos campos: avatar (previsualización + URL o subida si se decide storage), bio (textarea), phone, skills (input con chips/badges), joinedAt (date) si aplica. Defaults desde el perfil. Validación con los schemas ampliados."
+    },
+    {
+      "id": 7,
+      "name": "Pruebas",
+      "detail": "Tests unitarios: nuevos campos del schema de perfil (validaciones, límites, normalización de skills), query/mutación de perfil ampliada. Suite completa pasando (npx vitest run), typecheck (tsc --noEmit) y lint (eslint . --max-warnings=0) limpios."
+    }
+  ],
+  "acceptance_criteria": [
+    "Cada miembro tiene un perfil con foto, biografía y habilidades.",
+    "Los miembros pueden editar su propio perfil (foto, bio, teléfono, habilidades) desde /profile.",
+    "La página de perfil muestra el historial de eventos, turnos y asistencia del miembro.",
+    "El formulario valida los nuevos campos con mensajes claros en español.",
+    "Un miembro no puede editar los campos de otro miembro (autorización y RLS intactas)."
+  ],
+  "definition_of_done": [
+    "Migración SQL 20260101005100 con las nuevas columnas de profiles (evaluación y decisión documentada sobre joined_at).",
+    "src/types/database.types.ts actualizado (hand-authored) consistente con la migración.",
+    "Capa lib/profiles/ ampliada: schema con bio/phone/skills/avatarUrl (+joinedAt), queries con nuevos campos y resumen de historial.",
+    "updateOwnProfileAction ampliado con revalidación de /profile.",
+    "Página /profile rediseñada con avatar, bio, skills, contacto, fecha de incorporación e historial resumido con enlaces.",
+    "Formulario de edición completo con los nuevos campos y validación.",
+    "Tests unitarios nuevos pasando + suite completa (npx vitest run).",
+    "Typecheck (tsc --noEmit) y lint (eslint . --max-warnings=0) limpios.",
+    "Security scan sin issues HIGH.",
+    "ADR documentado en docs/adr-sprint-19-profiles-components.md."
+  ],
+  "dependencies": ["Sprint 1 (UI/UX)", "Sprint 2 (component_type/workgroup en profiles)", "Sprint 5 (asistencia/ausencias — historial)", "Sprint 12 (turnos — historial)", "Sprint 14 (listado de miembros — fecha de alta created_at)"]
+}
