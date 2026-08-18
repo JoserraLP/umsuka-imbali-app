@@ -13,6 +13,12 @@ vi.mock("@/lib/auth/session", () => ({
   requireAuthenticatedProfile: vi.fn(),
 }));
 
+vi.mock("@/lib/notifications/emit", () => ({
+  notifyUsers: vi.fn().mockResolvedValue(undefined),
+  getAllActiveMemberIds: vi.fn().mockResolvedValue([]),
+  resolveEventRecipients: vi.fn().mockResolvedValue([]),
+}));
+
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAuthenticatedProfile } from "@/lib/auth/session";
 import { approveUser, suspendUser } from "@/lib/approvals/mutations";

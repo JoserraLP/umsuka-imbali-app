@@ -10,6 +10,12 @@ vi.mock("@/lib/auth/session", () => ({
   requireAuthenticatedProfile: vi.fn(),
 }));
 
+vi.mock("@/lib/notifications/emit", () => ({
+  notifyUsers: vi.fn().mockResolvedValue(undefined),
+  getAllActiveMemberIds: vi.fn().mockResolvedValue([]),
+  resolveEventRecipients: vi.fn().mockResolvedValue([]),
+}));
+
 import { createClient } from "@/lib/supabase/server";
 import { requireAuthenticatedProfile } from "@/lib/auth/session";
 import {
