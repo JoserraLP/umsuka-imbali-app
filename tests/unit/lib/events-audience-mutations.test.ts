@@ -16,6 +16,12 @@ vi.mock("@/lib/auth/session", () => ({
   requireAuthenticatedProfile: vi.fn(),
 }));
 
+vi.mock("@/lib/notifications/emit", () => ({
+  notifyUsers: vi.fn().mockResolvedValue(undefined),
+  getAllActiveMemberIds: vi.fn().mockResolvedValue([]),
+  resolveEventRecipients: vi.fn().mockResolvedValue([]),
+}));
+
 import { requireAuthenticatedProfile } from "@/lib/auth/session";
 import type { AuthenticatedProfile } from "@/types/auth";
 import { createEventWithAudience, updateEvent } from "@/lib/events/mutations";

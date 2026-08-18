@@ -20,6 +20,12 @@ export type AppRole =
   | "guest";
 export type WaitlistStatus = "waiting" | "promoted" | "declined" | "removed";
 export type AudienceType = "all" | "workgroup" | "member_type" | "specific_users";
+export type NotificationType =
+  | "event_created"
+  | "news_created"
+  | "voting_created"
+  | "shift_assigned"
+  | "profile_approved";
 
 export interface Database {
   umsuka: {
@@ -614,6 +620,54 @@ export interface Database {
           alias_email?: string;
           created_by?: string | null;
           created_at?: string;
+        };
+        Relationships: [];
+      };
+      notifications: {
+        Row: {
+          id: string;
+          user_id: string;
+          title: string;
+          message: string | null;
+          type: NotificationType;
+          is_read: boolean;
+          link: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          title: string;
+          message?: string | null;
+          type: NotificationType;
+          is_read?: boolean;   // default false in DB
+          link?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          title?: string;
+          message?: string | null;
+          type?: NotificationType;
+          is_read?: boolean;
+          link?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      notification_preferences: {
+        Row: {
+          user_id: string;
+          types: NotificationType[];   // '{}' = receive every type
+        };
+        Insert: {
+          user_id: string;
+          types?: NotificationType[];   // default '{}' in DB
+        };
+        Update: {
+          user_id?: string;
+          types?: NotificationType[];
         };
         Relationships: [];
       };

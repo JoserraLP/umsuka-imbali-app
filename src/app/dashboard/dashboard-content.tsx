@@ -223,7 +223,7 @@ export function DashboardContent({ profile, instagramProfile, events, latestNews
       <div className="flex flex-col gap-6">
           {/* Notifications */}
           <section className="rounded-xl border bg-card p-5">
-            <NotificationsWidget />
+            <NotificationsWidget userId={profile.id} />
           </section>
 
           {/* Events / Calendar */}

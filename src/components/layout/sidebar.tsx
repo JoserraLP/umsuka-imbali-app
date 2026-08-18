@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { NotificationBell } from "@/components/layout/notification-bell";
+import { NavNotificationBadge } from "@/components/layout/nav-notification-badge";
 import { getVisibleLinks, isLinkActive } from "@/components/layout/nav-links";
 import { signOutAction } from "@/app/dashboard/actions";
 import type { AppRole, ComponentType, Workgroup } from "@/types/database.types";
@@ -16,6 +18,7 @@ interface SidebarProps {
   componentLeadFor: ComponentType | null;
   userName: string;
   userEmail: string | null;
+  userId: string;
 }
 
 export function Sidebar({
@@ -25,6 +28,7 @@ export function Sidebar({
   componentLeadFor,
   userName,
   userEmail,
+  userId,
 }: SidebarProps) {
   const pathname = usePathname();
   const links = getVisibleLinks({ role: currentRole, isWorkgroupLead, workgroup, componentLeadFor });
@@ -54,12 +58,22 @@ export function Sidebar({
           </span>
         </div>
         <span className="text-base font-bold tracking-tight">Umsuka Imbali</span>
+        <div className="ml-auto">
+          <NotificationBell userId={userId} />
+        </div>
       </div>
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-3">
         {links.map((link) => {
           const isActive = isLinkActive(link.href, pathname, links);
           const Icon = link.icon;
+          const icon = (
+            <Icon
+              className={`nav-icon ${
+                isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+              }`}
+            />
+          );
 
           return (
             <Link
@@ -71,11 +85,11 @@ export function Sidebar({
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <Icon
-                className={`nav-icon ${
-                  isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
-                }`}
-              />
+              {link.href === "/notifications" ? (
+                <NavNotificationBadge userId={userId}>{icon}</NavNotificationBadge>
+              ) : (
+                icon
+              )}
               <span>{link.label}</span>
             </Link>
           );
