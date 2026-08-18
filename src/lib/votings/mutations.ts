@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireAuthenticatedProfile } from "@/lib/auth/session";
 import { isManagementRole } from "@/lib/auth/roles";
+import { getAllActiveMemberIds, notifyUsers } from "@/lib/notifications/emit";
 import type { AuthenticatedProfile } from "@/types/auth";
 import { isVotingOpenEffective } from "@/lib/votings/logic";
 import {
@@ -42,9 +43,7 @@ async function requireManagementGuard(
   return actor;
 }
 
-function parseError(errors: {
-  issues: { message: string }[];
-}): MutationResult {
+function parseError(errors: { issues: { message: string }[] }): MutationResult {
   return {
     success: false,
     error: errors.issues.map((issue) => issue.message).join(", "),
@@ -58,17 +57,13 @@ function parseError(errors: {
  * If inserting the options fails (e.g. unique violation), the voting row
  * is deleted best-effort so no orphan votings are left behind.
  */
-export async function createVoting(
-  input: CreateVotingInput,
-): Promise<MutationResult> {
+export async function createVoting(input: CreateVotingInput): Promise<MutationResult> {
   const parsed = createVotingSchema.safeParse(input);
   if (!parsed.success) {
     return parseError(parsed.error);
   }
 
-  const authResult = await requireManagementGuard(
-    "Solo la directiva puede crear votaciones.",
-  );
+  const authResult = await requireManagementGuard("Solo la directiva puede crear votaciones.");
   if (!("id" in authResult)) {
     return authResult;
   }
@@ -92,14 +87,12 @@ export async function createVoting(
 
   const votingId = data.id;
 
-  const { error: optionsError } = await supabase
-    .from("voting_options")
-    .insert(
-      parsed.data.options.map((optionText) => ({
-        voting_id: votingId,
-        option_text: optionText,
-      })),
-    );
+  const { error: optionsError } = await supabase.from("voting_options").insert(
+    parsed.data.options.map((optionText) => ({
+      voting_id: votingId,
+      option_text: optionText,
+    })),
+  );
 
   if (optionsError) {
     // Best-effort rollback so a failed create does not leave an orphan voting.
@@ -115,23 +108,34 @@ export async function createVoting(
     return { success: false, error: optionsError.message };
   }
 
+  // Sprint 20: notify every active member (best-effort — a notification
+  // failure, even an unexpected throw from the emitter, can never fail
+  // the create).
+  try {
+    await notifyUsers({
+      userIds: await getAllActiveMemberIds(),
+      type: "voting_created",
+      title: `Nueva votación: ${parsed.data.title}`,
+      message: undefined,
+      link: `/votings/${votingId}`,
+    });
+  } catch (err) {
+    console.error("createVoting: la notificación falló (no bloqueante):", err);
+  }
+
   return { success: true, id: votingId };
 }
 
 /**
  * Adds an option to an open voting. Only management can add options.
  */
-export async function addOption(
-  input: AddOptionInput,
-): Promise<MutationResult> {
+export async function addOption(input: AddOptionInput): Promise<MutationResult> {
   const parsed = addOptionSchema.safeParse(input);
   if (!parsed.success) {
     return parseError(parsed.error);
   }
 
-  const authResult = await requireManagementGuard(
-    "Solo la directiva puede añadir opciones.",
-  );
+  const authResult = await requireManagementGuard("Solo la directiva puede añadir opciones.");
   if (!("id" in authResult)) {
     return authResult;
   }
@@ -189,9 +193,7 @@ export async function addOption(
  * against double voting; the 23505 code is mapped to a friendly message
  * as a race-condition defense.
  */
-export async function castVote(
-  input: CastVoteInput,
-): Promise<MutationResult> {
+export async function castVote(input: CastVoteInput): Promise<MutationResult> {
   const parsed = castVoteSchema.safeParse(input);
   if (!parsed.success) {
     return parseError(parsed.error);
@@ -246,13 +248,11 @@ export async function castVote(
     return { success: false, error: "Ya has votado en esta votación." };
   }
 
-  const { error: insertError } = await supabase
-    .from("voting_votes")
-    .insert({
-      voting_id: parsed.data.voting_id,
-      option_id: parsed.data.option_id,
-      user_id: actor.id,
-    });
+  const { error: insertError } = await supabase.from("voting_votes").insert({
+    voting_id: parsed.data.voting_id,
+    option_id: parsed.data.option_id,
+    user_id: actor.id,
+  });
 
   if (insertError) {
     if (insertError.code === UNIQUE_VIOLATION) {
@@ -267,17 +267,13 @@ export async function castVote(
 /**
  * Closes a voting (is_open = false). Only management can close votings.
  */
-export async function closeVoting(
-  input: CloseVotingInput,
-): Promise<MutationResult> {
+export async function closeVoting(input: CloseVotingInput): Promise<MutationResult> {
   const parsed = closeVotingSchema.safeParse(input);
   if (!parsed.success) {
     return parseError(parsed.error);
   }
 
-  const authResult = await requireManagementGuard(
-    "Solo la directiva puede cerrar votaciones.",
-  );
+  const authResult = await requireManagementGuard("Solo la directiva puede cerrar votaciones.");
   if (!("id" in authResult)) {
     return authResult;
   }

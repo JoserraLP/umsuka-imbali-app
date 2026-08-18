@@ -24,6 +24,7 @@ import {
   type RemoveWaitlistEntryInput,
 } from "@/lib/events/schema";
 import { replaceAudienceUsers, resolveAudienceFields } from "@/lib/events/audience";
+import { notifyUsers, resolveEventRecipients } from "@/lib/notifications/emit";
 import type { Workgroup, AppRole } from "@/types/database.types";
 export interface MutationResult {
   success: boolean;
@@ -167,6 +168,26 @@ export async function createEvent(input: CreateEventInput): Promise<MutationResu
       // Non-fatal: event was created, shift creation failed
       console.error("Failed to auto-create shift for work_shift event:", shiftError.message);
     }
+  }
+
+  // Sprint 20: notify the event audience (best-effort — a notification
+  // failure, even an unexpected throw from the emitter, can never fail
+  // the event creation).
+  try {
+    await notifyUsers({
+      userIds: await resolveEventRecipients({
+        audience_type: audience.audience.audienceType,
+        audience_workgroup: audience.audience.audienceWorkgroup,
+        audience_member_type: audience.audience.audienceMemberType,
+        audience_user_ids: audience.audience.audienceUserIds,
+      }),
+      type: "event_created",
+      title: `Nuevo evento: ${parsed.data.title}`,
+      message: parsed.data.description ? parsed.data.description.slice(0, 200) : undefined,
+      link: `/events/${data.id}`,
+    });
+  } catch (err) {
+    console.error("createEvent: la notificación falló (no bloqueante):", err);
   }
 
   return { success: true, id: data.id };

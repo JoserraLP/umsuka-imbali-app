@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireAuthenticatedProfile } from "@/lib/auth/session";
 import { isManagementRole } from "@/lib/auth/roles";
+import { notifyUsers } from "@/lib/notifications/emit";
 import { assignMemberSchema, unassignMemberSchema } from "@/lib/shifts/schema";
 import { checkShiftConflicts, type AssignmentWithUser } from "@/lib/shifts/queries";
 import { isAttendanceOnlyEventType, SHIFTS_UNAVAILABLE_MESSAGE } from "@/lib/events/policy";
@@ -355,6 +356,24 @@ export async function assignMemberToShift(input: {
       return { success: false, error: "El miembro ya está asignado a este turno." };
     }
     return { success: false, error: insertError.message };
+  }
+
+  // Sprint 20: notify the assigned member (best-effort — a notification
+  // failure, even an unexpected throw from the emitter, can never fail
+  // the assignment). The message carries the event title when reachable.
+  const { data: event } = shift.event_id
+    ? await supabase.from("events").select("title").eq("id", shift.event_id).maybeSingle()
+    : { data: null };
+  try {
+    await notifyUsers({
+      userIds: [parsed.data.userId],
+      type: "shift_assigned",
+      title: `Turno asignado: ${shift.name}`,
+      message: event?.title ?? undefined,
+      link: shift.event_id ? `/events/${shift.event_id}` : undefined,
+    });
+  } catch (err) {
+    console.error("assignMemberToShift: la notificación falló (no bloqueante):", err);
   }
 
   return { success: true };

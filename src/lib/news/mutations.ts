@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireAuthenticatedProfile } from "@/lib/auth/session";
 import { requireManagement, AuthorizationError } from "@/lib/auth/permissions";
+import { getAllActiveMemberIds, notifyUsers } from "@/lib/notifications/emit";
 import type { AuthenticatedProfile } from "@/types/auth";
 import {
   createNewsSchema,
@@ -73,6 +74,23 @@ export async function createNews(input: CreateNewsInput): Promise<MutationResult
 
   if (error) {
     return { success: false, error: error.message };
+  }
+
+  // Sprint 20: notify every active member only when the news is actually
+  // published (drafts are silent). Best-effort — a notification failure,
+  // even an unexpected throw from the emitter, can never fail the create.
+  if (parsed.data.published) {
+    try {
+      await notifyUsers({
+        userIds: await getAllActiveMemberIds(),
+        type: "news_created",
+        title: `Nueva noticia: ${parsed.data.title}`,
+        message: undefined,
+        link: `/news/${data.id}`,
+      });
+    } catch (err) {
+      console.error("createNews: la notificación falló (no bloqueante):", err);
+    }
   }
 
   return { success: true, id: data.id };
