@@ -1,0 +1,86 @@
+{
+  "title": "Sprint 20 — Notificaciones (In-App + Realtime)",
+  "description": "Sistema de notificaciones internas (en-app) y en tiempo real sobre eventos, noticias, votaciones, turnos y cambios relevantes. Incluye: migración de BD (tabla umsuka.notifications con id, user_id, title, message, type, is_read, link, created_at; tabla umsuka.notification_preferences con user_id y tipos), capa src/lib/notifications/ (queries getMyNotifications y getUnreadCount; mutations markAsRead, markAllAsRead y createNotification), server actions para marcar como leídas, campana de notificaciones en el header con contador de no leídas y dropdown con las últimas, página /notifications con historial completo, notificaciones en tiempo real con Supabase Realtime, integración con módulos existentes (crear evento, crear noticia, asignar turno, votaciones, aprobación de usuario) y pruebas.",
+  "branch": "feature/sprint-20-notifications",
+  "status": "documented",
+  "steps": [
+    {
+      "id": 1,
+      "name": "Migración de BD",
+      "detail": "Crear umsuka.notifications (id uuid pk default gen_random_uuid(), user_id uuid not null references auth.users on delete cascade, title text not null, message text, type text not null, is_read boolean not null default false, link text, created_at timestamptz not null default now()) con índices (user_id, created_at desc, is_read) y RLS: cada usuario solo ve/actualiza/borra sus propias notificaciones. Crear umsuka.notification_preferences (user_id uuid pk references auth.users on delete cascade, types text[] not null default '{}') con RLS own-row. Trigger de creación automática de preferencias junto con el perfil (handle_new_user).",
+      "id_note": "Revisar patrones de migraciones existentes en supabase/migrations (numeración 20260101NNN) y DATABASE.md."
+    },
+    {
+      "id": 2,
+      "name": "Actualizar tipos",
+      "detail": "Actualizar src/types/database.types.ts a mano (hand-authored, nunca regenerar con CLI): añadir Notifications y NotificationPreferences (Row/Insert/Update) y el enum o tipo para notification types.",
+      "id_note": "Patrón de Sprint 19."
+    },
+    {
+      "id": 3,
+      "name": "Capa lib/notifications/",
+      "detail": "Crear src/lib/notifications/schema.ts (schemas Zod para creación de notificación y preferencias), queries.ts (getMyNotifications con paginación sencilla, getUnreadCount, getMyNotificationPreferences) y mutations.ts (markAsRead, markAllAsRead, createNotification, updateNotificationPreferences). createNotification debe ser invocable desde servicios de otros módulos o definitivamente en el backend (trigger SQL o función), decisión de diseño a documentar.",
+      "id_note": "Evaluar si la creación de notificaciones se hace en la capa TypeScript (server actions de cada módulo) o vía triggers/funciones SQL para consistencia."
+    },
+    {
+      "id": 4,
+      "name": "Server actions",
+      "detail": "Crear src/app/notifications/actions.ts con markNotificationReadAction (marcar una como leída), markAllNotificationsReadAction, y updateNotificationPreferencesAction si aplica. Autorización: solo el propio usuario (cada acción verifica que la notificación pertenezca al usuario autenticado). revalidatePath('/notifications') y paths afectados.",
+      "id_note": "Patrón de server actions en el proyecto (thin wrappers + zod)."
+    },
+    {
+      "id": 5,
+      "name": "UI: Campana en el header",
+      "detail": "Añadir componente NotificationBell en el layout principal (src/components/layout o equivalente): icono de campana, contador de no leídas (badge), dropdown con las últimas 5 notificaciones (título, mensaje, tiempo relativo, link), acción de marcar todo como leído y enlace a /notifications. Al hacer clic en una notificación, marcarla como leída y navegar al link. Estado reactivo con TanStack Query.",
+      "id_note": "Revisar el header actual (dónde está la navegación principal) para integrar la campana coherentemente."
+    },
+    {
+      "id": 6,
+      "name": "UI: Página /notifications",
+      "detail": "Crear src/app/notifications/page.tsx con el historial completo: lista de todas las notificaciones (leídas y no leídas), filtro o agrupación visual por no leídas, botón 'marcar todas como leídas', enlaces funcionales. Estados vacío y de carga.",
+      "id_note": "Diseño coherente con shadcn/ui y el resto de páginas."
+    },
+    {
+      "id": 7,
+      "name": "Realtime",
+      "detail": "Suscripción Supabase Realtime (channel 'notifications' o por user_id) para actualizar el contador y la lista en vivo. Requiere habilitar publication en la migración (alter publication supabase_realtime add table umsuka.notifications) y un hook (useNotificationsRealtime o similar) en el lado cliente. Fallback sin errores si no hay conexión.",
+      "id_note": "Los grants UPDATE relevantes para replicación: grantar a supabase_realtime_admin o verificar patrón usado; documentar."
+    },
+    {
+      "id": 8,
+      "name": "Integración con otros módulos",
+      "detail": "emitir notificaciones: al crear evento → a todos los miembros (o según preferencias); al crear noticia → a todos; al asignar turno → al miembro asignado; al crear votación → a todos; al aprobar usuario (sprint 6) → al usuario aprobado. Evaluar eventos asistencia/ausencias solo si aplica. Respetar notification_preferences (filtrado por tipo). Implementar un servicio central (p. ej. src/lib/notifications/emit.ts o función SQL notify_users(user_ids, type, title, message, link)) y llamarlo desde los módulos implicados.",
+      "id_note": "Los módulos existentes: events (Sprint 3/17/18), news (Sprint 10), votings (Sprint 15), shifts (Sprint 8/12), registration approval (Sprint 6)."
+    },
+    {
+      "id": 9,
+      "name": "Pruebas",
+      "detail": "Tests unitarios: schemas de notification/preferences, queries (mocking cliente supabase), mutations markAsRead/markAllAsRead/createNotification, integración del emisor con otros módulos (mock). Suite completa pasando (npx vitest run), typecheck (tsc --noEmit) y lint (eslint . --max-warnings=0) limpios.",
+      "id_note": "Patrón de tests de sprints anteriores en tests/unit/lib/."
+    }
+  ],
+  "acceptance_criteria": [
+    "Las notificaciones se crean automáticamente al asignar turnos, crear eventos, noticias y votaciones, y al aprobar usuarios.",
+    "El usuario ve el contador de no leídas en el header (campana) y un dropdown con las últimas notificaciones.",
+    "Las notificaciones se marcan como leídas al hacer clic (individual) y existe 'marcar todas como leídas'.",
+    "La página /notifications muestra el historial completo del usuario.",
+    "Soporte de notificaciones en tiempo real vía Supabase Realtime (el contador y la lista se actualizan en vivo).",
+    "Un usuario solo ve y modifica sus propias notificaciones (RLS y autorización en server actions intactas).",
+    "Las preferencias de notificación permiten al usuario controlar qué tipos recibe."
+  ],
+  "definition_of_done": [
+    "Migración SQL numerada siguiendo el patrón del proyecto con umsuka.notifications y umsuka.notification_preferences, índices, RLS y publicación Realtime.",
+    "src/types/database.types.ts actualizado (hand-authored) consistente con la migración.",
+    "Capa lib/notifications/ completa: schema, queries (getMyNotifications, getUnreadCount) y mutations (markAsRead, markAllAsRead, createNotification) + emisor central.",
+    "Server actions de notificaciones con autorización de solo-propio-usuario.",
+    "Campana de notificaciones en el header con contador y dropdown.",
+    "Página /notifications con historial completo y acciones de lectura.",
+    "Integración con al menos eventos, noticias, turnos, votaciones y aprobación de usuarios respetando preferencias.",
+    "Realtime funcional documentado y con prueba/smoke test.",
+    "Tests unitarios nuevos pasando + suite completa (npx vitest run).",
+    "Typecheck (tsc --noEmit) y lint (eslint . --max-warnings=0) limpios.",
+    "Security scan sin issues HIGH.",
+    "ADR documentado en docs/adr-sprint-20-notifications.md."
+  ],
+  "dependencies": ["Sprint 3/17/18 (eventos)", "Sprint 10 (noticias)", "Sprint 8/12 (turnos)", "Sprint 15 (votaciones)", "Sprint 6 (aprobación de usuarios)", "Sprint 19 (perfiles y componentes)", "Sprint 1 (UI/UX en header)"]
+}
