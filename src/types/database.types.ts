@@ -26,6 +26,12 @@ export type NotificationType =
   | "voting_created"
   | "shift_assigned"
   | "profile_approved";
+export type Permission =
+  | "users.read"
+  | "users.manage"
+  | "settings.read"
+  | "settings.write"
+  | "audit.read";
 
 export interface Database {
   umsuka: {
@@ -671,6 +677,72 @@ export interface Database {
         };
         Relationships: [];
       };
+      settings: {
+        Row: {
+          key: string;
+          value: string;
+          updated_by: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          key: string;
+          value: string;
+          updated_by?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          key?: string;
+          value?: string;
+          updated_by?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      audit_logs: {
+        Row: {
+          id: string;
+          user_id: string | null;
+          action: string;
+          entity_type: string;
+          entity_id: string | null;
+          details: Json | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string | null;
+          action: string;
+          entity_type: string;
+          entity_id?: string | null;
+          details?: Json | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string | null;
+          action?: string;
+          entity_type?: string;
+          entity_id?: string | null;
+          details?: Json | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      role_permissions: {
+        Row: {
+          role: string;
+          permission: string;
+        };
+        Insert: {
+          role: string;
+          permission: string;
+        };
+        Update: {
+          role?: string;
+          permission?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -731,6 +803,13 @@ export interface Database {
           votes: number;
           total_votes: number;
           percentage: number;
+        }>;
+      };
+      get_user_emails: {
+        Args: { p_user_ids: string[] };
+        Returns: Array<{
+          id: string;
+          email: string | null;
         }>;
       };
     };
