@@ -5,11 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AppShell } from "@/components/layout/app-shell";
 import { getCurrentProfile } from "@/lib/auth/session";
-import { isAdminRole } from "@/lib/auth/roles";
+import { hasPermission } from "@/lib/admin/permissions";
 import { getProfileById } from "@/lib/profiles/queries";
 import { MemberEditForm } from "@/app/admin/users/[id]/member-edit-form";
 import { UserRoleSelect } from "@/app/admin/users/user-role-select";
 import { MemberActiveToggle } from "@/app/admin/users/member-active-toggle";
+import { ScrollText } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Editar miembro",
@@ -27,7 +28,7 @@ export default async function AdminUserDetailPage({ params }: AdminUserDetailPag
     redirect("/auth/login");
   }
 
-  if (!isAdminRole(actor.role)) {
+  if (!hasPermission(actor.role, "users.manage")) {
     redirect("/admin/users");
   }
 
@@ -51,6 +52,14 @@ export default async function AdminUserDetailPage({ params }: AdminUserDetailPag
           </p>
           <Link href="/admin/users" className="mt-2 inline-block text-sm text-muted-foreground hover:text-foreground">
             ← Volver al directorio
+          </Link>{" "}
+          <Link
+            href={`/admin/audit?user=${member.id}`}
+            className="mt-2 inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
+            title="Ver logs de auditoría de este miembro"
+          >
+            <ScrollText className="mr-1 h-4 w-4" />
+            Ver logs
           </Link>
         </div>
 

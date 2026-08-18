@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuthenticatedProfile } from "@/lib/auth/session";
-import { updateMemberRole, updateMemberProfile, setMemberActive, updateMemberComponentType, updateMemberWorkgroup } from "@/lib/profiles/mutations";
+import { updateMemberProfile, updateMemberComponentType, updateMemberWorkgroup } from "@/lib/profiles/mutations";
+import { updateUserRole, setUserActive, logAuditAction } from "@/lib/admin/mutations";
 import type {
   UpdateMemberRoleInput,
   UpdateMemberProfileInput,
@@ -11,7 +12,8 @@ import type {
   SetMemberComponentTypeInput,
   SetMemberWorkgroupInput,
 } from "@/lib/profiles/schema";
-import type { MutationResult } from "@/lib/profiles/mutations";
+import type { MutationResult } from "@/lib/admin/mutations";
+import type { AdminAuditAction } from "@/lib/admin/schema";
 import { createEmaillessAccount } from "@/lib/auth/admin-create";
 import { generateResetToken, adminUnlockAccount } from "@/lib/auth/password-service";
 import type {
@@ -23,10 +25,40 @@ import type {
   GenerateResetTokenResult,
 } from "@/lib/auth/password-schema";
 
+/**
+ * Friendliest-effort audit helper: resolves the actor and writes ONE
+ * audit row. Never throws — an audit failure (or a missing session right
+ * after a successful mutation) must not turn a successful mutation into
+ * a failed one. Mirrors the best-effort contract of logAuditAction.
+ */
+async function auditAsActor(input: {
+  action: AdminAuditAction;
+  entityType: string;
+  entityId?: string | null;
+  details?: Record<string, unknown> | null;
+}): Promise<void> {
+  try {
+    const actor = await requireAuthenticatedProfile();
+    await logAuditAction({
+      actorId: actor.id,
+      action: input.action,
+      entityType: input.entityType,
+      entityId: input.entityId ?? null,
+      details: input.details ?? null,
+    });
+  } catch (error) {
+    console.error("auditAsActor: no se pudo registrar la auditoría:", error);
+  }
+}
+
+/**
+ * Delegates to the admin wrapper (audit already inside) — no duplicate
+ * audit rows here.
+ */
 export async function updateMemberRoleAction(
   input: UpdateMemberRoleInput,
 ): Promise<MutationResult> {
-  const result = await updateMemberRole(input);
+  const result = await updateUserRole(input);
 
   if (result.success) {
     revalidatePath("/admin/users");
@@ -41,6 +73,11 @@ export async function updateMemberProfileAction(
   const result = await updateMemberProfile(input);
 
   if (result.success) {
+    await auditAsActor({
+      action: "user.profile_updated",
+      entityType: "profile",
+      entityId: input.userId,
+    });
     revalidatePath("/admin/users");
     revalidatePath(`/admin/users/${input.userId}`);
   }
@@ -48,10 +85,14 @@ export async function updateMemberProfileAction(
   return result;
 }
 
+/**
+ * Delegates to the admin wrapper (audit already inside) — no duplicate
+ * audit rows here.
+ */
 export async function setMemberActiveAction(
   input: SetMemberActiveInput,
 ): Promise<MutationResult> {
-  const result = await setMemberActive(input);
+  const result = await setUserActive(input);
 
   if (result.success) {
     revalidatePath("/admin/users");
@@ -67,6 +108,11 @@ export async function updateMemberComponentTypeAction(
   const result = await updateMemberComponentType(input);
 
   if (result.success) {
+    await auditAsActor({
+      action: "user.component_type_changed",
+      entityType: "profile",
+      entityId: input.userId,
+    });
     revalidatePath("/admin/users");
     revalidatePath(`/admin/users/${input.userId}`);
   }
@@ -80,6 +126,11 @@ export async function updateMemberWorkgroupAction(
   const result = await updateMemberWorkgroup(input);
 
   if (result.success) {
+    await auditAsActor({
+      action: "user.workgroup_changed",
+      entityType: "profile",
+      entityId: input.userId,
+    });
     revalidatePath("/admin/users");
     revalidatePath(`/admin/users/${input.userId}`);
   }
@@ -93,6 +144,11 @@ export async function createEmaillessAccountAction(
   const result = await createEmaillessAccount(input);
 
   if (result.success) {
+    await auditAsActor({
+      action: "user.emailless_created",
+      entityType: "auth.user",
+      details: { username: input.username },
+    });
     revalidatePath("/admin/users");
     revalidatePath("/admin/registrations");
   }
@@ -103,7 +159,19 @@ export async function createEmaillessAccountAction(
 export async function generateResetTokenAction(
   input: GenerateResetTokenInput,
 ): Promise<GenerateResetTokenResult> {
-  return generateResetToken(input);
+  const result = await generateResetToken(input);
+
+  if (result.success) {
+    await auditAsActor({
+      action: "user.password_reset_generated",
+      entityType: "profile",
+      entityId: input.profileId,
+    });
+    revalidatePath("/admin/users");
+    revalidatePath("/admin/registrations");
+  }
+
+  return result;
 }
 
 export async function unlockAccountAction(
@@ -112,7 +180,11 @@ export async function unlockAccountAction(
   const result = await adminUnlockAccount(profileId);
 
   if (result.success) {
-    const { revalidatePath } = await import("next/cache");
+    await auditAsActor({
+      action: "user.account_unlocked",
+      entityType: "profile",
+      entityId: profileId,
+    });
     revalidatePath("/admin/users");
   }
 
@@ -151,6 +223,8 @@ function isComponentLeadUniqueViolation(error: {
  * "active" and is_active true). Clearing a designation is always
  * allowed, so an admin can un-assign a suspended lead before appointing
  * the replacement.
+ *
+ * Audits `user.component_lead_changed` once on success.
  */
 export async function setComponentLeadAction(
   userId: string,
@@ -195,6 +269,14 @@ export async function setComponentLeadAction(
       }
       return { success: false, error: error.message };
     }
+
+    await logAuditAction({
+      actorId: actor.id,
+      action: "user.component_lead_changed",
+      entityType: "profile",
+      entityId: userId,
+      details: { component },
+    });
 
     revalidatePath("/admin/users");
     return { success: true };

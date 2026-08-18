@@ -14,8 +14,8 @@ import {
 } from "@/components/ui/table";
 import { AppShell } from "@/components/layout/app-shell";
 import { getCurrentProfile } from "@/lib/auth/session";
-import { isManagementRole, isAdminRole } from "@/lib/auth/roles";
-import { listProfiles } from "@/lib/profiles/queries";
+import { hasPermission } from "@/lib/admin/permissions";
+import { listUsersOverview } from "@/lib/admin/queries";
 import { UserRoleSelect } from "@/app/admin/users/user-role-select";
 import { MemberComponentTypeSelect } from "@/app/admin/users/member-component-type-select";
 import { MemberWorkgroupSelect } from "@/app/admin/users/member-workgroup-select";
@@ -24,10 +24,21 @@ import { MemberActiveToggle } from "@/app/admin/users/member-active-toggle";
 import { EmaillessAccountForm } from "@/app/admin/users/emailless-account-form";
 import { ResetPasswordButton } from "@/app/admin/users/reset-password-button";
 import { UnlockAccountButton } from "@/app/admin/users/unlock-account-button";
+import { UserStatusActions } from "@/app/admin/users/user-status-actions";
+import { ScrollText } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Administración de miembros",
 };
+
+/** Fecha de registro legible (ej. "18 ago 2026"). */
+function formatJoinDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("es-ES", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
 
 export default async function AdminUsersPage() {
   const profile = await getCurrentProfile();
@@ -36,12 +47,12 @@ export default async function AdminUsersPage() {
     redirect("/auth/login");
   }
 
-  if (!isManagementRole(profile.role)) {
+  if (!hasPermission(profile.role, "users.read")) {
     redirect("/dashboard");
   }
 
-  const members = await listProfiles();
-  const canManage = isAdminRole(profile.role);
+  const members = await listUsersOverview();
+  const canManage = hasPermission(profile.role, "users.manage");
 
   return (
     <AppShell profile={profile}>
@@ -58,7 +69,7 @@ export default async function AdminUsersPage() {
             <CardTitle>Listado</CardTitle>
             <CardDescription>
               {canManage
-                ? "Puedes editar, cambiar el rol y dar de alta/baja a cualquier miembro salvo a ti mismo."
+                ? "Puedes editar, cambiar el rol, aprobar/suspender y dar de alta/baja a cualquier miembro salvo a ti mismo."
                 : "Solo los administradores pueden modificar miembros. Tienes acceso de solo lectura."}
             </CardDescription>
           </CardHeader>
@@ -67,11 +78,13 @@ export default async function AdminUsersPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nombre</TableHead>
+                  <TableHead>Email</TableHead>
                   <TableHead>Componente</TableHead>
                   <TableHead>Grupo de trabajo</TableHead>
                   <TableHead>Rol</TableHead>
                   <TableHead>Responsable</TableHead>
-                  <TableHead>Registro</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead>Fecha de registro</TableHead>
                   <TableHead>Alta/Baja</TableHead>
                   {canManage && <TableHead>Acciones</TableHead>}
                 </TableRow>
@@ -84,6 +97,14 @@ export default async function AdminUsersPage() {
                     <TableRow key={member.id}>
                       <TableCell className="font-medium">
                         {member.firstName} {member.lastName}
+                      </TableCell>
+                      <TableCell>
+                        {/* Emails enmascarados vía get_user_emails; las
+                            cuentas sin email (aliases @umsuka.internal)
+                            llegan null y se muestran como "—". */}
+                        <span className="text-sm text-muted-foreground">
+                          {member.email ?? "—"}
+                        </span>
                       </TableCell>
                       <TableCell>
                         {canManage ? (
@@ -160,6 +181,11 @@ export default async function AdminUsersPage() {
                         </Badge>
                       </TableCell>
                       <TableCell>
+                        <span className="whitespace-nowrap text-sm text-muted-foreground">
+                          {formatJoinDate(member.createdAt)}
+                        </span>
+                      </TableCell>
+                      <TableCell>
                         <Badge variant={member.isActive ? "default" : "destructive"}>
                           {member.isActive ? "Alta" : "Baja"}
                         </Badge>
@@ -173,6 +199,11 @@ export default async function AdminUsersPage() {
                             <MemberActiveToggle
                               userId={member.id}
                               isActive={member.isActive}
+                              disableSelf={isSelf}
+                            />
+                            <UserStatusActions
+                              userId={member.id}
+                              status={member.status}
                               disableSelf={isSelf}
                             />
                             {member.authMethod === "email_alias" && !isSelf && (
@@ -191,6 +222,12 @@ export default async function AdminUsersPage() {
                                 }
                               />
                             )}
+                            <Button asChild variant="ghost" size="sm" title="Ver logs de auditoría">
+                              <Link href={`/admin/audit?user=${member.id}`}>
+                                <ScrollText className="mr-1 h-4 w-4" />
+                                Ver logs
+                              </Link>
+                            </Button>
                           </div>
                         </TableCell>
                       )}

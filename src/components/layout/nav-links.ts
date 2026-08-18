@@ -11,10 +11,13 @@ import {
   BarChart3,
   Vote,
   Bell,
+  Settings,
+  ScrollText,
   type LucideIcon,
 } from "lucide-react";
 import type { AppRole, ComponentType, Workgroup } from "@/types/database.types";
 import { isManagementRole, isAdminRole } from "@/lib/auth/roles";
+import { hasPermission } from "@/lib/admin/permissions";
 
 /**
  * Context evaluated by NavLink.showFor. Mirrors the authorization-relevant
@@ -73,6 +76,18 @@ export const NAV_LINKS: NavLink[] = [
     label: "Aprobaciones",
     icon: UserCheck,
     showFor: (ctx) => isAdminRole(ctx.role),
+  },
+  {
+    href: "/admin/settings",
+    label: "Configuración",
+    icon: Settings,
+    showFor: (ctx) => hasPermission(ctx.role, "settings.read"),
+  },
+  {
+    href: "/admin/audit",
+    label: "Auditoría",
+    icon: ScrollText,
+    showFor: (ctx) => hasPermission(ctx.role, "audit.read"),
   },
 ];
 

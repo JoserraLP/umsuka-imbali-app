@@ -1,0 +1,85 @@
+{
+  "title": "Sprint 21 — Administración: Panel de Control",
+  "description": "Panel de administración completo para gestión de usuarios, configuración global, permisos y auditoría. Incluye: migración de BD (tabla umsuka.settings con key/value/updated_by/updated_at y tabla umsuka.audit_logs con id/user_id/action/entity_type/entity_id/details/created_at, ambas con RLS restrictivo a super_admin y admin), capa src/lib/admin/ (queries y mutations para gestión de usuarios, settings y logs), server actions (cambiar roles, actualizar settings, consultar logs), refactor de /admin/users con tabla completa (nombre, email, rol, status, componente, fecha de registro) y acciones (editar rol, aprobar/suspender, ver logs), página /admin/settings para configuración global (nombre de la app, URL de Instagram, etc.), página /admin/audit con logs filtrables por usuario, acción y fecha, sistema de permisos granular (tabla umsuka.role_permissions) y pruebas.",
+  "branch": "feature/sprint-21-admin-panel",
+  "status": "documented",
+  "steps": [
+    {
+      "id": 1,
+      "name": "Migración de BD",
+      "detail": "Crear umsuka.settings (key text pk, value jsonb o text, updated_by uuid references auth.users, updated_at timestamptz not null default now()) y umsuka.audit_logs (id uuid pk default gen_random_uuid(), user_id uuid references auth.users, action text not null, entity_type text not null, entity_id text, details jsonb, created_at timestamptz not null default now()) con índices (user_id, created_at desc, entity_type/entity_id) y RLS: solo super_admin y admin pueden leer/escribir settings y audit_logs (SELECT/INSERT para admin; todo para super_admin). Crear umsuka.role_permissions (role text, permission text, primary key (role, permission)) con datos semilla de los permisos por rol (basados en APP_ROLES y los guards existentes en src/lib/auth/roles.ts).",
+      "id_note": "Revisar patrones de migraciones existentes en supabase/migrations (numeración 20260101NNN), la migración 0052 (RLS own-row + grants service_role) y DATABASE.md. Los ids de usuario/miembro en el proyecto son UUIDs (auth.users)."
+    },
+    {
+      "id": 2,
+      "name": "Actualizar tipos",
+      "detail": "Actualizar src/types/database.types.ts a mano (hand-authored, nunca regenerar con CLI): añadir Settings, AuditLogs y RolePermissions (Row/Insert/Update) y los tipos de Permission derivados.",
+      "id_note": "Patrón de Sprint 19/20."
+    },
+    {
+      "id": 3,
+      "name": "Capa lib/admin/",
+      "detail": "Crear src/lib/admin/schema.ts (schemas Zod para updateSetting, audit log creation y query filters), queries.ts (listSettings, getSetting, listAuditLogs con filtros por usuario/acción/fecha y paginación sencilla, listUsersOverview con email/role/status/component/created_at si no cubierto por listProfiles) y mutations.ts (updateSetting, logAuditAction, updateUserRole, setUserActive, approveUser, suspendUser). logAuditAction debe ser invocable desde servicios de otros módulos (patrón del emisor de notificaciones de Sprint 20).",
+      "id_note": "Evaluar si el registro de auditoría se hace en la capa TypeScript (mutations centrales) o vía triggers SQL para consistencia; documentar la decisión."
+    },
+    {
+      "id": 4,
+      "name": "Server actions",
+      "detail": "Crear src/app/admin/actions.ts (o en cada carpeta) con updateSettingAction, updateUserRoleActionAdmin, setUserActiveActionAdmin, approveUserActionAdmin, suspendUserActionAdmin y listAuditLogsAction. Autorización: solo super_admin (y admin según permiso granular) puede ejecutarlas; cada acción registra en audit_logs. revalidatePath de paths afectados (/admin/users, /admin/settings, /admin/audit).",
+      "id_note": "Patrón de server actions en el proyecto (thin wrappers + zod + requireAuthenticatedProfile)."
+    },
+    {
+      "id": 5,
+      "name": "UI: Panel de administración (/admin/users)",
+      "detail": "Refactorizar src/app/admin/users/page.tsx: tabla completa con nombre, email, rol, status (activo/pendiente/suspendido), componente, grupo de trabajo y fecha de registro. Acciones: editar rol, aprobar/suspender, ver logs del usuario (enlace o drawer). Mantener componentes existentes (UserRoleSelect, MemberActiveToggle, etc.) y añadir columna email y fecha de registro si no existen.",
+      "id_note": "listProfiles ya devuelve la mayoría de campos; verificar si incluye email y created_at (perfiles enriquecidos de Sprint 19)."
+    },
+    {
+      "id": 6,
+      "name": "UI: Configuración global (/admin/settings)",
+      "detail": "Crear src/app/admin/settings/page.tsx con formulario para settings de la app (app_name/nombre de la asociación, instagram_url, etc. según keys definidas en la migración o defaults), carga desde listSettings, guardado con updateSettingAction, estados de carga/error y éxito.",
+      "id_note": "Diseño coherente con shadcn/ui y el resto de páginas admin."
+    },
+    {
+      "id": 7,
+      "name": "UI: Auditoría (/admin/audit)",
+      "detail": "Crear src/app/admin/audit/page.tsx con la lista de audit_logs: tabla con fecha, usuario (join a profiles para nombre), acción, entidad y detalles. Filtros: por usuario (select), por acción y por rango de fechas. Estados vacío y de carga.",
+      "id_note": "Revisar cómo se hacen los joins en queries existentes (supabase.from('profiles') en lib/profiles/queries.ts)."
+    },
+    {
+      "id": 8,
+      "name": "Permisos granulares (role_permissions)",
+      "detail": "Implementar src/lib/admin/permissions.ts (o extender src/lib/auth/roles.ts) con helper hasPermission(role, permission) que consulte umsuka.role_permissions o use un mapa en memoria seed sincronizado con la tabla; integrarlo en los guards de /admin/users, /admin/settings y /admin/audit manteniendo compatibilidad con isAdminRole/isManagementRole. Documentar la estrategia (tabla vs código).",
+      "id_note": "La migración de roles fijos a permisos por rol debe ser incremental: no romper los guards existentes ni las RLS actuales."
+    },
+    {
+      "id": 9,
+      "name": "Pruebas",
+      "detail": "Tests unitarios: schemas de settings/audit/role_permissions, queries (mocking cliente supabase), mutations updateSetting/logAuditAction/updateUserRole con verificación de rol, hasPermission con mapa de permisos, integración de logAuditAction con otras mutaciones (mock). Suite completa pasando (npx vitest run), typecheck (tsc --noEmit) y lint (eslint . --max-warnings=0) limpios.",
+      "id_note": "Patrón de tests de sprints anteriores en tests/unit/lib/ (notifications-*.test.ts como referencia)."
+    }
+  ],
+  "acceptance_criteria": [
+    "Los super admin pueden ver y gestionar todos los usuarios (cambiar roles, activar/suspender) desde /admin/users con tabla completa (nombre, email, rol, status, componente, fecha de registro).",
+    "La configuración global (nombre de la app, URL de Instagram, etc.) es modificable desde /admin/settings y persistida en umsuka.settings.",
+    "Cada acción administrativa (cambio de rol, alta/baja, aprobación/suspensión, cambio de settings) queda registrada en umsuka.audit_logs.",
+    "Los logs de auditoría son consultables en /admin/audit con filtros por usuario, acción y fecha.",
+    "El sistema de permisos granular (umsuka.role_permissions) determina qué roles pueden ejecutar cada acción administrativa sin romper los guards existentes.",
+    "Solo super_admin/admin acceden al panel: RLS, guards de página y server actions bloquean al resto."
+  ],
+  "definition_of_done": [
+    "Migración SQL numerada siguiendo el patrón del proyecto con umsuka.settings, umsuka.audit_logs y umsuka.role_permissions, índices, RLS y datos semilla de permisos.",
+    "src/types/database.types.ts actualizado (hand-authored) consistente con la migración.",
+    "Capa lib/admin/ completa: schema, queries (listSettings, getSetting, listAuditLogs con filtros) y mutations (updateSetting, logAuditAction, acciones de usuarios) + helper de permisos.",
+    "Server actions administrativas con autorización y registro automático de auditoría.",
+    "/admin/users refactorizado con tabla completa y acciones (editar rol, aprobar/suspender, ver logs).",
+    "Página /admin/settings funcional para configuración global.",
+    "Página /admin/audit con logs filtrables por usuario, acción y fecha.",
+    "Permisos granulares integrados en los guards de los tres módulos admin sin romper isAdminRole/isManagementRole.",
+    "Tests unitarios nuevos pasando + suite completa (npx vitest run).",
+    "Typecheck (tsc --noEmit) y lint (eslint . --max-warnings=0) limpios.",
+    "Security scan sin issues HIGH.",
+    "ADR documentado en docs/adr-sprint-21-admin-panel.md."
+  ],
+  "dependencies": ["Sprint 6 (aprobación de usuarios)", "Sprint 19 (perfiles completos)", "Sprint 20 (patrón capa lib + emit central para integración de auditoría)"]
+}
