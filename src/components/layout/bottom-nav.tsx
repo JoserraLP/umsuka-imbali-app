@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { NavNotificationBadge } from "@/components/layout/nav-notification-badge";
 import { getVisibleLinks, isLinkActive } from "@/components/layout/nav-links";
 import type { AppRole, ComponentType, Workgroup } from "@/types/database.types";
 
@@ -10,6 +11,7 @@ interface BottomNavProps {
   isWorkgroupLead: boolean;
   workgroup: Workgroup;
   componentLeadFor: ComponentType | null;
+  userId: string;
 }
 
 export function BottomNav({
@@ -17,6 +19,7 @@ export function BottomNav({
   isWorkgroupLead,
   workgroup,
   componentLeadFor,
+  userId,
 }: BottomNavProps) {
   const pathname = usePathname();
   const links = getVisibleLinks({ role: currentRole, isWorkgroupLead, workgroup, componentLeadFor });
@@ -27,18 +30,27 @@ export function BottomNav({
         {links.map((link) => {
           const isActive = isLinkActive(link.href, pathname, links);
           const Icon = link.icon;
+          const icon = (
+            <Icon
+              className={`h-5 w-5 ${isActive ? "text-primary" : "text-muted-foreground"}`}
+            />
+          );
 
           return (
             <Link
               key={link.href}
               href={link.href}
-              className={`flex flex-col items-center gap-0.5 px-3 py-2 text-[11px] transition-colors ${
+              className={`relative flex flex-col items-center gap-0.5 px-3 py-2 text-[11px] transition-colors ${
                 isActive
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <Icon className="h-5 w-5" />
+              {link.href === "/notifications" ? (
+                <NavNotificationBadge userId={userId}>{icon}</NavNotificationBadge>
+              ) : (
+                icon
+              )}
               <span>{link.label}</span>
             </Link>
           );
