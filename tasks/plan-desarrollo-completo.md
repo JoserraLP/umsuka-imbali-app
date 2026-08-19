@@ -767,7 +767,7 @@ Panel de administración completo para gestión de usuarios, configuración glob
 **Rama:** `feature/sprint-22-account-deletion`
 
 ### Estado
-🔄 **En curso** (2026-08-18). Task: `tasks/sprint-22-account-deletion.json`.
+✅ **Ejecutado** (2026-08-19). PR #24 abierta en `feature/sprint-22-account-deletion`, pendiente de merge. Ver `tasks/sprint-22-account-deletion.json` y `docs/adr-sprint-22-account-deletion.md`.
 
 ### Descripción
 Permitir que solo el super admin pueda eliminar cuentas de forma permanente, incluyendo el usuario de auth, su perfil y todos sus datos relacionados. Requiere confirmación explícita y registro de auditoría.
@@ -913,7 +913,7 @@ Auditorías finales de seguridad, rendimiento, accesibilidad y validación gener
 | Sprint 19 — Profiles & Components | `feature/sprint-19-profiles-components` | ✅ Ejecutado |
 | Sprint 20 — Notifications | `feature/sprint-20-notifications` | ✅ Ejecutado |
 | Sprint 21 — Admin Panel | `feature/sprint-21-admin-panel` | ✅ Ejecutado |
-| **Sprint 22 — Account Deletion** | `feature/sprint-22-account-deletion` | **En curso** (Sprint 21, Sprint 6) |
+| **Sprint 22 — Account Deletion** | `feature/sprint-22-account-deletion` | ✅ Ejecutado (PR #24 abierta) |
 | Sprint 23 — PWA | `feature/sprint-23-pwa` | Sprint 1 (pendiente) |
 | Sprint 24 — CI/CD | `feature/sprint-24-cicd` | — (pendiente) |
 | Sprint 25 — Hardening | `feature/sprint-25-hardening` | Todos los anteriores (pendiente) |

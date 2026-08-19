@@ -2,7 +2,8 @@
   "title": "Sprint 22 — Eliminación Permanente de Cuentas (Solo Super Admin)",
   "description": "Permitir que solo el super admin pueda eliminar cuentas de forma permanente, incluyendo el usuario de auth, su perfil y todos sus datos relacionados. Requiere confirmación explícita (doble paso) y registro de auditoría. Incluye: auditoría de datos asociados (tablas con FK al usuario y estrategia de borrado por cada una: CASCADE, SET NULL o anonimización), migración de BD con columna deleted_at en umsuka.profiles (soft delete como salvaguarda) y revisión de RLS para excluir perfiles borrados, servicio src/lib/auth/delete-account.ts con deleteAccountPermanently(userId) (verificar rol super_admin, borrado en cascada de datos asociados, supabase.auth.admin.deleteUser(), registro en audit_logs), server action deleteAccountPermanentlyAction (solo super_admin, confirmación de doble paso), UI en /admin/users con botón 'Eliminar permanentemente' + diálogo de advertencia pidiendo confirmación escrita, feedback de éxito/error y actualización de la lista, y pruebas (unitarias del servicio + integración: solo super_admin puede eliminar, datos asociados limpiados, no se puede eliminar el propio super admin).",
   "branch": "feature/sprint-22-account-deletion",
-  "status": "documented",
+  "status": "published",
+  "pull_request": "https://github.com/JoserraLP/umsuka-imbali-app/pull/24",
   "steps": [
     {
       "id": 1,
