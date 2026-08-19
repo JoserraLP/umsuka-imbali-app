@@ -22,6 +22,9 @@
 
 **Rama:** `feature/sprint-01-ui-redesign`
 
+### Estado
+✅ **Ejecutado.** Ver `tasks/sprint-01-ui-redesign.json` y `docs/adr-sprint-01-ui-redesign.md`.
+
 ### Descripción
 Rediseñar la interfaz gráfica actual para adoptar un estilo visual moderno inspirado en X/Twitter y redes sociales actuales. Incluye sistema de temas, tipografía, espaciado, componentes visuales y experiencia de navegación mobile-first.
 
@@ -50,6 +53,9 @@ Rediseñar la interfaz gráfica actual para adoptar un estilo visual moderno ins
 ## Sprint 2 — Roles de Responsables de Grupos de Trabajo
 
 **Rama:** `feature/sprint-02-workgroup-roles`
+
+### Estado
+✅ **Ejecutado.** Ver `tasks/sprint-02-workgroup-roles.json` y `docs/adr-sprint-02-workgroup-roles.md`.
 
 ### Descripción
 Añadir roles específicos de responsable para grupos de trabajo (telas, barra, estandarte, limpieza). Solo estos responsables podrán registrar si una persona ha participado o no en su turno de trabajo. Además, los responsables pueden crear eventos de tipo "asistencia a turno de trabajo" donde se marca quién cumplió su turno.
@@ -118,6 +124,9 @@ Los responsables de barra (rol `workgroup_lead` con `workgroup = 'barra'`) podr�
 
 **Rama:** `feature/sprint-04-home-feed`
 
+### Estado
+✅ **Ejecutado.** Ver `tasks/sprint-04-home-feed.json` y `docs/adr-sprint-04-home-feed.md`.
+
 ### Descripción
 Rediseñar la página principal (`/dashboard`) para mostrar: feed de los últimos posts de Instagram de la cuenta oficial de Umsuka, notificaciones del usuario y eventos próximos del calendario.
 
@@ -171,6 +180,9 @@ Gestión completa de asistencia a eventos: marcar asistencia, historial, solicit
 
 **Rama:** `feature/sprint-06-registration-approval`
 
+### Estado
+✅ **Ejecutado.** Ver `tasks/sprint-06-registration-approval.json` y `docs/adr-sprint-06-registration-approval.md`.
+
 ### Descripción
 Implementar un flujo donde cada nuevo usuario que se registra (vía Google OAuth) queda en estado "pendiente de aprobación" hasta que un super admin lo active explícitamente.
 
@@ -201,6 +213,9 @@ Implementar un flujo donde cada nuevo usuario que se registra (vía Google OAuth
 ## Sprint 7 — Creación de Cuentas sin Correo Electrónico (Super Admin)
 
 **Rama:** `feature/sprint-07-emailless-accounts`
+
+### Estado
+✅ **Ejecutado.** Ver `tasks/sprint-07-emailless-accounts.json` y `docs/adr-sprint-07-emailless-accounts.md`.
 
 ### Descripción
 El super admin puede dar de alta a nuevos miembros en la aplicación sin necesidad de que estos tengan una cuenta de correo electrónico (por ejemplo, menores de edad). El sistema genera internamente un identificador único (email alias) que Supabase Auth utiliza como email, y el usuario accede con un nombre de usuario y contraseña proporcionados por el super admin.
@@ -242,6 +257,9 @@ El super admin puede dar de alta a nuevos miembros en la aplicación sin necesid
 ## Sprint 8 — Turnos: Creación, Asignación y Control de Conflictos
 
 **Rama:** `feature/sprint-08-shifts`
+
+### Estado
+✅ **Ejecutado.** Ver `tasks/sprint-08-shifts.json` y `docs/adr-sprint-08-shifts.md`.
 
 ### Descripción
 Crear y administrar turnos asociados a eventos, incluyendo asignación de miembros a turnos y control de conflictos (horarios solapados).
@@ -427,6 +445,9 @@ Permitir asociar personas concretas a cada turno de trabajo. Ya no se asume que 
 
 **Rama:** `feature/sprint-13-workgroup-stats`
 
+### Estado
+✅ **Ejecutado.** Ver `tasks/sprint-13-workgroup-stats.json` y `docs/adr-sprint-13-workgroup-stats.md`.
+
 ### Descripción
 Nueva sección para los responsables de cada grupo de trabajo donde pueden ver estadísticas de su grupo: asistencia a eventos de trabajo, horas echadas y número de turnos realizados por cada persona del grupo.
 
@@ -498,6 +519,9 @@ Sección donde la directiva y los responsables de cada grupo de trabajo pueden v
 
 **Rama:** `feature/sprint-15-votings`
 
+### Estado
+✅ **Ejecutado.** Ver `tasks/sprint-15-votings.json` y `docs/adr-sprint-15-votings.md`.
+
 ### Descripción
 Sistema de votación con opciones múltiples, control de voto único por usuario y visualización de resultados en tiempo real.
 
@@ -559,6 +583,9 @@ Gestionar documentos usando Supabase Storage con categorías, permisos por rol y
 
 **Rama:** `feature/sprint-17-events-enhancement`
 
+### Estado
+✅ **Ejecutado.** Ver `tasks/sprint-17-events-enhancement.json`, `tasks/sprint-17b-attendance-only-meeting-carnival.json` y `docs/adr-sprint-17-events-enhancement.md`.
+
 ### Descripción
 Mejorar la gestión de eventos: registro con campos adicionales, comentarios, capacidad máxima, y lista de espera. Además, se añade el flujo de **selección de grupo de trabajo en el primer inicio de sesión**: el usuario elige por primera vez el grupo al que pertenece (telas, barra, estandarte, limpieza); después, puede modificar su grupo desde su perfil y el super admin puede cambiarlo desde el panel de administración.
 
@@ -601,6 +628,9 @@ Mejorar la gestión de eventos: registro con campos adicionales, comentarios, ca
 
 **Rama:** `feature/sprint-18-event-audience`
 
+### Estado
+✅ **Ejecutado.** Ver `tasks/sprint-18-event-audience.json` y `docs/adr-sprint-18-event-audience.md`.
+
 ### Descripción
 Al crear un evento, el creador podrá indicar a qué tipo de usuarios se mostrará: por grupo de trabajo (telas, barra, estandarte, limpieza), por tipo de miembro (rol/componente) o a usuarios concretos seleccionables. Los eventos con audiencia restringida solo aparecerán para los destinatarios indicados.
 
@@ -637,6 +667,9 @@ Al crear un evento, el creador podrá indicar a qué tipo de usuarios se mostrar
 
 **Rama:** `feature/sprint-19-profiles-components`
 
+### Estado
+✅ **Ejecutado.** Ver `tasks/sprint-19-profiles-components.json` y `docs/adr-sprint-19-profiles-components.md`.
+
 ### Descripción
 Mejorar la gestión de perfiles de usuario: foto, biografía, componentes (telas, barra, etc.), habilidades, y historial de participación.
 
@@ -663,6 +696,9 @@ Mejorar la gestión de perfiles de usuario: foto, biografía, componentes (telas
 ## Sprint 20 — Notificaciones
 
 **Rama:** `feature/sprint-20-notifications`
+
+### Estado
+✅ **Ejecutado.** Ver `tasks/sprint-20-notifications.json` y `docs/adr-sprint-20-notifications.md`.
 
 ### Descripción
 Sistema de notificaciones internas (en-app) y en tiempo real sobre eventos, noticias, votaciones y cambios relevantes.
@@ -695,6 +731,9 @@ Sistema de notificaciones internas (en-app) y en tiempo real sobre eventos, noti
 
 **Rama:** `feature/sprint-21-admin-panel`
 
+### Estado
+✅ **Ejecutado.** Ver `tasks/sprint-21-admin-panel.json` y `docs/adr-sprint-21-admin-panel.md`.
+
 ### Descripción
 Panel de administración completo para gestión de usuarios, configuración global, permisos y auditoría.
 
@@ -726,6 +765,9 @@ Panel de administración completo para gestión de usuarios, configuración glob
 ## Sprint 22 — Eliminación Permanente de Cuentas (Solo Super Admin)
 
 **Rama:** `feature/sprint-22-account-deletion`
+
+### Estado
+🔄 **En curso** (2026-08-18). Task: `tasks/sprint-22-account-deletion.json`.
 
 ### Descripción
 Permitir que solo el super admin pueda eliminar cuentas de forma permanente, incluyendo el usuario de auth, su perfil y todos sus datos relacionados. Requiere confirmación explícita y registro de auditoría.
@@ -850,31 +892,31 @@ Auditorías finales de seguridad, rendimiento, accesibilidad y validación gener
 
 | Sprint | Rama | Dependencias |
 |---|---|---|
-| Sprint 1 — UI Redesign | `feature/sprint-01-ui-redesign` | — |
-| Sprint 2 — Workgroup Roles | `feature/sprint-02-workgroup-roles` | Sprint 1 |
-| Sprint 3 — Bar Pricing | `feature/sprint-03-bar-pricing` | Sprint 2 |
-| Sprint 4 — Home Feed | `feature/sprint-04-home-feed` | Sprint 1 |
+| Sprint 1 — UI Redesign | `feature/sprint-01-ui-redesign` | ✅ Ejecutado |
+| Sprint 2 — Workgroup Roles | `feature/sprint-02-workgroup-roles` | ✅ Ejecutado |
+| Sprint 3 — Bar Pricing | `feature/sprint-03-bar-pricing` | Sprint 2 (pendiente) |
+| Sprint 4 — Home Feed | `feature/sprint-04-home-feed` | ✅ Ejecutado |
 | Sprint 5 — Asistencia y Ausencias | `feature/sprint-05-asistencia-ausencias` | ✅ Completado |
-| Sprint 6 — Registration Approval | `feature/sprint-06-registration-approval` | Sprint 5 |
-| Sprint 7 — Emailless Accounts | `feature/sprint-07-emailless-accounts` | Sprint 6, Sprint 19 |
-| Sprint 8 — Shifts | `feature/sprint-08-shifts` | Sprint 1, Sprint 6 |
+| Sprint 6 — Registration Approval | `feature/sprint-06-registration-approval` | ✅ Ejecutado |
+| Sprint 7 — Emailless Accounts | `feature/sprint-07-emailless-accounts` | ✅ Ejecutado |
+| Sprint 8 — Shifts | `feature/sprint-08-shifts` | ✅ Ejecutado |
 | **Sprint 9 — Password Validation** | `feature/sprint-11-password-validation` (histórica) | ✅ Ejecutado |
 | **Sprint 10 — News** | `feature/sprint-13-news` (histórica) | ✅ Ejecutado |
 | **Sprint 11 — Questions** | `feature/sprint-14-questions` (histórica) | ✅ Ejecutado |
 | **Sprint 12 — Shift Assignment Groups** | `feature/sprint-12-shift-assignment-groups` (histórica) | ✅ Ejecutado |
-| **Sprint 13 — Workgroup Stats** | `feature/sprint-13-workgroup-stats` | **Sprint 12, Sprint 2** |
+| **Sprint 13 — Workgroup Stats** | `feature/sprint-13-workgroup-stats` | ✅ Ejecutado |
 | **Sprint 14 — Member List** | `feature/sprint-14-member-list` (histórica) | ✅ Ejecutado |
 | Sprint 15 — Votings | `feature/sprint-15-votings` | ✅ Ejecutado |
-| Sprint 16 — Document Management | `feature/sprint-16-document-management` | Sprint 6 |
-| Sprint 17 — Events Enhancement (+ Onboarding Grupo) | `feature/sprint-17-events-enhancement` | Sprint 1, Sprint 5, Sprint 2 |
+| Sprint 16 — Document Management | `feature/sprint-16-document-management` | Sprint 6 (pendiente) |
+| Sprint 17 — Events Enhancement (+ Onboarding Grupo) | `feature/sprint-17-events-enhancement` | ✅ Ejecutado |
 | **Sprint 18 — Event Audience** | `feature/sprint-18-event-audience` | ✅ Ejecutado |
-| Sprint 19 — Profiles & Components | `feature/sprint-19-profiles-components` | Sprint 1 |
-| Sprint 20 — Notifications | `feature/sprint-20-notifications` | Múltiples |
-| Sprint 21 — Admin Panel | `feature/sprint-21-admin-panel` | Sprint 6, Sprint 19 |
-| **Sprint 22 — Account Deletion** | `feature/sprint-22-account-deletion` | **Sprint 21, Sprint 6** |
-| Sprint 23 — PWA | `feature/sprint-23-pwa` | Sprint 1 |
-| Sprint 24 — CI/CD | `feature/sprint-24-cicd` | — |
-| Sprint 25 — Hardening | `feature/sprint-25-hardening` | Todos los anteriores |
+| Sprint 19 — Profiles & Components | `feature/sprint-19-profiles-components` | ✅ Ejecutado |
+| Sprint 20 — Notifications | `feature/sprint-20-notifications` | ✅ Ejecutado |
+| Sprint 21 — Admin Panel | `feature/sprint-21-admin-panel` | ✅ Ejecutado |
+| **Sprint 22 — Account Deletion** | `feature/sprint-22-account-deletion` | **En curso** (Sprint 21, Sprint 6) |
+| Sprint 23 — PWA | `feature/sprint-23-pwa` | Sprint 1 (pendiente) |
+| Sprint 24 — CI/CD | `feature/sprint-24-cicd` | — (pendiente) |
+| Sprint 25 — Hardening | `feature/sprint-25-hardening` | Todos los anteriores (pendiente) |
 
 ---
 
