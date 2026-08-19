@@ -18,7 +18,11 @@ export interface QuestionItem {
 export interface QuestionComment {
   id: string;
   questionId: string;
-  userId: string;
+  /**
+   * null when the author's account was permanently deleted (migration
+   * 0054 sets question_comments.user_id to null on auth.users delete).
+   */
+  userId: string | null;
   content: string;
   createdAt: string;
   authorFirstName: string;

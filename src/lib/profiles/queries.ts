@@ -69,6 +69,7 @@ export async function listProfiles(): Promise<ProfileListItem[]> {
   const { data, error } = await supabase
     .from("profiles")
     .select("id, first_name, last_name, component_type, workgroup, role, is_active, status, username, auth_method, component_lead_for, skills, joined_at, created_at")
+    .is("deleted_at", null)
     .order("first_name", { ascending: true })
     .order("last_name", { ascending: true });
 
@@ -112,6 +113,7 @@ export async function getProfileById(userId: string): Promise<ProfileDetail | nu
     .from("profiles")
     .select("id, first_name, last_name, birth_date, component_type, role, is_active, status, username, auth_method, avatar_url, bio, phone, skills, joined_at, created_at, workgroup, component_lead_for")
     .eq("id", userId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (error) {
