@@ -31,7 +31,7 @@ describe("admin schema constants", () => {
     expect(SETTING_KEY_LABELS.app_name).toContain("Nombre");
   });
 
-  it("exposes exactly the 13 audited administrative actions", () => {
+  it("exposes exactly the 14 audited administrative actions", () => {
     expect(AUDIT_ACTIONS).toEqual([
       "user.role_changed",
       "user.activated",
@@ -46,8 +46,9 @@ describe("admin schema constants", () => {
       "user.password_reset_generated",
       "user.account_unlocked",
       "settings.updated",
+      "user.deleted",
     ]);
-    expect(AUDIT_ACTIONS).toHaveLength(13);
+    expect(AUDIT_ACTIONS).toHaveLength(14);
   });
 
   it("labels every audit action in Spanish (non-empty)", () => {
@@ -55,6 +56,7 @@ describe("admin schema constants", () => {
       expect(AUDIT_ACTION_LABELS[action]).toBeTruthy();
     }
     expect(AUDIT_ACTION_LABELS["settings.updated"]).toContain("Configuración");
+    expect(AUDIT_ACTION_LABELS["user.deleted"]).toContain("eliminada");
   });
 
   it("uses a page size of 50 for the audit log list", () => {
@@ -166,10 +168,10 @@ describe("logAuditActionSchema", () => {
     ).toBeNull();
   });
 
-  it("rejects an action outside the 13 audited actions", () => {
+  it("rejects an action outside the 14 audited actions", () => {
     const parsed = logAuditActionSchema.safeParse({
       actorId: ACTOR_ID,
-      action: "user.deleted",
+      action: "user.banned",
       entityType: "profile",
     });
     expect(parsed.success).toBe(false);
@@ -258,7 +260,7 @@ describe("auditLogFiltersSchema", () => {
   });
 
   it("rejects an action outside the audited set", () => {
-    expect(auditLogFiltersSchema.safeParse({ action: "user.deleted" }).success).toBe(false);
+    expect(auditLogFiltersSchema.safeParse({ action: "user.banned" }).success).toBe(false);
   });
 
   it("rejects malformed from/to dates", () => {

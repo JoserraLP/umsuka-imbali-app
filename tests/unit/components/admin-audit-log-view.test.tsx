@@ -67,7 +67,7 @@ describe("AuditLogView", () => {
     expect(screen.getAllByText(/18 ago 2026/).length).toBe(2);
   });
 
-  it("renders the action filter select with all 13 actions plus 'Todas'", () => {
+  it("renders the action filter select with all 14 actions plus 'Todas'", () => {
     render(
       <AuditLogView
         items={[makeItem("log-1", "user.role_changed")]}
@@ -84,7 +84,8 @@ describe("AuditLogView", () => {
     expect(options).toContain("Rol cambiado");
     expect(options).toContain("Cuenta suspendida");
     expect(options).toContain("Configuración actualizada");
-    expect(options?.length).toBe(14); // "Todas" + 13 actions
+    expect(options).toContain("Cuenta eliminada permanentemente");
+    expect(options?.length).toBe(15); // "Todas" + 14 actions
   });
 
   it("preselects the current filters from the URL", () => {
