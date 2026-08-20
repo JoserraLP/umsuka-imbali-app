@@ -79,7 +79,7 @@
 
 @layer components {
   .feed-container {
-    @apply mx-auto w-full max-w-[600px];
+    @apply mx-auto w-full max-w-[600px] md:max-w-none;
   }
 
   .sidebar-link {
