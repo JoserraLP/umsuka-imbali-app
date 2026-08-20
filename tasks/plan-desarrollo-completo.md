@@ -762,40 +762,45 @@ Panel de administración completo para gestión de usuarios, configuración glob
 
 ---
 
-## Sprint 22 — Eliminación Permanente de Cuentas (Solo Super Admin)
+## Sprint 22 — Eliminación Lógica de Cuentas (Solo Super Admin)
 
-**Rama:** `feature/sprint-22-account-deletion`
+**Rama:** `feature/sprint-22-account-soft-deletion`
 
 ### Estado
-✅ **Ejecutado** (2026-08-19). PR #24 abierta en `feature/sprint-22-account-deletion`, pendiente de merge. Ver `tasks/sprint-22-account-deletion.json` y `docs/adr-sprint-22-account-deletion.md`.
+✅ **Ejecutado** (PR #24 mergeado el 2026-08-20, rama `feature/sprint-22-account-deletion`). Ver `tasks/sprint-22-account-deletion.json` y `docs/adr-sprint-22-account-deletion.md`. La especificación de soft-delete/restauración descrita abajo queda como evolución pendiente de re-evaluación.
 
 ### Descripción
-Permitir que solo el super admin pueda eliminar cuentas de forma permanente, incluyendo el usuario de auth, su perfil y todos sus datos relacionados. Requiere confirmación explícita y registro de auditoría.
+Permitir que solo el super admin "elimine" cuentas de forma **lógica (soft delete)**, no física. **Ningún dato se borra de la base de datos**: el perfil y todas sus relaciones (asistencia, turnos, ausencias, eventos, votaciones, preguntas, notificaciones, documentos, etc.) se conservan intactos para mantener el histórico y la integridad referencial. La cuenta queda marcada como eliminada, el usuario pierde el acceso a la aplicación y sus datos dejan de aparecer en los listados; el super admin puede restaurarla en cualquier momento. Requiere confirmación explícita y registro de auditoría.
 
 ### Pasos
 
 | # | Paso | Detalle |
 |---|---|---|
-| 1 | Auditoría de datos asociados | Identificar todas las tablas con FK al usuario (profiles, attendance, absences, shift_assignments, questions, voting_votes, event_registrations, notifications, etc.) y decidir estrategia de borrado por cada una (CASCADE, SET NULL o anonimización). |
-| 2 | Migración de BD — soft delete | Añadir columna `deleted_at` a `umsuka.profiles` como salvaguarda previa al borrado físico. |
-| 3 | Migración de BD — políticas RLS | Revisar que las políticas RLS excluyan perfiles con `deleted_at` no nulo. |
-| 4 | Servicio `lib/auth/delete-account.ts` | Implementar `deleteAccountPermanently(userId)`: (1) verificar rol super_admin, (2) ejecutar borrado en cascada de datos asociados, (3) eliminar el usuario de auth con `supabase.auth.admin.deleteUser()`, (4) registrar en `audit_logs`. |
-| 5 | Server action | `deleteAccountPermanentlyAction` — solo super_admin, con confirmación de doble paso. |
-| 6 | UI: Confirmación | En `/admin/users`, botón "Eliminar permanentemente" que abre diálogo con advertencia ("Esta acción no se puede deshacer"), pidiendo teclear el nombre del usuario o "ELIMINAR" para confirmar. |
-| 7 | UI: Feedback | Mensaje de éxito/error tras la eliminación, y actualización de la lista de usuarios. |
-| 8 | Pruebas | Tests unitarios del servicio de borrado. Tests de integración: solo super_admin puede eliminar, los datos asociados se limpian, no se puede eliminar el propio super admin. |
+| 1 | Migración de BD — soft delete | Añadir a `umsuka.profiles`: columna `deleted_at` (timestamptz, null = cuenta activa) y `deleted_by` (uuid, FK a profiles). **No se elimina ninguna fila ni se alteran las FKs existentes.** |
+| 2 | Bloqueo de acceso (auth) | Impedir el login del usuario eliminado SIN borrarlo de `auth.users`: usar `supabase.auth.admin.updateUserById(userId, { ban_duration: '876000h' })` (o soft-delete de auth) para banear la cuenta. Cerrar sesiones activas. |
+| 3 | RLS — exclusión de eliminados | Actualizar las políticas RLS y las queries para excluir perfiles con `deleted_at` no nulo de todos los listados (miembros, búsquedas, estadísticas, etc.). Las tablas relacionadas (attendance, shift_assignments, etc.) NO pierden las referencias. |
+| 4 | Servicio `lib/auth/delete-account.ts` | Implementar `softDeleteAccount(userId)`: (1) verificar rol super_admin, (2) marcar `deleted_at` + `deleted_by` en profiles, (3) banear el usuario en auth, (4) invalidar sesiones, (5) registrar en `audit_logs`. **Sin borrados en cascada ni DELETE de ningún tipo.** |
+| 5 | Servicio `lib/auth/restore-account.ts` | Implementar `restoreAccount(userId)`: (1) verificar rol super_admin, (2) limpiar `deleted_at` y `deleted_by`, (3) desbanear el usuario en auth (ban_duration 'none'), (4) registrar en `audit_logs`. |
+| 6 | Server actions | `softDeleteAccountAction`, `restoreAccountAction` — solo super_admin, con confirmación de doble paso. |
+| 7 | UI: Confirmación | En `/admin/users`, botón "Eliminar cuenta" que abre diálogo con advertencia explicando que es una **eliminación lógica**: "El usuario perderá el acceso, pero sus datos e historial se conservan", pidiendo teclear el nombre del usuario o "ELIMINAR" para confirmar. |
+| 8 | UI: Vista de eliminados y restauración | En `/admin/users`, filtro/pestaña "Eliminadas" (con `deleted_at`) que muestra las cuentas marcadas como eliminadas y permite restaurarlas con el botón "Restaurar cuenta" (con confirmación). |
+| 9 | UI: Feedback | Mensaje de éxito/error tras eliminar/restaurar, y actualización de la lista de usuarios. |
+| 10 | Referencias históricas | Verificar que en los listados que muestren datos históricos (p. ej. asistencia, turnos, votos) el nombre del miembro eliminado se muestre con fallback ("Miembro eliminado") manteniendo el registro intacto. |
+| 11 | Pruebas | Tests unitarios de los servicios. Tests de integración: solo super_admin puede eliminar/restaurar, **ninguna fila se borra físicamente**, las relaciones se conservan, el usuario eliminado no puede iniciar sesión, la restauración devuelve el acceso, no se puede eliminar el propio super admin. |
 
 ### Dependencias
 - Sprint 21 (Admin Panel — para el panel de usuarios y audit_logs)
 - Sprint 6 (Registration Approval — para el estado de cuentas)
 
 ### Criterios de Aceptación
-- Solo el super admin puede eliminar cuentas permanentemente.
-- La eliminación borra el usuario de auth, el perfil y todos sus datos asociados.
+- Solo el super admin puede eliminar (lógicamente) y restaurar cuentas.
+- La eliminación es **100% lógica**: no se elimina ninguna fila de la base de datos y todas las relaciones existentes (asistencia, turnos, ausencias, votaciones, preguntas, notificaciones, etc.) se conservan intactas.
+- El usuario eliminado no puede iniciar sesión ni acceder a la aplicación.
+- Las cuentas eliminadas quedan excluidas de los listados, búsquedas y estadísticas (vía RLS y queries).
+- El super admin puede restaurar una cuenta eliminada en cualquier momento, devolviéndole el acceso.
 - Se requiere confirmación explícita (doble paso) antes de eliminar.
-- La eliminación queda registrada en el log de auditoría.
+- La eliminación y la restauración quedan registradas en el log de auditoría.
 - Un super admin no puede eliminarse a sí mismo (protección).
-- El sistema avisa de las consecuencias irreversibles antes de confirmar.
 
 ---
 
@@ -816,7 +821,8 @@ Convertir la aplicación en una Progressive Web App instalable con soporte offli
 | 4 | Iconos PWA | Generar iconos en múltiples tamaños (192x192, 512x512) y colocarlos en `/public/icons/`. |
 | 5 | Estrategia offline | Página offline por defecto (`/offline`) y sincronización al recuperar conexión. |
 | 6 | Hook de registro | Componente `PwaRegister` que muestre banner de instalación en navegadores compatibles. |
-| 7 | Pruebas | Verificar instalación en Chrome, Firefox, Safari iOS, Edge. Probar offline mode. |
+| 7 | Menú inferior deslizable (mobile) | Asegurar que el menú inferior de la aplicación en móviles **se pueda deslizar horizontalmente (swipe)** para poder ver TODAS las secciones, incluso cuando el número de ítems exceda el ancho de la pantalla. Actualmente no se puede acceder a algunas secciones en el bottom nav. |
+| 8 | Pruebas | Verificar instalación en Chrome, Firefox, Safari iOS, Edge. Probar offline mode. Probar el menú inferior deslizable en móvil (todas las secciones accesibles). |
 
 ### Criterios de Aceptación
 - La aplicación es instalable en navegadores compatibles (Chrome, Edge, Safari iOS).
@@ -824,12 +830,226 @@ Convertir la aplicación en una Progressive Web App instalable con soporte offli
 - La aplicación muestra una página offline personalizada.
 - El manifest.json tiene todos los campos requeridos.
 - Los iconos se muestran correctamente después de la instalación.
+- El menú inferior en móvil es deslizable horizontalmente y muestra todas las secciones (ninguna queda inaccesible).
 
 ---
 
-## Sprint 24 — CI/CD y Despliegue Automático
+## Sprint 24 — Gestión de Instrumentos
 
-**Rama:** `feature/sprint-24-cicd`
+**Rama:** `feature/sprint-24-instrument-management`
+
+### Descripción
+Gestionar el inventario de instrumentos de la comparsa: alta, baja y edición de instrumentos, asignación de una persona responsable por instrumento y registro histórico de responsables. Solo la directiva y el super_admin pueden gestionar el inventario y las asignaciones.
+
+### Pasos
+
+| # | Paso | Detalle |
+|---|---|---|
+| 1 | Migración de BD | Crear `umsuka.instruments` (id, name, category, description, is_active, created_at, updated_at) e `umsuka.instrument_assignments` (id, instrument_id, user_id, assigned_at, unassigned_at). |
+| 2 | RLS | Directiva (`is_directiva`) y super_admin pueden crear/editar/desactivar instrumentos. Leer: todos los auth users. |
+| 3 | Capa de negocio `lib/instruments/` | Schemas Zod (createInstrumentSchema, assignSchema), queries (getInstruments, getAssignments), mutations (createInstrument, updateInstrument, toggleActive, assign, unassign). |
+| 4 | Server actions | Wrappers thin con validación de rol (directiva o super_admin) y revalidación de path. |
+| 5 | UI de inventario | Página `/instruments` con listado de instrumentos, creación/edición, activar/desactivar y asignación/desasignación de responsable. |
+| 6 | Historial | Mostrar historial de responsables de cada instrumento. |
+| 7 | Pruebas | Tests unitarios para schemas y tests de integración para acciones y RLS. |
+
+### Dependencias
+- Sprint 2 (Roles — para validar directiva/super_admin)
+- Sprint 19 (Perfiles — para el responsable asignado)
+
+### Criterios de Aceptación
+- La directiva y el super_admin pueden gestionar instrumentos (alta, edición, baja lógica).
+- Cada instrumento puede tener una persona responsable asignada (una a la vez).
+- El historial de responsables de cada instrumento queda registrado.
+- Los instrumentos inactivos no aparecen en los listados de asignación.
+
+---
+
+## Sprint 25 — Ordenación de Listados
+
+**Rama:** `feature/sprint-25-list-ordering`
+
+### Descripción
+Permitir ordenar los principales listados de la aplicación (miembros, instrumentos, eventos) por distintos criterios, de forma persistente por usuario.
+
+### Pasos
+
+| # | Paso | Detalle |
+|---|---|---|
+| 1 | Migración de BD | Tabla `umsuka.user_preferences` (user_id PK, list_ordering jsonb) o reutilizar preferencias existentes si el sprint 19 ya las define. |
+| 2 | Capa de negocio `lib/ordering/` | Utilidades para aplicar ordenaciones: por nombre, por fecha de alta, por trabajo, por instrumento, por asistencia, etc. Almacenar la preferencia por usuario. |
+| 3 | UI de ordenación | Menú desplegable "Ordenar por" en los listados de miembros, instrumentos y eventos. |
+| 4 | Persistencia | Guardar la preferencia del usuario en `user_preferences` y reaplicarla al volver. |
+| 5 | Pruebas | Tests unitarios de las funciones de ordenación y de persistencia. |
+
+### Dependencias
+- Sprint 14 (Listado de Miembros)
+- Sprint 19 (Perfiles — preferencias de usuario si aplica)
+
+### Criterios de Aceptación
+- Los listados de miembros, instrumentos y eventos se pueden ordenar por al menos 3 criterios distintos.
+- La preferencia de ordenación se guarda por usuario y se mantiene entre visitas.
+- La ordenación funciona correctamente con paginación.
+
+---
+
+## Sprint 26 — Buscador de Personas en Turnos
+
+**Rama:** `feature/sprint-26-shift-member-search`
+
+### Descripción
+Añadir un buscador de personas en la gestión de turnos para permitir al responsable de grupo (o super admin) buscar y marcar rápidamente la asistencia de un miembro concreto en un turno, sin tener que recorrer toda la lista.
+
+### Pasos
+
+| # | Paso | Detalle |
+|---|---|---|
+| 1 | Capa de negocio `lib/shifts/search.ts` | Función `searchShiftMembers(shiftId, query)` que busque por nombre, apellidos o workgroup con indexación en BD. |
+| 2 | Server action | `searchShiftMembersAction` con paginación. |
+| 3 | UI | Barra de búsqueda en el panel de gestión de turno con resultados en vivo y botón de marcar/desmarcar asistencia directo desde los resultados. |
+| 4 | Accesibilidad | Resultados navegables por teclado y compatibles con lectores de pantalla. |
+| 5 | Pruebas | Tests de la búsqueda e integración con el panel de turnos. |
+
+### Dependencias
+- Sprint 8 (Shifts)
+- Sprint 12 (Asociación de Personas a Turnos)
+
+### Criterios de Aceptación
+- El responsable de grupo puede buscar a cualquier miembro asignado a un turno por nombre.
+- Los resultados aparecen en tiempo real y permiten marcar la asistencia sin salir de la búsqueda.
+- Combinado con la búsqueda por workgroup (telas, barra, estandarte, limpieza).
+
+---
+
+## Sprint 27 — Asistencia a Ensayos
+
+**Rama:** `feature/sprint-27-rehearsal-attendance`
+
+### Descripción
+Registrar la asistencia de los miembros a los ensayos de la comparsa. Cada ensayo es un evento de tipo `rehearsal` con sesiones de mañana y tarde; los responsables pueden marcar quién asistió y las estadísticas alimentan el perfil y el porcentaje de participación.
+
+### Pasos
+
+| # | Paso | Detalle |
+|---|---|---|
+| 1 | Migración de BD — event_type rehearsal | Añadir `'rehearsal'` como tipo de evento válido. Campos opcionales `session` (mañana/tarde) en `umsuka.events`. |
+| 2 | Migración de BD — rehearsal_attendance | Crear `umsuka.rehearsal_attendance` (id, event_id, user_id, session, attended, marked_by, timestamps) con RLS. |
+| 3 | Helper functions | `umsuka.is_rehearsal_lead()` si aplica, o reutilizar directiva/super_admin para marcar asistencia. |
+| 4 | Capa de negocio `lib/rehearsals/` | Queries y mutations para registrar/editar asistencia a sesiones de mañana/tarde. |
+| 5 | UI de registro | Panel en la página de detalle del ensayo para marcar asistencia por sesión (mañana/tarde). |
+| 6 | Integración con estadísticas | Alimentar el % de participación en ensayos del perfil de cada miembro (usado también por Sprint 28). |
+| 7 | Pruebas | Tests de la capa de negocio y de las políticas RLS. |
+
+### Dependencias
+- Sprint 5 (Asistencia y Ausencias — reutiliza el flujo)
+- Sprint 17 (Eventos — el ensayo es un tipo de evento)
+
+### Criterios de Aceptación
+- Se pueden crear eventos de tipo "ensayo" con sesión de mañana y/o tarde.
+- Los responsables pueden marcar asistencia por sesión.
+- La asistencia a ensayos se refleja en las estadísticas del perfil.
+
+---
+
+## Sprint 28 — Estadísticas Personales
+
+**Rama:** `feature/sprint-28-personal-stats`
+
+### Descripción
+Panel de estadísticas personales para cada miembro: porcentaje de asistencia a turnos, ensayos y eventos, comparación con el grupo de trabajo, racha actual y tendencia en el tiempo.
+
+### Pasos
+
+| # | Paso | Detalle |
+|---|---|---|
+| 1 | Capa de negocio `lib/stats/` | Funciones `getPersonalStats(userId)` (asistencia a turnos, ensayos, eventos; racha; tendencia), `getWorkgroupComparison(userId)` y `getEventStats(eventId)`. |
+| 2 | Server actions | `getPersonalStatsAction` con caché y revalidación. |
+| 3 | UI de estadísticas personales | Sección en el perfil del miembro con tarjetas: % asistencia turnos, % ensayos, % eventos, racha actual, mini-gráficos de tendencia (últimos 6 meses). |
+| 4 | Comparativa | Gráfico comparando la asistencia del miembro con la media de su grupo de trabajo. |
+| 5 | Event stats | Vista de estadísticas por evento (asistencia total, por grupo) para responsables. |
+| 6 | Pruebas | Tests de las funciones de cálculo de estadísticas con datos de ejemplo. |
+
+### Dependencias
+- Sprint 5 (Asistencia), Sprint 12 (Turnos), Sprint 27 (Ensayos), Sprint 17 (Eventos)
+
+### Criterios de Aceptación
+- Cada miembro ve sus estadísticas personales en su perfil (propias y de los responsables de su grupo).
+- Las estadísticas se calculan en tiempo real sobre los datos de asistencia existentes.
+- Se muestra racha actual y tendencia en el tiempo.
+
+---
+
+## Sprint 29 — Gestión de Dinero de la Comparsa
+
+**Rama:** `feature/sprint-29-money-management`
+
+### Descripción
+Permitir llevar el control del dinero de la comparsa desde la aplicación: registrar ingresos (p. ej. turnos de barra) y gastos (p. ej. compras de barra, compras de material del traje, compras de material para baile, otros). Incluye una vista de resumen con totales y estadísticas. **Solo la directiva y el super_admin pueden ver y gestionar esta funcionalidad.**
+
+### Pasos
+
+| # | Paso | Detalle |
+|---|---|---|
+| 1 | Migración de BD | Crear `umsuka.transactions` (id, type ENUM `income`/`expense`, category ENUM `bar_shift`/`bar_purchases`/`costume_materials`/`dance_materials`/`other`, amount numeric(10,2), description, transaction_date, created_by, created_at) con índices. |
+| 2 | RLS | Solo directiva (`is_directiva`) y super_admin pueden insertar/leer/actualizar/eliminar transacciones. El resto de usuarios no ve la sección. |
+| 3 | Helper `umsuka.is_directiva()` | Añadir helper en SQL similar a `is_super_admin()` (o una tabla de roles de directiva si aún no existe). |
+| 4 | Capa de negocio `lib/finances/` | Schemas Zod (createTransactionSchema, updateTransactionSchema), queries (getTransactions con filtros por tipo/categoría/fecha, getSummary), mutations (create, update, delete). |
+| 5 | Server actions | Wrappers thin con validación de rol (directiva o super_admin) y revalidación de path. |
+| 6 | UI de gestión | Página `/finances` solo visible para directiva y super_admin: alta de ingresos/gastos con formulario (tipo, categoría, importe, descripción, fecha), listado con filtros y edición/eliminación. |
+| 7 | Vista resumen | Tarjetas con totales: ingresos, gastos, saldo, y desglose por categoría (turnos de barra, compras de barra, material del traje, material para baile). |
+| 8 | Estadísticas | Gráficos mensuales de ingresos vs gastos y distribución por categoría. |
+| 9 | Pruebas | Tests unitarios de schemas y de cálculo de resumen. Tests de integración: solo directiva/super_admin acceden. |
+
+### Dependencias
+- Sprint 2/21 (Roles — para validar directiva y super_admin)
+- Sprint 3 (Barra — los ingresos de turno de barra se registran aquí)
+
+### Criterios de Aceptación
+- La directiva y el super_admin pueden registrar ingresos y gastos con categorías predefinidas (turno de barra, compras de barra, material del traje, material para baile, otros).
+- La página `/finances` y todos sus datos son **invisibles** para el resto de roles (no solo ocultos en el menú).
+- La vista de resumen muestra totales de ingresos, gastos, saldo y desglose por categoría.
+- Se pueden consultar estadísticas mensuales de ingresos vs gastos.
+- Las transacciones se pueden filtrar por tipo, categoría y rango de fechas.
+
+---
+
+## Sprint 30 — Representante Legal para Menores de Edad
+
+**Rama:** `feature/sprint-30-legal-guardian`
+
+### Descripción
+Permitir que un componente menor de edad tenga un representante legal asociado. El representante legal puede ser **otro componente de la comparsa** o una **persona nueva dada de alta como representante** (con sus datos de contacto). El representante puede ejercer acciones legales/responsabilidades en nombre del menor según lo requiera la administración.
+
+### Pasos
+
+| # | Paso | Detalle |
+|---|---|---|
+| 1 | Migración de BD | Añadir a `umsuka.profiles`: `is_minor` (boolean) y `legal_guardian_id` (uuid, nullable, FK a `umsuka.legal_guardians`). Crear `umsuka.legal_guardians` (id, full_name, document_id, email, phone, relationship, is_member (bool), member_user_id (nullable, si es otro componente), created_at). |
+| 2 | RLS | El representante registrado puede consultar los datos del menor que representa (con consentimiento). Super_admin y directiva gestionan los vínculos. |
+| 3 | Capa de negocio `lib/guardians/` | Schemas Zod (createGuardianSchema, assignGuardianSchema), queries (getGuardians, getMinorProfiles), mutations (createGuardian, assignGuardian, updateGuardian). |
+| 4 | Server actions | Wrappers thin con validación de rol (super_admin/directiva) y revalidación. |
+| 5 | UI de registro | Al dar de alta a un menor, opción de marcar `is_minor` y asignar representante legal: o bien seleccionar un componente existente, o bien crear un **nuevo componente** que actuará como representante. |
+| 6 | UI de gestión | En `/admin` (o `/directiva`), listado de menores con su representante actual, opción de cambiar de representante y de editar los datos del representante. |
+| 7 | Permisos del representante | El representante (si tiene cuenta de usuario, p. ej. si es otro componente) ve la información del menor y puede realizar acciones permitidas (p. ej. confirmar asistencias, ver notificaciones del menor). |
+| 8 | Pruebas | Tests de la capa de negocio y de RLS. Verificar que un menor sin representante queda pendiente de asignación. |
+
+### Dependencias
+- Sprint 6 (Registration Approval — flujo de alta de nuevos componentes)
+- Sprint 19 (Perfiles — campos y edición de perfil)
+- Sprint 14 (Listado de Miembros — para seleccionar representante entre componentes)
+
+### Criterios de Aceptación
+- Un perfil puede marcarse como menor de edad (`is_minor`).
+- Todo menor de edad debe tener un representante legal asignado (obligatorio al registrarse o asignado posteriormente por super_admin/directiva).
+- El representante legal puede ser otro componente de la comparsa o una persona nueva dada de alta en el sistema.
+- El representante con cuenta de usuario puede ver la información del menor que representa y ejercer las acciones permitidas.
+- El super_admin y la directiva pueden administrar las asignaciones y los datos de los representantes.
+
+---
+
+## Sprint 31 — CI/CD y Despliegue Automático
+
+**Rama:** `feature/sprint-31-cicd`
 
 ### Descripción
 Configurar GitHub Actions para linting, typecheck, tests, build y despliegue automático a Vercel desde la rama `main`.
@@ -856,9 +1076,9 @@ Configurar GitHub Actions para linting, typecheck, tests, build y despliegue aut
 
 ---
 
-## Sprint 25 — Hardening Final
+## Sprint 32 — Hardening Final
 
-**Rama:** `feature/sprint-25-hardening`
+**Rama:** `feature/sprint-32-hardening`
 
 ### Descripción
 Auditorías finales de seguridad, rendimiento, accesibilidad y validación general para producción.
@@ -913,10 +1133,17 @@ Auditorías finales de seguridad, rendimiento, accesibilidad y validación gener
 | Sprint 19 — Profiles & Components | `feature/sprint-19-profiles-components` | ✅ Ejecutado |
 | Sprint 20 — Notifications | `feature/sprint-20-notifications` | ✅ Ejecutado |
 | Sprint 21 — Admin Panel | `feature/sprint-21-admin-panel` | ✅ Ejecutado |
-| **Sprint 22 — Account Deletion** | `feature/sprint-22-account-deletion` | ✅ Ejecutado (PR #24 abierta) |
+| **Sprint 22 — Account Deletion** | `feature/sprint-22-account-deletion` | ✅ Ejecutado (PR #24, 2026-08-20) |
 | Sprint 23 — PWA | `feature/sprint-23-pwa` | Sprint 1 (pendiente) |
-| Sprint 24 — CI/CD | `feature/sprint-24-cicd` | — (pendiente) |
-| Sprint 25 — Hardening | `feature/sprint-25-hardening` | Todos los anteriores (pendiente) |
+| Sprint 24 — Instrument Management | `feature/sprint-24-instrument-management` | Sprint 2, Sprint 19 (pendiente) |
+| Sprint 25 — List Ordering | `feature/sprint-25-list-ordering` | Sprint 14, Sprint 19 (pendiente) |
+| Sprint 26 — Shift Member Search | `feature/sprint-26-shift-member-search` | Sprint 8, Sprint 12 (pendiente) |
+| Sprint 27 — Rehearsal Attendance | `feature/sprint-27-rehearsal-attendance` | Sprint 5, Sprint 17 (pendiente) |
+| Sprint 28 — Personal Stats | `feature/sprint-28-personal-stats` | Sprint 5, Sprint 12, Sprint 27, Sprint 17 (pendiente) |
+| Sprint 29 — Money Management | `feature/sprint-29-money-management` | Sprint 2, Sprint 21, Sprint 3 (pendiente) |
+| Sprint 30 — Legal Guardian (Menores) | `feature/sprint-30-legal-guardian` | Sprint 6, Sprint 19, Sprint 14 (pendiente) |
+| Sprint 31 — CI/CD | `feature/sprint-31-cicd` | — (pendiente) |
+| Sprint 32 — Hardening | `feature/sprint-32-hardening` | Todos los anteriores (pendiente) |
 
 ---
 

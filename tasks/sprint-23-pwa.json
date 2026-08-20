@@ -1,0 +1,77 @@
+{
+  "title": "Sprint 23 — PWA: Progressive Web App",
+  "description": "Convertir la aplicación en una Progressive Web App instalable con soporte offline mediante Service Workers. Incluye: configuración de next-pwa (ya presente en dependencias) en next.config.ts con estrategias de cache (NetworkFirst para API, StaleWhileRevalidate para assets, CacheFirst para estáticos), manifest.json con campos requeridos e iconos PNG en múltiples tamaños (192x192, 512x512) en /public/icons/, página offline personalizada (/offline), componente PwaRegister con banner de instalación en navegadores compatibles, y arreglo del menú inferior en móviles para que sea deslizable horizontalmente (swipe) y TODAS las secciones sean accesibles aunque excedan el ancho de pantalla.",
+  "branch": "feature/sprint-23-pwa",
+  "status": "created",
+  "steps": [
+    {
+      "id": 1,
+      "name": "Configurar next-pwa",
+      "detail": "next-pwa ya está en dependencias y parcialmente configurado en next.config.ts (withPWA con dest: public, disable en development, register: true, skipWaiting: true, cacheOnFrontEndNav: true). Revisar/ajustar la configuración con opciones de Service Worker: runtimeCaching con estrategias NetworkFirst para rutas de API/Supabase, StaleWhileRevalidate para assets compilados y CacheFirst para estáticos de /public, límites de caché (expiration) y exclude de rutas sensibles (p. ej. /auth, /admin) si aplica.",
+      "id_note": "Verificar que public/sw.js y public/workbox-*.js son artefactos generados por next-pwa en build y decidir si se excluyen del repo (.gitignore) para evitar conflictos. next-pwa 5.6.0 con Next 15 puede requerir webpack fallback; validar con next build."
+    },
+    {
+      "id": 2,
+      "name": "Manifest.json completo",
+      "detail": "Actualizar public/manifest.json con todos los campos requeridos: name, short_name, description, start_url (/dashboard), scope (/), display standalone, orientation, background_color y theme_color (#0369b4 actuales), id, lang y categoría. Reemplazar/añadir iconos PNG (192x192 y 512x512) además del icon.svg existente, con purpose any y maskable.",
+      "id_note": "El manifest actual solo referencia /icons/icon.svg (sizes any). Safari iOS requiere apple-touch-icon (180x180) y meta apple-mobile-web-app-capable."
+    },
+    {
+      "id": 3,
+      "name": "Service Worker",
+      "detail": "Configurar en next-pwa las estrategias de cache: NetworkFirst para llamadas API (Supabase), StaleWhileRevalidate para assets estáticos compilados (_next/static) y CacheFirst para imágenes/recursos de /public. Configurar expiration/size limits y precache de shell de la app. Evitar cachear datos sensibles y páginas autenticadas.",
+      "id_note": "next-pwa usa workbox; definir runtimeCaching en next.config.ts dentro de withPWA."
+    },
+    {
+      "id": 4,
+      "name": "Iconos PWA",
+      "detail": "Generar iconos PNG en múltiples tamaños (192x192, 512x512) a partir del logo actual (public/logo.png o icons/icon.svg) y colocarlos en /public/icons/. Incluir apple-touch-icon (180x180) y favicon si falta. Referenciarlos en manifest.json y en el layout (head metadata).",
+      "id_note": "Usar sharp o un script node simple para generar los PNG; documentar el comando en package.json si se añade. Verificar assets existentes en public/ (logo.png, icons/icon.svg)."
+    },
+    {
+      "id": 5,
+      "name": "Estrategia offline",
+      "detail": "Crear página de respaldo /offline (src/app/offline/page.tsx) con diseño acorde a la app (logo, mensaje 'Sin conexión', botón reintentar). Registrarla como fallback offline en next-pwa (navigateFallback) y tratar la sincronización al recuperar conexión (eventos online/offline, indicador de estado en el shell si es viable).",
+      "id_note": "La página offline debe ser estática y no requerir auth. En App Router usar segment config export const dynamic = 'force-static'."
+    },
+    {
+      "id": 6,
+      "name": "Hook de registro / banner de instalación",
+      "detail": "Crear componente cliente PwaRegister (src/components/pwa/pwa-register.tsx o similar) que: (1) escuche beforeinstallprompt y muestre banner/botón 'Instalar app' en navegadores compatibles, (2) maneje appinstalled y (3) muestre estado de instalación. Montarlo en el layout raíz o app shell.",
+      "id_note": "next-pwa ya hace register del SW en producción; el componente solo añade la UX de instalación. Considerar persistir el rechazo del banner (localStorage) para no molestar."
+    },
+    {
+      "id": 7,
+      "name": "Menú inferior deslizable (mobile)",
+      "detail": "Arreglar src/components/layout/bottom-nav.tsx: el contenedor flex actual (justify-around, px-2 py-1) desborda en pantallas estrechas cuando hay muchos ítems (según rol), dejando secciones inaccesibles. Añadir scroll horizontal (overflow-x-auto, overscroll-x-contain, scrollbar oculto) manteniendo la altura del nav y sin romper los badges de notificaciones ni el estado activo. Los ítems deben quedar accesibles mediante swipe.",
+      "id_note": "Ver src/components/layout/nav-links.ts para ver cuántos ítems puede haber por rol. Probar con el rol que más ítems tiene (p. ej. admin/directiva). Añadir tests de componente si la suite de vitest lo permite (jsdom ya configurado)."
+    },
+    {
+      "id": 8,
+      "name": "Pruebas",
+      "detail": "Tests unitarios de los componentes nuevos (PwaRegister con beforeinstallprompt mockeado, BottomNav con scroll y accesibilidad de todos los links). Verificación: manifest válido (schema), iconos presentes. Suite completa pasando (npx vitest run), typecheck (tsc --noEmit) y lint (eslint . --max-warnings=0) limpios. Verificación manual del flujo offline y de instalación si el entorno lo permite (documentar pasos para Chrome/Edge y limitaciones de Safari iOS).",
+      "id_note": "next build debe completar sin errores; el SW se genera en public/. Playwright puede validar el manifest (GET /manifest.json) y el bottom nav en viewport móvil."
+    }
+  ],
+  "acceptance_criteria": [
+    "La aplicación es instalable en navegadores compatibles (Chrome, Edge, Safari iOS): manifest válido, SW registrado e iconos correctos.",
+    "Los assets estáticos se cachean y la app funciona offline (página /offline personalizada de respaldo).",
+    "El manifest.json tiene todos los campos requeridos (name, short_name, start_url, display, theme_color, background_color, icons 192/512 PNG con purpose any y maskable).",
+    "Los iconos PWA (192x192, 512x512, apple-touch-icon 180x180) se muestran correctamente después de la instalación.",
+    "El menú inferior en móvil es deslizable horizontalmente y muestra todas las secciones (ninguna queda inaccesible), con scrollbar oculto y sin romper el diseño existente."
+  ],
+  "definition_of_done": [
+    "next.config.ts con withPWA configurado y runtimeCaching con NetworkFirst/StaleWhileRevalidate/CacheFirst según el plan.",
+    "public/manifest.json completo y válido con iconos PNG referenciados.",
+    "Iconos PNG generados en /public/icons/ (192, 512) y apple-touch-icon.",
+    "Página /offline funcional y registrada como fallback de navegación del SW.",
+    "Componente PwaRegister montado con banner de instalación y manejo de beforeinstallprompt/appinstalled.",
+    "bottom-nav.tsx con scroll horizontal (swipe) que expone todas las secciones en móvil.",
+    "Tests unitarios nuevos pasando + suite completa (npx vitest run).",
+    "Typecheck (tsc --noEmit) y lint (eslint . --max-warnings=0) limpios.",
+    "next build completado sin errores y SW generado correctamente.",
+    "Security scan sin issues HIGH.",
+    "ADR documentado en docs/adr-sprint-23-pwa.md."
+  ],
+  "dependencies": ["Sprint 1 (diseño UI, shell y bottom nav)", "Sprint 21 (admin panel, reutilizable en exclusiones de caché)"]
+}
