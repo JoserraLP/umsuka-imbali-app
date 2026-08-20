@@ -1,0 +1,70 @@
+{
+  "title": "Sprint 24 — Gestión de Instrumentos (Instrument Management)",
+  "description": "Gestionar el inventario de instrumentos de la comparsa: alta, baja (lógica) y edición de instrumentos, asignación de una persona responsable por instrumento (una a la vez) y registro histórico de responsables. Solo la directiva (roles de gestión: super_admin, admin, board_member, event_manager) y el super_admin pueden gestionar el inventario y las asignaciones. El resto de usuarios autenticados pueden leer el inventario. Los instrumentos inactivos no aparecen en los listados de asignación. Incluye: migración de BD (umsuka.instruments y umsuka.instrument_assignments), políticas RLS, capa de negocio src/lib/instruments/ (schemas Zod, queries, mutations), server actions thin con validación de rol y revalidación de path, página /instruments con listado/creación/edición/activar-desactivar/asignación, historial de responsables por instrumento y pruebas (unitarias de schemas + integración de acciones y RLS).",
+  "branch": "feature/sprint-24-instrument-management",
+  "status": "planned",
+  "steps": [
+    {
+      "id": 1,
+      "name": "Migración de BD",
+      "detail": "Crear migración supabase/migrations/20260101005600_instruments.sql con: tabla umsuka.instruments (id uuid pk default gen_random_uuid(), name text not null, category text, description text, is_active boolean not null default true, created_at timestamptz default now(), updated_at timestamptz default now()) y tabla umsuka.instrument_assignments (id uuid pk, instrument_id uuid references umsuka.instruments on delete cascade, user_id uuid references umsuka.profiles, assigned_at timestamptz default now(), unassigned_at timestamptz null). La asignación activa de un instrumento es la fila con unassigned_at IS NULL; para garantizar 'una persona a la vez', incluir partial unique index (ON instrument_id WHERE unassigned_at IS NULL). Índices para las consultas (user_id, instrument_id). Trigger opcional para actualizar updated_at en instruments.",
+      "id_note": "Seguir convención de nomenclatura de migraciones (YYYYMMDDHHMMSS_descripcion.sql). La siguiente numeración disponible es 20260101005600. Revisar migraciones recientes (20260101005500_fix_events_rls_recursion.sql) para el estilo SQL usado en el proyecto."
+    },
+    {
+      "id": 2,
+      "name": "RLS",
+      "detail": "Habilitar RLS en ambas tablas. Políticas: (a) instruments — SELECT para todos los usuarios autenticados (using auth.role() = 'authenticated'); INSERT/UPDATE/DELETE solo para directiva/super_admin (roles de gestión: super_admin, admin, board_member, event_manager — ver umsuka.is_management()/is_admin() existentes o subselect de umsuka.profiles.role). (b) instrument_assignments — SELECT para todos los autenticados; INSERT/UPDATE solo para directiva/super_admin. Reutilizar helpers existentes (umsuka.is_super_admin() de 20260101001900) y crear umsuka.is_directiva() o is_management() si no existe, siguiendo el patrón de rls_policies.sql.",
+      "id_note": "El plan habla de is_directiva; el proyecto modela 'directiva' con MANAGEMENT_ROLES (super_admin, admin, board_member, event_manager) como en src/lib/auth/roles.ts. Mantener coherencia: la RLS debe usar el mismo conjunto que la capa de negocio (isManagementRole)."
+    },
+    {
+      "id": 3,
+      "name": "Capa de negocio src/lib/instruments/",
+      "detail": "Crear módulo src/lib/instruments/ con: schema.ts (createInstrumentSchema, updateInstrumentSchema, assignSchema, unassignSchema — Zod con mensajes en español consistentes con el proyecto, validación de campos: name requerido con trim y límite de longitud, category opcional, description opcional, max length), queries.ts (getInstruments incluyendo filtro por is_active y la asignación activa actual con join al perfil responsable, getInstrumentById, getAssignments(instrumentId) para el historial, getAssignableMembers para el selector de responsable), mutations.ts (createInstrument, updateInstrument, toggleActive, assign — que primero desasigna la asignación activa previa cerrando unassigned_at y luego inserta la nueva —, unassign — cierra la asignación activa actual —). Toda mutación valida rol con isManagementRole (patrón requireManagementGuard de src/lib/votings/mutations.ts) y valida con Zod. El nombre del instrumento debe ser único (unique index) y manejar violación 23505.",
+      "id_note": "La asignación activa de un instrumento: antes de asignar, hacer UPDATE de la fila activa actual (unassigned_at = now()) y después INSERT de la nueva. Considerar transacción RPC si es necesario; si se hace con dos queries, aceptar la pequeña ventana o usar un enfoque atómico (p. ej. RPC SECURITY DEFINER como en otros módulos si el proyecto ya lo usa)."
+    },
+    {
+      "id": 4,
+      "name": "Server actions",
+      "detail": "Crear src/app/instruments/actions.ts (o src/lib/instruments/actions.ts según patrón del proyecto) con wrappers thin que llamen a las mutations: createInstrumentAction, updateInstrumentAction, toggleInstrumentActiveAction, assignInstrumentAction, unassignInstrumentAction. Cada una retorna MutationResult y hace revalidatePath('/instruments') y revalidatePath('/instruments/[id]') en éxito.",
+      "id_note": "Seguir el patrón de server actions existentes (p. ej. src/app/admin/users/actions.ts o el patrón de votings) para la forma de retorno (ActionResult con success/error/message)."
+    },
+    {
+      "id": 5,
+      "name": "UI de inventario",
+      "detail": "Crear la página /instruments (src/app/instruments/page.tsx) con: listado de instrumentos (nombre, categoría, estado activo/inactivo, responsable actual), formulario de creación/edición (name, category, description), acciones activar/desactivar y asignación/desasignación de responsable (selector de miembros con búsqueda si es viable). Añadir el ítem al menú de navegación (src/components/layout/nav-links.ts) visible según rol (directiva/super_admin para gestión; el resto puede ver el listado si aplica según el plan). Acceso a la página: todos los usuarios autenticados pueden leer; solo directiva/super_admin ven los controles de gestión.",
+      "id_note": "Revisar el patrón de páginas admin (src/app/admin) y de componentes UI existentes (src/components/ui) para reutilizar. Consultar nav-links.ts y la estructura de roles para decidir visibilidad. La página debe ser server component con formularios cliente (useActionState si el proyecto lo usa)."
+    },
+    {
+      "id": 6,
+      "name": "Historial",
+      "detail": "En la página de detalle de instrumento (o en el listado) mostrar el historial de responsables: filas de instrument_assignments con assigned_at/unassigned_at, nombre del perfil responsable (join con profiles) y rango de fechas. Formatear fechas con la convención del proyecto (date-fns u otro usado).",
+      "id_note": "getAssignments(instrumentId) debe devolver las filas con el display_name/full_name del profile para mostrarlas sin N+1."
+    },
+    {
+      "id": 7,
+      "name": "Pruebas",
+      "detail": "Tests unitarios para los schemas Zod (validación de campos, límites, trim) y para la lógica de asignación/desasignación con mocks de Supabase (patrón de tests/unit/lib/*). Tests de integración/RLS: verificar que solo directiva/super_admin pueden escribir y que todos los autenticados leen. Suite completa pasando (npx vitest run), typecheck (tsc --noEmit) y lint (eslint . --max-warnings=0) limpios.",
+      "id_note": "Revisar tests/unit/lib/ existentes (p. ej. tests/unit/lib/approvals, social) para el patrón de mocks y estructura. Si hay tests de RLS SQL (comprobación de políticas), añadir cobertura para instruments."
+    }
+  ],
+  "acceptance_criteria": [
+    "La directiva y el super_admin pueden gestionar instrumentos (alta, edición, baja lógica con is_active).",
+    "Cada instrumento puede tener una persona responsable asignada, una a la vez (la asignación anterior se cierra automáticamente).",
+    "El historial de responsables de cada instrumento queda registrado y es visible (assigned_at/unassigned_at).",
+    "Los instrumentos inactivos no aparecen en los listados de asignación.",
+    "Todos los usuarios autenticados pueden leer el inventario; solo directiva/super_admin pueden modificar (RLS + validación de rol en la capa de negocio)."
+  ],
+  "definition_of_done": [
+    "Migración SQL con umsuka.instruments y umsuka.instrument_assignments, índices y políticas RLS aplicadas.",
+    "Módulo src/lib/instruments/ con schemas Zod, queries y mutations completos y con guards de rol.",
+    "Server actions con revalidación de path y mensajes de error consistentes.",
+    "Página /instruments funcional: listado, alta, edición, activar/desactivar, asignar/desasignar responsable e historial visible.",
+    "Nav actualizado si aplica para la entrada de Instrumentos.",
+    "Tests unitarios nuevos pasando + suite completa (npx vitest run).",
+    "Typecheck (tsc --noEmit) y lint (eslint . --max-warnings=0) limpios.",
+    "next build completado sin errores (si procede).",
+    "Security scan sin issues HIGH.",
+    "ADR documentado en docs/adr-sprint-24-instrument-management.md."
+  ],
+  "dependencies": ["Sprint 2 (Roles — para validar directiva/super_admin)", "Sprint 19 (Perfiles — para el responsable asignado)"]
+}
