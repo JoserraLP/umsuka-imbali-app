@@ -608,6 +608,60 @@ export interface Database {
         };
         Relationships: [];
       };
+      instrument_assignments: {
+        Row: {
+          id: string;
+          instrument_id: string;
+          user_id: string;
+          assigned_at: string;
+          unassigned_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          instrument_id: string;
+          user_id: string;
+          assigned_at?: string;   // default now() in DB
+          unassigned_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          instrument_id?: string;
+          user_id?: string;
+          assigned_at?: string;
+          unassigned_at?: string | null;
+        };
+        Relationships: [];
+      };
+      instruments: {
+        Row: {
+          id: string;
+          name: string;
+          category: string | null;
+          description: string | null;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          category?: string | null;
+          description?: string | null;
+          is_active?: boolean;   // default true in DB
+          created_at?: string;   // default now() in DB
+          updated_at?: string;   // default now() in DB
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          category?: string | null;
+          description?: string | null;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       email_aliases: {
         Row: {
           id: string;
