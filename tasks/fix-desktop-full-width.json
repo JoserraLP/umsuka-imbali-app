@@ -1,0 +1,33 @@
+{
+  "title": "Fix — Páginas a ancho completo en ordenador (móvil intacto)",
+  "description": "En ordenador, las páginas autenticadas ocupan solo 600px centrados (clase global .feed-container con @apply mx-auto w-full max-w-[600px], aplicada por AppShell desde el Sprint 1/ADR-001, ancho tipo feed X/Twitter), dejando el resto de la pantalla vacía al lado del sidebar. Fix: en desktop (>= md, 768px) el wrapper debe ocupar todo el ancho disponible del main (que ya compensa el sidebar con md:pl-sidebar); en móvil (< md) el comportamiento actual se mantiene exactamente igual.",
+  "branch": "fix/desktop-full-width-pages",
+  "status": "published",
+  "pr_url": "https://github.com/JoserraLP/umsuka-imbali-app/pull/27",
+  "steps": [
+    {
+      "id": 1,
+      "name": "Ajustar .feed-container en globals.css",
+      "detail": "En src/app/globals.css (capa @layer components), cambiar .feed-container de '@apply mx-auto w-full max-w-[600px]' a '@apply mx-auto w-full max-w-[600px] md:max-w-none' (o equivalente con media query). Así en pantallas md+ el contenedor ocupa el 100% del main y en móvil conserva el ancho de feed actual. NO tocar .sidebar-link, .nav-icon ni nada más.",
+      "id_note": ".feed-container solo se usa en src/components/layout/app-shell.tsx (verificado por grep). La página /notifications tiene su propio max-w-3xl anidado: queda como está a propósito (no es el wrapper global y en desktop es un límite razonable)."
+    },
+    {
+      "id": 2,
+      "name": "Verificación",
+      "detail": "Comprobar que no se rompe nada: npx vitest run (suite completa, 1025 tests pre-fix), npm run typecheck, npm run lint (--max-warnings=0). Verificación manual documentada: en desktop (>=768px) las páginas ocupan todo el ancho; en móvil (<768px) se mantiene la columna centrada de 600px.",
+      "id_note": "El cambio es CSS puro en una capa Tailwind: no debería afectar lógica ni tests; si algún test de snapshot/className dependiera de la clase, ajustarlo."
+    }
+  ],
+  "acceptance_criteria": [
+    "En ordenador (pantallas >= 768px) las páginas autenticadas ocupan todo el ancho disponible del área principal (a la derecha del sidebar), sin columna centrada de 600px.",
+    "En móvil (< 768px) el layout se mantiene exactamente igual al actual (feed centrado de 600px con bottom nav)."
+  ],
+  "definition_of_done": [
+    "src/app/globals.css modificado solo en .feed-container (responsive md:max-w-none).",
+    "Suite de tests pasando (npx vitest run), typecheck (tsc --noEmit) y lint (eslint . --max-warnings=0) limpios.",
+    "Security scan sin issues HIGH.",
+    "ADR documentado en docs/adr-fix-desktop-full-width.md.",
+    "PR creado según docs/git-conventions.md (rama fix/desktop-full-width-pages, commits semánticos, body con secciones)."
+  ],
+  "dependencies": ["Sprint 1 (ADR-001 introdujo .feed-container)"]
+}
