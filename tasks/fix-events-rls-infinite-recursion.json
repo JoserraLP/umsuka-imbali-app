@@ -1,0 +1,30 @@
+{
+  "title": "Fix: Recursión infinita RLS en políticas de events (infinite recursion detected in policy for relation \"events\")",
+  "description": "El dashboard (/dashboard) falla al iniciar sesión con 'Error: Failed to list events: infinite recursion detected in policy for relation \"events\"'. Causa raíz: la política events_select_authenticated (migración 20260101005000, Sprint 18) contiene un exists que consulta umsuka.event_audience_users, y las políticas de event_audience_users (SELECT/INSERT/UPDATE/DELETE de la misma migración) contienen exists que consultan umsuka.events. Con FORCE RLS en ambas tablas, evaluar la política de events para un usuario no-management reevalúa la política de event_audience_users, que vuelve a evaluar la de events, etc. -> recursión infinita detectada por PostgreSQL. Fix canónico del proyecto: extraer ambas subconsultas a funciones SECURITY DEFINER (patrón is_management/current_user_workgroup: language sql, stable, security definer, set search_path = umsuka, public, grant execute to authenticated) que rompen la cadena porque corren como el dueño (postgres) sin re-evaluar RLS. Nueva migración 20260101005500: crear umsuka.is_event_creator(event_id uuid) y umsuka.is_event_audience_member(event_id uuid); reescribir la política events_select_authenticated usando is_event_audience_member(umsuka.events.id); reescribir las 4 políticas de event_audience_users usando is_event_creator(event_id). No requiere cambios de tipos TS ni de código de aplicación.",
+  "branch": "fix/events-rls-infinite-recursion",
+  "status": "published",
+  "pull_request": "https://github.com/JoserraLP/umsuka-imbali-app/pull/25",
+  "steps": [
+    {
+      "id": 1,
+      "name": "Migración SQL 20260101005500_fix_events_rls_recursion.sql",
+      "detail": "Crear funciones SECURITY DEFINER umsuka.is_event_creator(uuid) y umsuka.is_event_audience_member(uuid) con el patrón exacto del proyecto (language sql, stable, security definer, set search_path = umsuka, public, comment, grant execute to authenticated). Drop + recreate de la política events_select_authenticated en umsuka.events reemplazando el exists inline por umsuka.is_event_audience_member(id). Drop + recreate de las 4 políticas de umsuka.event_audience_users reemplazando cada exists inline por umsuka.is_event_creator(event_id). Mantener idempotencia (drop policy if exists) y comentarios explicando el porqué del fix.",
+      "id_note": "Verificar los nombres exactos de políticas en 20260101005000: event_audience_users_select_own_or_management_or_creator, event_audience_users_insert_management_or_creator, event_audience_users_update_management_or_creator, event_audience_users_delete_management_or_creator y events_select_authenticated."
+    }
+  ],
+  "acceptance_criteria": [
+    "El SELECT a umsuka.events para un usuario autenticado no-management ya no produce 'infinite recursion detected in policy for relation events'.",
+    "La visibilidad de eventos por audiencia (all/workgroup/member_type/specific_users) se conserva exactamente igual (misma lógica, solo extraída a funciones).",
+    "Las políticas de event_audience_users conservan la semántica: own row, management, o creador del evento.",
+    "No hay cambios de tipos TypeScript ni de la capa de aplicación: es un fix puramente SQL."
+  ],
+  "definition_of_done": [
+    "Migración 20260101005500_fix_events_rls_recursion.sql creada siguiendo el patrón del proyecto.",
+    "Las 2 funciones SECURITY DEFINER presentes con grant execute to authenticated.",
+    "Las 5 políticas reescritas (1 de events + 4 de event_audience_users) sin subconsultas recursivas inline.",
+    "Suite de tests existente pasa (npx vitest run), typecheck y lint limpios (sin cambios TS esperados).",
+    "Security scan sin issues HIGH.",
+    "ADR breve en docs/adr-fix-events-rls-recursion.md."
+  ],
+  "dependencies": ["Sprint 18 (migración 20260101005000 — origen del bug)", "Patrón SECURITY DEFINER de las migraciones 0013/0019/0027/0050"]
+}
