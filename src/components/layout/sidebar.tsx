@@ -110,7 +110,16 @@ export function Sidebar({
         </div>
         <div className="flex items-center gap-1 px-2">
           <ThemeToggle />
-          <form action={signOutAction}>
+          <form
+            action={signOutAction}
+            onSubmit={() => {
+              // PII hygiene: drop the identity-scoped API cache (see
+              // cacheKeyWillBeUsed in next.config.ts) on sign-out.
+              if ("caches" in window) {
+                void window.caches.delete("umsuka-api-v1");
+              }
+            }}
+          >
             <Button type="submit" variant="ghost" size="sm" className="gap-2 text-muted-foreground">
               <LogOut className="h-4 w-4" />
               <span className="text-sm">Cerrar sesión</span>
