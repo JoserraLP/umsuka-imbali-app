@@ -282,7 +282,16 @@ export function DashboardContent({ profile, instagramProfile, events, latestNews
                 <h2 className="text-sm font-semibold">Tu sesión</h2>
                 <p className="text-xs text-muted-foreground">{profile.email ?? "correo desconocido"}</p>
               </div>
-              <form action={signOutAction}>
+              <form
+                action={signOutAction}
+                onSubmit={() => {
+                  // PII hygiene: drop the identity-scoped API cache (see
+                  // cacheKeyWillBeUsed in next.config.ts) on sign-out.
+                  if ("caches" in window) {
+                    void window.caches.delete("umsuka-api-v1");
+                  }
+                }}
+              >
                 <Button type="submit" variant="outline" size="sm" className="w-full">
                   Cerrar sesión
                 </Button>
