@@ -2,7 +2,8 @@
   "title": "Sprint 23 — PWA: Progressive Web App",
   "description": "Convertir la aplicación en una Progressive Web App instalable con soporte offline mediante Service Workers. Incluye: configuración de next-pwa (ya presente en dependencias) en next.config.ts con estrategias de cache (NetworkFirst para API, StaleWhileRevalidate para assets, CacheFirst para estáticos), manifest.json con campos requeridos e iconos PNG en múltiples tamaños (192x192, 512x512) en /public/icons/, página offline personalizada (/offline), componente PwaRegister con banner de instalación en navegadores compatibles, y arreglo del menú inferior en móviles para que sea deslizable horizontalmente (swipe) y TODAS las secciones sean accesibles aunque excedan el ancho de pantalla.",
   "branch": "feature/sprint-23-pwa",
-  "status": "created",
+  "status": "published",
+  "pr_url": "https://github.com/JoserraLP/umsuka-imbali-app/pull/26",
   "steps": [
     {
       "id": 1,
