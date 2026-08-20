@@ -84,8 +84,9 @@ async function fetchProfileRow(userId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, first_name, last_name, birth_date, component_type, role, workgroup, is_workgroup_lead, component_lead_for, is_active, status, username, auth_method, avatar_url, bio, phone, skills, joined_at, created_at")
+    .select("id, first_name, last_name, birth_date, component_type, role, workgroup, is_workgroup_lead, component_lead_for, is_active, status, username, auth_method, avatar_url, bio, phone, skills, joined_at, created_at, deleted_at")
     .eq("id", userId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (error) {
@@ -94,6 +95,17 @@ async function fetchProfileRow(userId: string) {
       code: error.code,
       details: error.details,
     });
+    return null;
+  }
+
+  // Defense in depth: a soft-deleted profile (deleted_at set) is not an
+  // authenticated member even if some query path ever bypassed the
+  // `deleted_at is null` filter above (migration 0054).
+  if (data?.deleted_at) {
+    console.error(
+      `getCurrentProfile: el perfil ${userId} está marcado como eliminado (deleted_at) — ` +
+        "tratado como no autenticado.",
+    );
     return null;
   }
 

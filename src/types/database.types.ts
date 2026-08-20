@@ -57,6 +57,7 @@ export interface Database {
           skills: string[];
           joined_at: string | null;
           created_at: string;
+          deleted_at: string | null;
         };
         Insert: {
           id: string;
@@ -78,6 +79,7 @@ export interface Database {
           skills?: string[];   // default '{}' in DB
           joined_at?: string | null;
           created_at?: string;
+          deleted_at?: string | null;
         };
         Update: {
           id?: string;
@@ -99,6 +101,7 @@ export interface Database {
           skills?: string[];
           joined_at?: string | null;
           created_at?: string;
+          deleted_at?: string | null;
         };
         Relationships: [];
       };
@@ -358,21 +361,21 @@ export interface Database {
         Row: {
           id: string;
           question_id: string;
-          user_id: string;
+          user_id: string | null;
           content: string;
           created_at: string;
         };
         Insert: {
           id?: string;
           question_id: string;
-          user_id: string;
+          user_id?: string | null;
           content: string;
           created_at?: string;
         };
         Update: {
           id?: string;
           question_id?: string;
-          user_id?: string;
+          user_id?: string | null;
           content?: string;
           created_at?: string;
         };

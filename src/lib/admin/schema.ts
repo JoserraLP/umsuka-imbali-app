@@ -23,8 +23,8 @@ export const SETTING_KEY_LABELS: Record<SettingKey, string> = {
 };
 
 /**
- * The 13 audited administrative actions (mirrors the CHECK constraint
- * `chk_audit_logs_action` in migration 0053).
+ * The 14 audited administrative actions (mirrors the CHECK constraint
+ * `chk_audit_logs_action` in migrations 0053 + 0054).
  */
 export const AUDIT_ACTIONS = [
   "user.role_changed",
@@ -40,6 +40,7 @@ export const AUDIT_ACTIONS = [
   "user.password_reset_generated",
   "user.account_unlocked",
   "settings.updated",
+  "user.deleted",
 ] as const;
 export type AdminAuditAction = (typeof AUDIT_ACTIONS)[number];
 
@@ -57,6 +58,7 @@ export const AUDIT_ACTION_LABELS: Record<AdminAuditAction, string> = {
   "user.password_reset_generated": "Reset de contraseña generado",
   "user.account_unlocked": "Cuenta desbloqueada",
   "settings.updated": "Configuración actualizada",
+  "user.deleted": "Cuenta eliminada permanentemente",
 };
 
 /** Page size for /admin/audit. The server loads one page per request. */
@@ -240,7 +242,7 @@ export function mapAuditLogRow(
   return {
     id: row.id,
     userId: row.user_id,
-    // The DB CHECK chk_audit_logs_action guarantees the 13-value set.
+    // The DB CHECK chk_audit_logs_action guarantees the 14-value set.
     action: row.action as AdminAuditAction,
     entityType: row.entity_type,
     entityId: row.entity_id,

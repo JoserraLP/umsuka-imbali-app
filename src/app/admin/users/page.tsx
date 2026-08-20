@@ -24,6 +24,7 @@ import { MemberActiveToggle } from "@/app/admin/users/member-active-toggle";
 import { EmaillessAccountForm } from "@/app/admin/users/emailless-account-form";
 import { ResetPasswordButton } from "@/app/admin/users/reset-password-button";
 import { UnlockAccountButton } from "@/app/admin/users/unlock-account-button";
+import { DeleteAccountButton } from "@/app/admin/users/delete-account-button";
 import { UserStatusActions } from "@/app/admin/users/user-status-actions";
 import { ScrollText } from "lucide-react";
 
@@ -69,7 +70,7 @@ export default async function AdminUsersPage() {
             <CardTitle>Listado</CardTitle>
             <CardDescription>
               {canManage
-                ? "Puedes editar, cambiar el rol, aprobar/suspender y dar de alta/baja a cualquier miembro salvo a ti mismo."
+                ? "Puedes editar, cambiar el rol, aprobar/suspender y dar de alta/baja a cualquier miembro salvo a ti mismo. La eliminación permanente de cuentas es exclusiva del super admin."
                 : "Solo los administradores pueden modificar miembros. Tienes acceso de solo lectura."}
             </CardDescription>
           </CardHeader>
@@ -220,6 +221,12 @@ export default async function AdminUsersPage() {
                                 username={
                                   member.username ?? `${member.firstName} ${member.lastName}`
                                 }
+                              />
+                            )}
+                            {profile.role === "super_admin" && !isSelf && (
+                              <DeleteAccountButton
+                                userId={member.id}
+                                memberName={`${member.firstName} ${member.lastName}`.trim()}
                               />
                             )}
                             <Button asChild variant="ghost" size="sm" title="Ver logs de auditoría">

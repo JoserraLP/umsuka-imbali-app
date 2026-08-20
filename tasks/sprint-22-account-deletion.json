@@ -1,0 +1,78 @@
+{
+  "title": "Sprint 22 — Eliminación Permanente de Cuentas (Solo Super Admin)",
+  "description": "Permitir que solo el super admin pueda eliminar cuentas de forma permanente, incluyendo el usuario de auth, su perfil y todos sus datos relacionados. Requiere confirmación explícita (doble paso) y registro de auditoría. Incluye: auditoría de datos asociados (tablas con FK al usuario y estrategia de borrado por cada una: CASCADE, SET NULL o anonimización), migración de BD con columna deleted_at en umsuka.profiles (soft delete como salvaguarda) y revisión de RLS para excluir perfiles borrados, servicio src/lib/auth/delete-account.ts con deleteAccountPermanently(userId) (verificar rol super_admin, borrado en cascada de datos asociados, supabase.auth.admin.deleteUser(), registro en audit_logs), server action deleteAccountPermanentlyAction (solo super_admin, confirmación de doble paso), UI en /admin/users con botón 'Eliminar permanentemente' + diálogo de advertencia pidiendo confirmación escrita, feedback de éxito/error y actualización de la lista, y pruebas (unitarias del servicio + integración: solo super_admin puede eliminar, datos asociados limpiados, no se puede eliminar el propio super admin).",
+  "branch": "feature/sprint-22-account-deletion",
+  "status": "published",
+  "pull_request": "https://github.com/JoserraLP/umsuka-imbali-app/pull/24",
+  "steps": [
+    {
+      "id": 1,
+      "name": "Auditoría de datos asociados",
+      "detail": "Identificar todas las tablas con FK al usuario (profiles, attendance, absences, shift_assignments, questions, voting_votes, event_registrations, notifications, workgroup_attendance, email_aliases, password_attempts, etc.) y decidir estrategia de borrado por cada una (CASCADE, SET NULL o anonimización). Documentar la decisión en el ADR.",
+      "id_note": "Revisar esquema real en supabase/migrations y src/types/database.types.ts; no asumir nombres."
+    },
+    {
+      "id": 2,
+      "name": "Migración de BD — soft delete",
+      "detail": "Añadir columna deleted_at (timestamptz nullable) a umsuka.profiles como salvaguarda previa al borrado físico.",
+      "id_note": "Seguir numeración de migraciones existentes (20260101NNN) y patrón RLS + grants service_role de la migración 0052."
+    },
+    {
+      "id": 3,
+      "name": "Migración de BD — políticas RLS",
+      "detail": "Revisar que las políticas RLS excluyan perfiles con deleted_at no nulo (añadir condición deleted_at IS NULL a políticas SELECT/UPDATE existentes de profiles si aplica).",
+      "id_note": "No romper queries existentes; evaluar impacto en listados (admin debe poder ver borrados o no, según criterio)."
+    },
+    {
+      "id": 4,
+      "name": "Servicio src/lib/auth/delete-account.ts",
+      "detail": "Implementar deleteAccountPermanently(userId): (1) verificar rol super_admin, (2) ejecutar borrado en cascada de datos asociados (según estrategia del paso 1), (3) eliminar el usuario de auth con supabase.auth.admin.deleteUser(), (4) registrar en audit_logs (reutilizar logAuditAction de Sprint 21 si existe).",
+      "id_note": "Patrón de la capa auth existente (src/lib/auth/); reutilizar requireAdmin/super_admin helpers de src/lib/auth/roles.ts."
+    },
+    {
+      "id": 5,
+      "name": "Server action",
+      "detail": "deleteAccountPermanentlyAction(userId) — solo super_admin, con confirmación de doble paso (recibe campo de confirmación del formulario), errores tipados y revalidatePath de /admin/users.",
+      "id_note": "Patrón de server actions del proyecto (thin wrapper + zod + requireAuthenticatedProfile)."
+    },
+    {
+      "id": 6,
+      "name": "UI: Confirmación",
+      "detail": "En /admin/users, botón 'Eliminar permanentemente' que abre diálogo con advertencia ('Esta acción no se puede deshacer'), pidiendo teclear el nombre del usuario o 'ELIMINAR' para confirmar.",
+      "id_note": "Usar componentes shadcn/ui existentes (AlertDialog/Dialog) y patrón de las páginas admin actuales."
+    },
+    {
+      "id": 7,
+      "name": "UI: Feedback",
+      "detail": "Mensaje de éxito/error tras la eliminación, y actualización de la lista de usuarios (refetch o revalidate).",
+      "id_note": "Estados de carga/error coherentes con el resto de la app."
+    },
+    {
+      "id": 8,
+      "name": "Pruebas",
+      "detail": "Tests unitarios del servicio de borrado (mocks del cliente supabase). Tests de integración: solo super_admin puede eliminar, los datos asociados se limpian, no se puede eliminar el propio super admin. Suite completa pasando (npx vitest run), typecheck (tsc --noEmit) y lint (eslint . --max-warnings=0) limpios.",
+      "id_note": "Patrón de tests de sprints anteriores en tests/unit/lib/."
+    }
+  ],
+  "acceptance_criteria": [
+    "Solo el super admin puede eliminar cuentas permanentemente.",
+    "La eliminación borra el usuario de auth, el perfil y todos sus datos asociados.",
+    "Se requiere confirmación explícita (doble paso) antes de eliminar.",
+    "La eliminación queda registrada en el log de auditoría.",
+    "Un super admin no puede eliminarse a sí mismo (protección).",
+    "El sistema avisa de las consecuencias irreversibles antes de confirmar."
+  ],
+  "definition_of_done": [
+    "Auditoría de datos asociados completada y estrategia de borrado documentada en el ADR.",
+    "Migración SQL numerada añadiendo deleted_at a umsuka.profiles con RLS actualizada.",
+    "src/types/database.types.ts actualizado (hand-authored) consistente con la migración.",
+    "Servicio src/lib/auth/delete-account.ts con deleteAccountPermanently(userId) completo.",
+    "Server action deleteAccountPermanentlyAction con autorización super_admin y confirmación de doble paso.",
+    "UI en /admin/users con diálogo de confirmación irreversible y feedback de éxito/error.",
+    "Tests unitarios nuevos pasando + suite completa (npx vitest run).",
+    "Typecheck (tsc --noEmit) y lint (eslint . --max-warnings=0) limpios.",
+    "Security scan sin issues HIGH.",
+    "ADR documentado en docs/adr-sprint-22-account-deletion.md."
+  ],
+  "dependencies": ["Sprint 21 (Admin Panel — panel de usuarios y audit_logs)", "Sprint 6 (Registration Approval — estado de cuentas)"]
+}

@@ -1,10 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuthenticatedProfile } from "@/lib/auth/session";
-import { updateMemberProfile, updateMemberComponentType, updateMemberWorkgroup } from "@/lib/profiles/mutations";
+import {
+  updateMemberProfile,
+  updateMemberComponentType,
+  updateMemberWorkgroup,
+} from "@/lib/profiles/mutations";
 import { updateUserRole, setUserActive, logAuditAction } from "@/lib/admin/mutations";
+import { deleteAccountPermanently } from "@/lib/auth/delete-account";
 import type {
   UpdateMemberRoleInput,
   UpdateMemberProfileInput,
@@ -20,10 +26,7 @@ import type {
   CreateEmaillessAccountInput,
   CreateEmaillessAccountResult,
 } from "@/lib/auth/emailless-schema";
-import type {
-  GenerateResetTokenInput,
-  GenerateResetTokenResult,
-} from "@/lib/auth/password-schema";
+import type { GenerateResetTokenInput, GenerateResetTokenResult } from "@/lib/auth/password-schema";
 
 /**
  * Friendliest-effort audit helper: resolves the actor and writes ONE
@@ -89,9 +92,7 @@ export async function updateMemberProfileAction(
  * Delegates to the admin wrapper (audit already inside) — no duplicate
  * audit rows here.
  */
-export async function setMemberActiveAction(
-  input: SetMemberActiveInput,
-): Promise<MutationResult> {
+export async function setMemberActiveAction(input: SetMemberActiveInput): Promise<MutationResult> {
   const result = await setUserActive(input);
 
   if (result.success) {
@@ -283,5 +284,58 @@ export async function setComponentLeadAction(
   } catch (error) {
     console.error("setComponentLeadAction failed", error);
     return { success: false, error: "Error inesperado al actualizar el responsable." };
+  }
+}
+
+/**
+ * Confirmation gate for the permanent account deletion: the caller must
+ * type the word ELIMINAR (trimmed, case-insensitive) — the double-step
+ * confirmation the UI enforces in the AlertDialog.
+ */
+const deleteAccountPermanentlySchema = z
+  .object({
+    userId: z.string().uuid(),
+    confirmation: z.string(),
+  })
+  .refine((data) => data.confirmation.trim().toUpperCase() === "ELIMINAR", {
+    message: "Debes escribir ELIMINAR para confirmar.",
+    path: ["confirmation"],
+  });
+export type DeleteAccountPermanentlyActionInput = z.infer<typeof deleteAccountPermanentlySchema>;
+
+/**
+ * Super-admin only: permanently deletes a member account (auth user,
+ * profile and related data). Thin wrapper over
+ * deleteAccountPermanently() — authorization and the audit trail live in
+ * the service. The confirmation field is validated here (double step)
+ * and the affected admin views are revalidated on success only.
+ */
+export async function deleteAccountPermanentlyAction(input: {
+  userId: string;
+  confirmation: string;
+}): Promise<MutationResult> {
+  try {
+    const parsed = deleteAccountPermanentlySchema.safeParse(input);
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: parsed.error.issues.map((issue) => issue.message).join(", "),
+      };
+    }
+
+    const result = await deleteAccountPermanently(parsed.data.userId);
+
+    if (result.success) {
+      revalidatePath("/admin/users");
+      revalidatePath("/admin/registrations");
+    }
+
+    return result;
+  } catch (error) {
+    console.error("deleteAccountPermanentlyAction failed", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Error inesperado al eliminar la cuenta.",
+    };
   }
 }
