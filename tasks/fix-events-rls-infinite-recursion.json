@@ -2,7 +2,8 @@
   "title": "Fix: Recursión infinita RLS en políticas de events (infinite recursion detected in policy for relation \"events\")",
   "description": "El dashboard (/dashboard) falla al iniciar sesión con 'Error: Failed to list events: infinite recursion detected in policy for relation \"events\"'. Causa raíz: la política events_select_authenticated (migración 20260101005000, Sprint 18) contiene un exists que consulta umsuka.event_audience_users, y las políticas de event_audience_users (SELECT/INSERT/UPDATE/DELETE de la misma migración) contienen exists que consultan umsuka.events. Con FORCE RLS en ambas tablas, evaluar la política de events para un usuario no-management reevalúa la política de event_audience_users, que vuelve a evaluar la de events, etc. -> recursión infinita detectada por PostgreSQL. Fix canónico del proyecto: extraer ambas subconsultas a funciones SECURITY DEFINER (patrón is_management/current_user_workgroup: language sql, stable, security definer, set search_path = umsuka, public, grant execute to authenticated) que rompen la cadena porque corren como el dueño (postgres) sin re-evaluar RLS. Nueva migración 20260101005500: crear umsuka.is_event_creator(event_id uuid) y umsuka.is_event_audience_member(event_id uuid); reescribir la política events_select_authenticated usando is_event_audience_member(umsuka.events.id); reescribir las 4 políticas de event_audience_users usando is_event_creator(event_id). No requiere cambios de tipos TS ni de código de aplicación.",
   "branch": "fix/events-rls-infinite-recursion",
-  "status": "created",
+  "status": "published",
+  "pull_request": "https://github.com/JoserraLP/umsuka-imbali-app/pull/25",
   "steps": [
     {
       "id": 1,
