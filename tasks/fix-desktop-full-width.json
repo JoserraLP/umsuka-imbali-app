@@ -2,7 +2,8 @@
   "title": "Fix — Páginas a ancho completo en ordenador (móvil intacto)",
   "description": "En ordenador, las páginas autenticadas ocupan solo 600px centrados (clase global .feed-container con @apply mx-auto w-full max-w-[600px], aplicada por AppShell desde el Sprint 1/ADR-001, ancho tipo feed X/Twitter), dejando el resto de la pantalla vacía al lado del sidebar. Fix: en desktop (>= md, 768px) el wrapper debe ocupar todo el ancho disponible del main (que ya compensa el sidebar con md:pl-sidebar); en móvil (< md) el comportamiento actual se mantiene exactamente igual.",
   "branch": "fix/desktop-full-width-pages",
-  "status": "created",
+  "status": "published",
+  "pr_url": "https://github.com/JoserraLP/umsuka-imbali-app/pull/27",
   "steps": [
     {
       "id": 1,
