@@ -52,23 +52,25 @@ export default async function NewEventPage() {
             <CardDescription>Visible para todos los miembros en cuanto se cree.</CardDescription>
           </CardHeader>
           <CardContent>
-            <EventForm
-              mode="create"
-              defaultValues={{
-                title: "",
-                description: "",
-                eventType: isManagement ? "general" : "work_shift",
-                eventDate: "",
-                capacity: null,
-                location: "",
-                imageUrl: "",
-                registrationDeadline: "",
-                workgroup: (isManagement ? null : profile.workgroup) as EventWorkgroup | null,
-                audienceType: "all",
-                audienceWorkgroup: null,
-                audienceMemberType: null,
-                audienceUserIds: [],
-              }}
+              <EventForm
+                mode="create"
+                defaultValues={{
+                  title: "",
+                  description: "",
+                  eventType: isManagement ? "general" : "work_shift",
+                  eventDate: "",
+                  capacity: null,
+                  location: "",
+                  imageUrl: "",
+                  registrationDeadline: "",
+                  morningSession: false,
+                  afternoonSession: false,
+                  workgroup: (isManagement ? null : profile.workgroup) as EventWorkgroup | null,
+                  audienceType: "all",
+                  audienceWorkgroup: null,
+                  audienceMemberType: null,
+                  audienceUserIds: [],
+                }}
               leadWorkgroup={isManagement ? undefined : profile.workgroup}
               audienceMembers={audienceMembers}
               canConfigureAudience={isManagement}

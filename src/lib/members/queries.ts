@@ -5,6 +5,10 @@ import { isLeadOfGroup, isLeadOfComponent, type MemberActor } from "@/lib/member
 import type { MemberListItem, MemberDetail } from "@/lib/members/schema";
 import { getMyAssignedShifts, type MyAssignedShift } from "@/lib/shifts/assignments";
 import { getUserAttendance, type UserAttendanceRecord } from "@/lib/attendance/queries";
+import {
+  getUserRehearsalAttendance,
+  type UserRehearsalAttendanceRecord,
+} from "@/lib/rehearsals/queries";
 import type {
   AppRole,
   AuthMethod,
@@ -163,14 +167,17 @@ export interface MemberHistory {
   member: MemberDetail;
   shifts: MyAssignedShift[];
   attendance: UserAttendanceRecord[];
+  /** Per-session rehearsal attendance (Sprint 27). */
+  rehearsalAttendance: UserRehearsalAttendanceRecord[];
 }
 
 /**
- * Member profile + assigned shifts + attendance history, reusing the
- * queries from previous sprints. Returns null when the profile does not
- * exist. Callers must gate access with canViewMemberDetail(); the RLS
- * policies added in migration 0042 let a lead read shifts/attendance of
- * members of their own workgroup, and management reads everything.
+ * Member profile + assigned shifts + attendance history + rehearsal
+ * session attendance, reusing the queries from previous sprints. Returns
+ * null when the profile does not exist. Callers must gate access with
+ * canViewMemberDetail(); the RLS policies added in migration 0042 let a
+ * lead read shifts/attendance of members of their own workgroup, and
+ * management reads everything.
  */
 export async function getMemberDetailWithHistory(userId: string): Promise<MemberHistory | null> {
   const member = await getMemberDetail(userId);
@@ -179,10 +186,11 @@ export async function getMemberDetailWithHistory(userId: string): Promise<Member
     return null;
   }
 
-  const [shifts, attendance] = await Promise.all([
+  const [shifts, attendance, rehearsalAttendance] = await Promise.all([
     getMyAssignedShifts(userId),
     getUserAttendance(userId),
+    getUserRehearsalAttendance(userId),
   ]);
 
-  return { member, shifts, attendance };
+  return { member, shifts, attendance, rehearsalAttendance };
 }

@@ -20,12 +20,15 @@ import { getAllWorkgroupMembers, getWorkgroupAttendanceByShift } from "@/lib/wor
 import { getEventShifts, getAvailableMembers } from "@/lib/shifts/queries";
 import { getAudienceOptions, getAudienceSummary, getEventAudience } from "@/lib/events/audience";
 import { isAttendanceOnlyEventType } from "@/lib/events/policy";
+import { getRehearsalAttendance } from "@/lib/rehearsals/queries";
+import type { RehearsalSession } from "@/types/database.types";
 import { EventForm } from "@/app/events/event-form";
 import { AudienceEditor } from "@/app/events/[id]/audience-editor";
 import { DeleteEventButton } from "@/app/events/[id]/delete-event-button";
 import { RegistrationPanel } from "@/app/events/[id]/registration-panel";
 import { CommentsSection } from "@/app/events/[id]/comments-section";
 import { AttendancePanel } from "@/app/events/[id]/attendance-panel";
+import { RehearsalAttendancePanel } from "@/app/events/[id]/rehearsal-attendance-panel";
 import { AbsencePanel } from "@/app/events/[id]/absence-panel";
 import { WorkgroupAttendancePanel } from "@/app/events/[id]/workgroup-panel";
 import { ShiftManagementPanel } from "@/app/events/[id]/shift-management-panel";
@@ -41,6 +44,7 @@ const EVENT_TYPE_LABELS: Record<EventTypeValue, string> = {
   meeting: "Reunión",
   carnival: "Carnaval",
   work_shift: "Turno de trabajo",
+  rehearsal: "Ensayo",
 };
 
 const WORKGROUP_LABELS: Record<string, string> = {
@@ -92,6 +96,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   }
 
   const isWorkShift = event.eventType === "work_shift";
+  const isRehearsal = event.eventType === "rehearsal";
   // Management can manage any event; a workgroup lead can only manage the
   // work_shift events they created for their own group (Sprint 12).
   const canManage =
@@ -105,8 +110,8 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   const [eventAudience, audienceOptions] = canManage
     ? await Promise.all([getEventAudience(event.id), getAudienceOptions()])
     : [null, []];
-  // Sprint 17b: meeting/carnival events are attendance-only — they have
-  // no shifts (nor workgroup attendance) and no absences.
+  // Sprint 17b: meeting/carnival/rehearsal events are attendance-only —
+  // they have no shifts (nor workgroup attendance) and no absences.
   const canHaveShifts = !isAttendanceOnlyEventType(event.eventType);
   const canHaveAbsences = event.eventType === "general";
   const registrationSummary = await getEventRegistrationSummary(event.id, profile.id);
@@ -126,11 +131,20 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     now: new Date(),
   });
 
-  const [attendanceRecords, attendanceSummary, absences] = await Promise.all([
-    canManage ? getEventAttendance(event.id) : [],
-    canManage ? getEventAttendanceSummary(event.id) : null,
+  // Rehearsals use the per-session panel instead of the generic one, so
+  // the generic attendance queries are skipped for them.
+  const [attendanceRecords, attendanceSummary, absences, rehearsalRecords] = await Promise.all([
+    canManage && !isRehearsal ? getEventAttendance(event.id) : [],
+    canManage && !isRehearsal ? getEventAttendanceSummary(event.id) : null,
     canManage && canHaveAbsences ? getEventAbsences(event.id) : [],
+    canManage && isRehearsal ? getRehearsalAttendance(event.id) : [],
   ]);
+
+  /** Enabled sessions of this rehearsal (at least one by constraint). */
+  const rehearsalSessions: RehearsalSession[] = [
+    ...(event.morningSession ? (["morning"] as const) : []),
+    ...(event.afternoonSession ? (["afternoon"] as const) : []),
+  ];
 
   const viewerAbsence = await (canManage
     ? Promise.resolve(absences.find((a) => a.userId === profile.id) ?? null)
@@ -247,6 +261,8 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                   registrationDeadline: event.registrationDeadline
                     ? toDatetimeLocalValue(event.registrationDeadline)
                     : "",
+                  morningSession: event.morningSession,
+                  afternoonSession: event.afternoonSession,
                   workgroup: event.visibleToGroup as EventWorkgroup | null,
                   audienceType: event.audienceType,
                   audienceWorkgroup: event.audienceWorkgroup as EventWorkgroup | null,
@@ -326,7 +342,27 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           </CardContent>
         </Card>
 
-        {canManage && !isWorkShift && (
+        {/* Sprint 27: rehearsals use the per-session attendance panel. */}
+        {canManage && isRehearsal && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Asistencia a ensayos</CardTitle>
+              <CardDescription>
+                Marca quién asistió a cada sesión del ensayo (mañana/tarde).
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RehearsalAttendancePanel
+                eventId={event.id}
+                sessions={rehearsalSessions}
+                attendees={registrationSummary.attendees}
+                records={rehearsalRecords}
+              />
+            </CardContent>
+          </Card>
+        )}
+
+        {canManage && !isWorkShift && !isRehearsal && (
           <Card>
             <CardHeader>
               <CardTitle>Asistencia</CardTitle>
@@ -348,7 +384,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
 
         {/* Shift management panel — shown for event types that support
             shifts (general, work_shift); hidden for attendance-only
-            events (meeting, carnival). */}
+            events (meeting, carnival, rehearsal). */}
         {canHaveShifts && (
           <Card>
             <CardHeader>
