@@ -2,7 +2,7 @@
   "title": "Sprint 27 — Asistencia a Ensayos (Rehearsal Attendance)",
   "description": "Registrar la asistencia de los miembros a los ensayos de la comparsa. Cada ensayo es un evento de tipo `rehearsal` con sesiones de mañana y tarde; los responsables pueden marcar quién asistió y las estadísticas alimentan el perfil y el porcentaje de participación.",
   "branch": "feature/sprint-27-rehearsal-attendance",
-  "status": "planned",
+  "status": "implemented",
   "plan_summary": {
     "migrations": [
       "supabase/migrations/20260101005700_rehearsal_event_type.sql — ALTER TYPE umsuka.event_type ADD VALUE 'rehearsal' (transacción separada por restricción PG)",
