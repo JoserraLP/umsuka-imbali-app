@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireAuthenticatedProfile } from "@/lib/auth/session";
 import { requireManagement, AuthorizationError } from "@/lib/auth/permissions";
+import { REHEARSAL_SESSIONS_UNAVAILABLE_MESSAGE } from "@/lib/events/policy";
 import {
   markAttendanceSchema,
   markMultipleAttendanceSchema,
@@ -16,6 +17,29 @@ import type { AuthenticatedProfile } from "@/types/auth";
 export interface MutationResult {
   success: boolean;
   error?: string;
+}
+
+/**
+ * Sprint 27: rehearsal events use the per-session flow instead of this
+ * generic table. Returns REHEARSAL_SESSIONS_UNAVAILABLE_MESSAGE when the
+ * event is a rehearsal, "Evento no encontrado." when the event does not
+ * exist (fail closed), or `null` when generic attendance is allowed.
+ */
+async function rejectRehearsalEvent(eventId: string): Promise<string | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("events")
+    .select("event_type")
+    .eq("id", eventId)
+    .maybeSingle();
+
+  if (!data) {
+    return "Evento no encontrado.";
+  }
+  if (data.event_type === "rehearsal") {
+    return REHEARSAL_SESSIONS_UNAVAILABLE_MESSAGE;
+  }
+  return null;
 }
 
 /**
@@ -52,6 +76,11 @@ export async function markAttendance(input: MarkAttendanceInput): Promise<Mutati
   const actorOrError = await assertCanManageAttendance();
   if ("success" in actorOrError) {
     return actorOrError;
+  }
+
+  const rehearsalError = await rejectRehearsalEvent(parsed.data.eventId);
+  if (rehearsalError !== null) {
+    return { success: false, error: rehearsalError };
   }
 
   const supabase = await createClient();
@@ -93,9 +122,21 @@ export async function markMultipleAttendance(
     return actorOrError;
   }
 
+  const rehearsalError = await rejectRehearsalEvent(parsed.data.records[0]!.eventId);
+  if (rehearsalError !== null) {
+    return { success: false, error: rehearsalError };
+  }
+
   const supabase = await createClient();
 
   for (const record of parsed.data.records) {
+    if (record.eventId !== parsed.data.records[0]!.eventId) {
+      return {
+        success: false,
+        error: "Todos los registros deben pertenecer al mismo evento.",
+      };
+    }
+
     const { error } = await supabase.from("attendance").upsert(
       {
         event_id: record.eventId,
@@ -132,6 +173,23 @@ export async function updateAttendance(input: UpdateAttendanceInput): Promise<Mu
 
   const supabase = await createClient();
 
+  // Defense-in-depth (Sprint 27): resolve the record's event first so
+  // rehearsal rows can never be mutated through this generic path.
+  const { data: record } = await supabase
+    .from("attendance")
+    .select("event_id")
+    .eq("id", parsed.data.id)
+    .maybeSingle();
+
+  if (!record?.event_id) {
+    return { success: false, error: "Registro de asistencia no encontrado." };
+  }
+
+  const rehearsalError = await rejectRehearsalEvent(record.event_id);
+  if (rehearsalError !== null) {
+    return { success: false, error: rehearsalError };
+  }
+
   const { error } = await supabase
     .from("attendance")
     .update({ attended: parsed.data.attended })
@@ -162,6 +220,23 @@ export async function deleteAttendance(input: DeleteAttendanceInput): Promise<Mu
   }
 
   const supabase = await createClient();
+
+  // Defense-in-depth (Sprint 27): resolve the record's event first so
+  // rehearsal rows can never be deleted through this generic path.
+  const { data: record } = await supabase
+    .from("attendance")
+    .select("event_id")
+    .eq("id", parsed.data.id)
+    .maybeSingle();
+
+  if (!record?.event_id) {
+    return { success: false, error: "Registro de asistencia no encontrado." };
+  }
+
+  const rehearsalError = await rejectRehearsalEvent(record.event_id);
+  if (rehearsalError !== null) {
+    return { success: false, error: rehearsalError };
+  }
 
   const { error } = await supabase.from("attendance").delete().eq("id", parsed.data.id);
 

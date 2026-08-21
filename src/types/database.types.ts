@@ -7,7 +7,8 @@
 export type Json = string | number | boolean | null | { [key: string]: Json } | Json[];
 
 export type ComponentType = "music" | "dance" | "member";
-export type EventType = "general" | "meeting" | "carnival" | "work_shift";
+export type EventType = "general" | "meeting" | "carnival" | "work_shift" | "rehearsal";
+export type RehearsalSession = "morning" | "afternoon";
 export type Workgroup = "telas" | "barra" | "estandarte" | "limpieza" | "ninguno";
 export type UserStatus = "pending" | "active" | "suspended";
 export type AuthMethod = "google" | "email_alias" | "phone";
@@ -116,6 +117,8 @@ export interface Database {
           registration_deadline: string | null;
           location: string | null;
           image_url: string | null;
+          morning_session: boolean;   // default false in DB (rehearsal only)
+          afternoon_session: boolean; // default false in DB (rehearsal only)
           visible_to_group: Workgroup | null;
           created_by_workgroup: Workgroup | null;
           audience_type: AudienceType;
@@ -134,6 +137,8 @@ export interface Database {
           registration_deadline?: string | null;
           location?: string | null;
           image_url?: string | null;
+          morning_session?: boolean;   // default false in DB
+          afternoon_session?: boolean; // default false in DB
           visible_to_group?: Workgroup | null;
           created_by_workgroup?: Workgroup | null;
           audience_type?: AudienceType;   // default 'all' in DB
@@ -152,6 +157,8 @@ export interface Database {
           registration_deadline?: string | null;
           location?: string | null;
           image_url?: string | null;
+          morning_session?: boolean;
+          afternoon_session?: boolean;
           visible_to_group?: Workgroup | null;
           created_by_workgroup?: Workgroup | null;
           audience_type?: AudienceType;
@@ -533,6 +540,39 @@ export interface Database {
           status?: WaitlistStatus;
           joined_at?: string;
           promoted_at?: string | null;
+        };
+        Relationships: [];
+      };
+      rehearsal_attendance: {
+        Row: {
+          id: string;
+          event_id: string;
+          user_id: string;
+          session: RehearsalSession;
+          attended: boolean;
+          marked_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;   // default gen_random_uuid() in DB
+          event_id: string;
+          user_id: string;
+          session: RehearsalSession;
+          attended: boolean;
+          marked_by?: string | null;
+          created_at?: string;   // default now() in DB
+          updated_at?: string;   // default now() in DB
+        };
+        Update: {
+          id?: string;
+          event_id?: string;
+          user_id?: string;
+          session?: RehearsalSession;
+          attended?: boolean;
+          marked_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
         };
         Relationships: [];
       };

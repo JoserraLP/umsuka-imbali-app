@@ -37,6 +37,25 @@ export interface MutationResult {
 const UNIQUE_VIOLATION = "23505";
 
 /**
+ * Normalizes the rehearsal session flags before persisting: they are
+ * always false for non-rehearsal events so the DB CHECK
+ * chk_events_non_rehearsal_no_sessions can never trip on stale form
+ * input.
+ */
+function resolveSessionFlags(
+  eventType: CreateEventInput["eventType"],
+  sessions: { morningSession: boolean; afternoonSession: boolean },
+): { morning_session: boolean; afternoon_session: boolean } {
+  if (eventType !== "rehearsal") {
+    return { morning_session: false, afternoon_session: false };
+  }
+  return {
+    morning_session: sessions.morningSession,
+    afternoon_session: sessions.afternoonSession,
+  };
+}
+
+/**
  * Resolves the target workgroup for a work_shift event.
  * Management can choose any active group; a workgroup lead can only use
  * their own group (the form already defaults to it, this is the server-side
@@ -125,6 +144,7 @@ export async function createEvent(input: CreateEventInput): Promise<MutationResu
       location: parsed.data.location,
       image_url: parsed.data.imageUrl,
       registration_deadline: parsed.data.registrationDeadline,
+      ...resolveSessionFlags(parsed.data.eventType, parsed.data),
       created_by: actor.id,
       visible_to_group: resolvedGroup,
       created_by_workgroup: resolvedGroup,
@@ -224,7 +244,21 @@ export async function updateEvent(input: UpdateEventInput): Promise<MutationResu
 
   const isWorkShift = parsed.data.eventType === "work_shift";
   const wasWorkShift = existing.event_type === "work_shift";
+  const isRehearsal = parsed.data.eventType === "rehearsal";
+  const wasRehearsal = existing.event_type === "rehearsal";
   const wasSpecificUsers = existing.audience_type === "specific_users";
+
+  // Sprint 27: conversions to or from `rehearsal` are blocked — the two
+  // types carry incompatible attendance models (per-session rows vs the
+  // single generic record) and silently switching would orphan data.
+  if (wasRehearsal !== isRehearsal) {
+    return {
+      success: false,
+      error: wasRehearsal
+        ? "No puedes cambiar el tipo de un evento de tipo ensayo."
+        : "No puedes convertir este evento en un ensayo.",
+    };
+  }
 
   // Work_shift events: the creator (a workgroup lead) or management can
   // update them. A lead cannot convert their work_shift event into a
@@ -287,6 +321,7 @@ export async function updateEvent(input: UpdateEventInput): Promise<MutationResu
       location: parsed.data.location,
       image_url: parsed.data.imageUrl,
       registration_deadline: parsed.data.registrationDeadline,
+      ...resolveSessionFlags(parsed.data.eventType, parsed.data),
       visible_to_group: resolvedGroup,
       created_by_workgroup: resolvedGroup,
       audience_type: audience.audience.audienceType,
