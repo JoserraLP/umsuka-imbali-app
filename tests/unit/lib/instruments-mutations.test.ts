@@ -92,7 +92,7 @@ function makeTableMock(
   return builder;
 }
 
-type TableKey = "instruments" | "instrument_assignments";
+type TableKey = "instruments" | "instrument_assignments" | "profiles";
 
 interface TableResults {
   select?: QueryResult;
@@ -115,6 +115,11 @@ function setupTables(
       tables.instrument_assignments?.select ?? { data: null, error: null },
       tables.instrument_assignments?.awaited ?? { data: null, error: null },
       tables.instrument_assignments?.awaitedUpdate ?? { data: null, error: null },
+    ),
+    profiles: makeTableMock(
+      tables.profiles?.select ?? { data: null, error: null },
+      tables.profiles?.awaited ?? { data: null, error: null },
+      tables.profiles?.awaitedUpdate ?? { data: null, error: null },
     ),
   };
 
@@ -158,6 +163,18 @@ function duplicateKeyError(): Error {
   return Object.assign(new Error("duplicate key value violates unique constraint"), {
     code: "23505",
   });
+}
+
+function foreignKeyError(): Error {
+  return Object.assign(
+    new Error("insert or update on table violates foreign key constraint"),
+    { code: "23503" },
+  );
+}
+
+/** Row shape returned by the assignability pre-check on profiles. */
+function assignableProfile(overrides: Record<string, unknown> = {}) {
+  return { is_active: true, status: "active", deleted_at: null, ...overrides };
 }
 
 function validCreateInput() {
@@ -356,6 +373,7 @@ describe("assignInstrument", () => {
   it("closes the previous active assignment and inserts the new one", async () => {
     const builders = setupTables({
       instruments: { select: { data: [{ is_active: true }] } },
+      profiles: { select: { data: [assignableProfile()] } },
       instrument_assignments: {
         // feeds .single() on the new-assignment insert (the result id)
         select: { data: [{ id: "assign-1" }] },
@@ -368,7 +386,7 @@ describe("assignInstrument", () => {
     });
 
     expect(result).toEqual({ success: true, id: "assign-1" });
-
+    expect(builders.profiles.eq).toHaveBeenCalledWith("id", USER_ID);
     expect(builders.instrument_assignments.update).toHaveBeenCalledWith(
       expect.objectContaining({ unassigned_at: expect.any(String) }),
     );
@@ -417,6 +435,7 @@ describe("assignInstrument", () => {
   it("maps a 23505 insert violation (race) to a friendly message", async () => {
     setupTables({
       instruments: { select: { data: [{ is_active: true }] } },
+      profiles: { select: { data: [assignableProfile()] } },
       instrument_assignments: {
         // the close-UPDATE must succeed, the INSERT .single() must fail
         awaitedUpdate: { data: null, error: null },
@@ -435,9 +454,68 @@ describe("assignInstrument", () => {
     );
   });
 
+  it("maps a 23503 insert FK violation to a friendly message", async () => {
+    setupTables({
+      instruments: { select: { data: [{ is_active: true }] } },
+      profiles: { select: { data: [assignableProfile()] } },
+      instrument_assignments: {
+        // the member was removed between render and submit: the
+        // pre-check passed but the INSERT hits the FK violation.
+        awaitedUpdate: { data: null, error: null },
+        select: { error: foreignKeyError() },
+      },
+    });
+
+    const result = await assignInstrument({
+      instrument_id: INSTRUMENT_ID,
+      user_id: USER_ID,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe(
+      "El miembro seleccionado ya no está disponible.",
+    );
+  });
+
+  it.each([
+    { name: "does not exist", profile: [] },
+    { name: "is inactive", profile: [assignableProfile({ is_active: false })] },
+    {
+      name: "is not approved yet",
+      profile: [assignableProfile({ status: "pending" })],
+    },
+    {
+      name: "was soft-deleted",
+      profile: [assignableProfile({ deleted_at: "2026-08-01T00:00:00Z" })],
+    },
+  ])(
+    "does not close the active assignment when the target member $name",
+    async ({ profile }) => {
+      const builders = setupTables({
+        instruments: { select: { data: [{ is_active: true }] } },
+        profiles: { select: { data: profile } },
+      });
+
+      const result = await assignInstrument({
+        instrument_id: INSTRUMENT_ID,
+        user_id: USER_ID,
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe(
+        "El miembro seleccionado ya no está disponible.",
+      );
+      // The close-then-insert gap must be avoided: the previous
+      // responsable keeps the instrument when the new one is invalid.
+      expect(builders.instrument_assignments.update).not.toHaveBeenCalled();
+      expect(builders.instrument_assignments.insert).not.toHaveBeenCalled();
+    },
+  );
+
   it("returns the close-update error when closing the previous assignment fails", async () => {
     const builders = setupTables({
       instruments: { select: { data: [{ is_active: true }] } },
+      profiles: { select: { data: [assignableProfile()] } },
       instrument_assignments: {
         awaitedUpdate: { error: new Error("close exploded") },
       },

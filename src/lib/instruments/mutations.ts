@@ -22,6 +22,8 @@ export interface MutationResult {
 }
 
 const UNIQUE_VIOLATION = "23505";
+const FOREIGN_KEY_VIOLATION = "23503";
+const MEMBER_NOT_AVAILABLE_ERROR = "El miembro seleccionado ya no está disponible.";
 
 // ── Authorization helpers ─────────────────────────────
 
@@ -188,10 +190,14 @@ export async function toggleInstrumentActive(
 /**
  * Assigns a responsable to an instrument ("one person at a time"): the
  * previous active assignment is closed (unassigned_at = now) and then
- * the new one is inserted. The partial unique index on active
+ * the new one is inserted. The target member is verified to exist and
+ * be assignable BEFORE closing the active assignment, so a stale form
+ * submit (member removed between render and submit) never leaves the
+ * instrument without a responsable. The partial unique index on active
  * assignments is the final defense against concurrent assigns (23505 is
- * mapped to a friendly message). Inactive instruments cannot be
- * assigned. Only management can do this.
+ * mapped to a friendly message, and a late 23503 FK violation on the
+ * insert maps to the same member-unavailable message). Inactive
+ * instruments cannot be assigned. Only management can do this.
  */
 export async function assignInstrument(
   input: AssignInstrumentInput,
@@ -226,6 +232,30 @@ export async function assignInstrument(
     return { success: false, error: "No se puede asignar un instrumento inactivo." };
   }
 
+  // Verify the target member still exists and is assignable (same
+  // criteria as getAssignableMembers) BEFORE closing the active
+  // assignment: otherwise a member removed between render and submit
+  // would leave the instrument with neither the old nor the new
+  // responsable (close-then-insert gap).
+  const { data: member, error: memberError } = await supabase
+    .from("profiles")
+    .select("is_active, status, deleted_at")
+    .eq("id", parsed.data.user_id)
+    .maybeSingle();
+
+  if (memberError) {
+    return { success: false, error: memberError.message };
+  }
+
+  if (
+    !member ||
+    !member.is_active ||
+    member.status !== "active" ||
+    member.deleted_at !== null
+  ) {
+    return { success: false, error: MEMBER_NOT_AVAILABLE_ERROR };
+  }
+
   // Close any previously active assignment for this instrument.
   const { error: closeError } = await supabase
     .from("instrument_assignments")
@@ -252,6 +282,11 @@ export async function assignInstrument(
         success: false,
         error: "El instrumento ya tiene una persona responsable asignada.",
       };
+    }
+    if (error.code === FOREIGN_KEY_VIOLATION) {
+      // The member was removed after the pre-check above (TOCTOU):
+      // surface the same friendly message instead of the raw FK error.
+      return { success: false, error: MEMBER_NOT_AVAILABLE_ERROR };
     }
     return { success: false, error: error.message };
   }
