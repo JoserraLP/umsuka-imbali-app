@@ -174,6 +174,8 @@ function createInput(overrides: Record<string, unknown> = {}): CreateEventInput 
     location: "",
     imageUrl: "",
     registrationDeadline: "",
+    morningSession: false,
+    afternoonSession: false,
     workgroup: null,
     audienceType: "all",
     audienceWorkgroup: null,

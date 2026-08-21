@@ -65,13 +65,15 @@ describe("getProfileHistorySummary", () => {
     { table: "attendance", result: { count: 2 } },
     { table: "absences", result: { count: 1 } },
     { table: "shift_assignments", result: { count: 4 } },
+    { table: "rehearsal_attendance", result: { count: 6 } },
+    { table: "rehearsal_attendance", result: { count: 8 } },
   ];
 
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("runs five head-only count queries scoped to the user and returns the summary", async () => {
+  it("runs seven head-only count queries scoped to the user and returns the summary", async () => {
     const builders = setupScript(script);
 
     const summary = await getProfileHistorySummary(USER_ID);
@@ -82,6 +84,8 @@ describe("getProfileHistorySummary", () => {
       attendanceAbsent: 2,
       absences: 1,
       shifts: 4,
+      rehearsalsAttended: 6,
+      rehearsalsMarked: 8,
     });
 
     // Every query is head-only and scoped to the user.
@@ -93,6 +97,9 @@ describe("getProfileHistorySummary", () => {
     // The two attendance queries split present vs absent.
     expect(builders[1]!.eq).toHaveBeenCalledWith("attended", true);
     expect(builders[2]!.eq).toHaveBeenCalledWith("attended", false);
+
+    // The two rehearsal queries split attended vs total marked.
+    expect(builders[5]!.eq).toHaveBeenCalledWith("attended", true);
   });
 
   it("falls back to 0 when a count is null", async () => {
@@ -102,6 +109,8 @@ describe("getProfileHistorySummary", () => {
       { table: "attendance", result: { count: null } },
       { table: "absences", result: { count: null } },
       { table: "shift_assignments", result: { count: null } },
+      { table: "rehearsal_attendance", result: { count: null } },
+      { table: "rehearsal_attendance", result: { count: null } },
     ]);
 
     const summary = await getProfileHistorySummary(USER_ID);
@@ -112,6 +121,8 @@ describe("getProfileHistorySummary", () => {
       attendanceAbsent: 0,
       absences: 0,
       shifts: 0,
+      rehearsalsAttended: 0,
+      rehearsalsMarked: 0,
     });
   });
 
@@ -122,6 +133,8 @@ describe("getProfileHistorySummary", () => {
       { table: "attendance", result: { count: 2 } },
       { table: "absences", result: { error: { message: "select failed" } } },
       { table: "shift_assignments", result: { count: 4 } },
+      { table: "rehearsal_attendance", result: { count: 6 } },
+      { table: "rehearsal_attendance", result: { count: 8 } },
     ]);
 
     await expect(getProfileHistorySummary(USER_ID)).rejects.toThrow(
