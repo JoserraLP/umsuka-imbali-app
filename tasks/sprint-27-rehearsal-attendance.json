@@ -1,0 +1,51 @@
+{
+  "title": "Sprint 27 — Asistencia a Ensayos (Rehearsal Attendance)",
+  "description": "Registrar la asistencia de los miembros a los ensayos de la comparsa. Cada ensayo es un evento de tipo `rehearsal` con sesiones de mañana y tarde; los responsables pueden marcar quién asistió y las estadísticas alimentan el perfil y el porcentaje de participación.",
+  "branch": "feature/sprint-27-rehearsal-attendance",
+  "status": "planned",
+  "plan_summary": {
+    "migrations": [
+      "supabase/migrations/20260101005700_rehearsal_event_type.sql — ALTER TYPE umsuka.event_type ADD VALUE 'rehearsal' (transacción separada por restricción PG)",
+      "supabase/migrations/20260101005800_rehearsal_attendance.sql — columnas morning_session/afternoon_session en events + CHECKs, ENUM umsuka.rehearsal_session, tabla umsuka.rehearsal_attendance (unique event_id+user_id+session), trigger updated_at, índices, RLS (select propio o management; escritura solo management)"
+    ],
+    "key_decisions": [
+      "D1: sesiones modeladas como dos booleanos en events (morning_session/afternoon_session) + enum rehearsal_session en filas de asistencia",
+      "D2: solo MANAGEMENT_ROLES (super_admin, admin, board_member, event_manager) marcan asistencia — reutiliza is_management()/isManagementRole()",
+      "D3: UNIQUE(event_id,user_id,session) + upsert onConflict; marked_by siempre server-side desde actor.id",
+      "D4: defensa en 3 capas (UI, servidor fail-closed leyendo evento real, guard inverso en markAttendance genérico); 'rehearsal' añadido a ATTENDANCE_ONLY_EVENT_TYPES",
+      "D5: participationRate = attended/marked*100 redondeado a 1 decimal, null si nada marcado",
+      "D7: dos migraciones separadas por la restricción ALTER TYPE ADD VALUE de PostgreSQL",
+      "D8: database.types.ts se edita a mano (sin CLI Supabase local)"
+    ],
+    "phases": [
+      "Fase 0: rama feature/sprint-27-rehearsal-attendance desde master",
+      "Fase 1: migraciones SQL + tipos hand-edited en src/types/database.types.ts",
+      "Fase 2: módulo src/lib/rehearsals/ (schema.ts, stats.ts, queries.ts, mutations.ts)",
+      "Fase 3: integración con events (schema, policy, queries, mutations, guards inversos, label maps)",
+      "Fase 4: server actions + RehearsalAttendancePanel en /events/[id]",
+      "Fase 5: integración estadísticas (/profile tile, /members/[id])",
+      "Fase 6: tests unitarios (schemas, mutations, stats, guards inversos)",
+      "Fase 7: ADR docs/adr-sprint-27-rehearsal-attendance.md + DATABASE.md + PR"
+    ]
+  },
+  "acceptance_criteria": [
+    "Se pueden crear eventos de tipo 'ensayo' con sesión de mañana y/o tarde.",
+    "Los responsables pueden marcar asistencia por sesión (mañana/tarde).",
+    "La asistencia a ensayos se refleja en las estadísticas del perfil de cada miembro.",
+    "La tabla rehearsal_attendance registra correctamente la sesión (mañana/tarde), quién asistió y quién marcó la asistencia."
+  ],
+  "definition_of_done": [
+    "Migración SQL con el tipo de evento 'rehearsal' y tabla umsuka.rehearsal_attendance con políticas RLS aplicadas.",
+    "Módulo src/lib/rehearsals/ con schemas Zod, queries y mutations completos con guards de rol.",
+    "Server actions con revalidación de path y mensajes de error consistentes.",
+    "UI en la página de detalle del ensayo (/events/[id]) con panel para marcar asistencia por sesión (mañana/tarde).",
+    "Integración con estadísticas: la asistencia a ensayos alimenta el % de participación en el perfil.",
+    "Tests unitarios nuevos pasando + suite completa (npx vitest run).",
+    "Typecheck (tsc --noEmit) y lint (eslint . --max-warnings=0) limpios.",
+    "next build completado sin errores.",
+    "Security scan sin issues HIGH.",
+    "ADR documentado en docs/adr-sprint-27-rehearsal-attendance.md.",
+    "PR creada y mergeada a develop."
+  ],
+  "dependencies": ["Sprint 5 (Asistencia y Ausencias)", "Sprint 17 (Eventos)"]
+}
