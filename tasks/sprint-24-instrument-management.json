@@ -2,7 +2,7 @@
   "title": "Sprint 24 — Gestión de Instrumentos (Instrument Management)",
   "description": "Gestionar el inventario de instrumentos de la comparsa: alta, baja (lógica) y edición de instrumentos, asignación de una persona responsable por instrumento (una a la vez) y registro histórico de responsables. Solo la directiva (roles de gestión: super_admin, admin, board_member, event_manager) y el super_admin pueden gestionar el inventario y las asignaciones. El resto de usuarios autenticados pueden leer el inventario. Los instrumentos inactivos no aparecen en los listados de asignación. Incluye: migración de BD (umsuka.instruments y umsuka.instrument_assignments), políticas RLS, capa de negocio src/lib/instruments/ (schemas Zod, queries, mutations), server actions thin con validación de rol y revalidación de path, página /instruments con listado/creación/edición/activar-desactivar/asignación, historial de responsables por instrumento y pruebas (unitarias de schemas + integración de acciones y RLS).",
   "branch": "feature/sprint-24-instrument-management",
-  "status": "planned",
+  "status": "documented",
   "steps": [
     {
       "id": 1,
