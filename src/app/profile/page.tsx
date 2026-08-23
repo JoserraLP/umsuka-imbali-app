@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { AppShell } from "@/components/layout/app-shell";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { getProfileHistorySummary } from "@/lib/profiles/queries";
+import { computeParticipationFromCounts } from "@/lib/rehearsals/stats";
 import { ProfileForm } from "@/app/profile/profile-form";
 import { ChangePasswordForm } from "@/app/profile/change-password-form";
 import { WorkgroupSection } from "@/app/profile/workgroup-section";
@@ -55,6 +56,10 @@ export default async function ProfilePage() {
   }
 
   const history = await getProfileHistorySummary(profile.id);
+  const rehearsalParticipation = computeParticipationFromCounts(
+    history.rehearsalsAttended,
+    history.rehearsalsMarked,
+  );
   const initials = `${profile.firstName.charAt(0)}${profile.lastName.charAt(0)}`;
   const joinedAtLabel = formatDate(profile.joinedAt);
   const createdAtLabel = formatDate(profile.createdAt);
@@ -147,7 +152,7 @@ export default async function ProfilePage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-6">
               <Link
                 href="/events"
                 className="flex flex-col items-center gap-1 rounded-md border border-border p-4 text-center transition-colors hover:bg-muted"
@@ -182,6 +187,18 @@ export default async function ProfilePage() {
               >
                 <span className="text-2xl font-bold">{history.shifts}</span>
                 <span className="text-xs text-muted-foreground">Turnos</span>
+              </Link>
+              <Link
+                href="/profile/history"
+                className="flex flex-col items-center gap-1 rounded-md border border-border p-4 text-center transition-colors hover:bg-muted"
+              >
+                <span className="text-2xl font-bold">{history.rehearsalsAttended}</span>
+                <span className="text-xs text-muted-foreground">
+                  Ensayos{" "}
+                  {rehearsalParticipation !== null
+                    ? `(${history.rehearsalsAttended}/${history.rehearsalsMarked} · ${rehearsalParticipation}%)`
+                    : ""}
+                </span>
               </Link>
             </div>
           </CardContent>

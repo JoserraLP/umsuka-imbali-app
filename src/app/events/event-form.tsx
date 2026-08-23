@@ -25,6 +25,7 @@ const EVENT_TYPE_LABELS: Record<EventTypeValue, string> = {
   meeting: "Reunión",
   carnival: "Carnaval",
   work_shift: "Asistencia a turno de trabajo",
+  rehearsal: "Ensayo",
 };
 
 const EVENT_WORKGROUP_LABELS: Record<EventWorkgroup, string> = {
@@ -233,6 +234,25 @@ export function EventForm({
               <p className="text-xs text-destructive">{errors.workgroup.message}</p>
             )}
           </div>
+        )}
+
+        {eventType === "rehearsal" && (
+          <fieldset className="flex flex-col gap-2 sm:col-span-2">
+            <legend className="text-sm font-medium leading-none">Sesiones del ensayo</legend>
+            <div className="flex items-center gap-2">
+              <input id="morningSession" type="checkbox" {...register("morningSession")} />
+              <Label htmlFor="morningSession">Mañana</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input id="afternoonSession" type="checkbox" {...register("afternoonSession")} />
+              <Label htmlFor="afternoonSession">Tarde</Label>
+            </div>
+            {(errors.morningSession || errors.afternoonSession) && (
+              <p role="alert" className="text-xs text-destructive">
+                {errors.morningSession?.message ?? errors.afternoonSession?.message}
+              </p>
+            )}
+          </fieldset>
         )}
 
         {canConfigureAudience && (

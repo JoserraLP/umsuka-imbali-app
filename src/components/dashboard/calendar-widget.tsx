@@ -11,6 +11,7 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   meeting: "Reunión",
   carnival: "Carnaval",
   work_shift: "Turno",
+  rehearsal: "Ensayo",
 };
 
 const EVENT_TYPE_VARIANTS: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
@@ -18,6 +19,7 @@ const EVENT_TYPE_VARIANTS: Record<string, "default" | "secondary" | "outline" | 
   meeting: "secondary",
   carnival: "destructive",
   work_shift: "outline",
+  rehearsal: "secondary",
 };
 
 // ── Helpers ─────────────────────────────────────────────

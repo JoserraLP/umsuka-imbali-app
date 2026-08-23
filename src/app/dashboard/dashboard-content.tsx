@@ -34,6 +34,7 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   meeting: "Reunión",
   carnival: "Carnaval",
   work_shift: "Turno",
+  rehearsal: "Ensayo",
 };
 
 function formatEventDate(dateStr: string): string {

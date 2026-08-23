@@ -20,6 +20,9 @@ export interface EventListItem {
   imageUrl: string | null;
   /** Optional cutoff instant for new registrations (ISO timestamp). */
   registrationDeadline: string | null;
+  /** Rehearsal sessions enabled (Sprint 27). Always false for non-rehearsal events. */
+  morningSession: boolean;
+  afternoonSession: boolean;
   /** Workgroup the event is restricted to. `null` = visible to everyone. */
   visibleToGroup: Workgroup | null;
   /** Workgroup of the lead who created the event (work_shift events only). */
@@ -62,6 +65,8 @@ interface EventRow {
   location: string | null;
   image_url: string | null;
   registration_deadline: string | null;
+  morning_session: boolean;
+  afternoon_session: boolean;
   visible_to_group: Workgroup | null;
   created_by_workgroup: Workgroup | null;
   audience_type: string | null;
@@ -72,7 +77,7 @@ interface EventRow {
 }
 
 const EVENT_SELECT =
-  "id, title, description, event_type, event_date, capacity, location, image_url, registration_deadline, visible_to_group, created_by_workgroup, audience_type, audience_workgroup, audience_member_type, created_by, created_at";
+  "id, title, description, event_type, event_date, capacity, location, image_url, registration_deadline, morning_session, afternoon_session, visible_to_group, created_by_workgroup, audience_type, audience_workgroup, audience_member_type, created_by, created_at";
 
 function mapRow(row: EventRow): EventListItem {
   return {
@@ -85,6 +90,8 @@ function mapRow(row: EventRow): EventListItem {
     location: row.location,
     imageUrl: row.image_url,
     registrationDeadline: row.registration_deadline,
+    morningSession: row.morning_session ?? false,
+    afternoonSession: row.afternoon_session ?? false,
     visibleToGroup: row.visible_to_group,
     createdByWorkgroup: row.created_by_workgroup,
     audienceType: (row.audience_type as AudienceTypeValue) ?? "all",

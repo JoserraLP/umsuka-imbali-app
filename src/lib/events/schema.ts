@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { AUDIENCE_FORM_FIELDS, audienceCrossFieldIssueFn } from "@/lib/events/audience-shared";
 
-export const EVENT_TYPES = ["general", "meeting", "carnival", "work_shift"] as const;
+export const EVENT_TYPES = ["general", "meeting", "carnival", "work_shift", "rehearsal"] as const;
 export type EventTypeValue = (typeof EVENT_TYPES)[number];
 
 /** Workgroups a group-scoped event can target (excludes "ninguno"). */
@@ -21,7 +21,9 @@ const EVENT_FORM_FIELDS = {
     .optional()
     .transform((value) => (value ? value : null)),
   eventType: z.enum(EVENT_TYPES, {
-    errorMap: () => ({ message: "Event type must be general, meeting, carnival or work_shift." }),
+    errorMap: () => ({
+      message: "Event type must be general, meeting, carnival, work_shift or rehearsal.",
+    }),
   }),
   eventDate: z
     .string()
@@ -90,6 +92,15 @@ const EVENT_FORM_FIELDS = {
     .nullable()
     .optional()
     .transform((value) => value ?? null),
+  /**
+   * Rehearsal session flags (Sprint 27). Only meaningful for
+   * `rehearsal` events; at least one must be true (refined below).
+   * Checkboxes default to unchecked, and the DB CHECK constraints
+   * mirror these rules (`chk_events_rehearsal_has_session`,
+   * `chk_events_non_rehearsal_no_sessions`).
+   */
+  morningSession: z.boolean().default(false),
+  afternoonSession: z.boolean().default(false),
 } as const;
 
 function isWorkShift(data: { eventType?: string | null; workgroup?: string | null }): boolean {
@@ -97,10 +108,27 @@ function isWorkShift(data: { eventType?: string | null; workgroup?: string | nul
 }
 
 /**
+ * Cross-field rule: a rehearsal event must enable at least one session.
+ * Non-rehearsal events always pass (their flags are normalized to false
+ * before persisting).
+ */
+function hasRequiredRehearsalSessions(data: {
+  eventType?: string | null;
+  morningSession?: boolean;
+  afternoonSession?: boolean;
+}): boolean {
+  if (data.eventType !== "rehearsal") {
+    return true;
+  }
+  return data.morningSession === true || data.afternoonSession === true;
+}
+
+/**
  * Shared shape used by the client-side form (React Hook Form + Zod). Both
  * create and update use this exact shape for the editable fields, so the
  * form component only ever needs one resolver type regardless of mode.
- * Work_shift events require a target workgroup. The audience fields
+ * Work_shift events require a target workgroup; rehearsal events require
+ * at least one session (morning/afternoon). The audience fields
  * (Sprint 18) are spread from AUDIENCE_FORM_FIELDS with cross-field
  * validation via audienceCrossFieldIssueFn.
  */
@@ -110,6 +138,10 @@ export const eventFormSchema = z
     message: "For work shift events you must choose the target workgroup.",
     path: ["workgroup"],
   })
+  .refine(hasRequiredRehearsalSessions, {
+    message: "Un ensayo debe tener al menos una sesión (mañana o tarde).",
+    path: ["morningSession"],
+  })
   .superRefine(audienceCrossFieldIssueFn);
 export type EventFormValues = z.infer<typeof eventFormSchema>;
 
@@ -118,6 +150,10 @@ export const createEventSchema = z
   .refine((data) => !isWorkShift(data) || data.workgroup !== null, {
     message: "For work shift events you must choose the target workgroup.",
     path: ["workgroup"],
+  })
+  .refine(hasRequiredRehearsalSessions, {
+    message: "Un ensayo debe tener al menos una sesión (mañana o tarde).",
+    path: ["morningSession"],
   })
   .superRefine(audienceCrossFieldIssueFn);
 export type CreateEventInput = z.infer<typeof createEventSchema>;
@@ -131,6 +167,10 @@ export const updateEventSchema = z
   .refine((data) => !isWorkShift(data) || data.workgroup !== null, {
     message: "For work shift events you must choose the target workgroup.",
     path: ["workgroup"],
+  })
+  .refine(hasRequiredRehearsalSessions, {
+    message: "Un ensayo debe tener al menos una sesión (mañana o tarde).",
+    path: ["morningSession"],
   })
   .superRefine(audienceCrossFieldIssueFn);
 export type UpdateEventInput = z.infer<typeof updateEventSchema>;

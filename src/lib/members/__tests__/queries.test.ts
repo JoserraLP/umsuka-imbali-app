@@ -26,8 +26,13 @@ vi.mock("@/lib/attendance/queries", () => ({
   getUserAttendance: vi.fn(),
 }));
 
+vi.mock("@/lib/rehearsals/queries", () => ({
+  getUserRehearsalAttendance: vi.fn(),
+}));
+
 import { getMyAssignedShifts } from "@/lib/shifts/assignments";
 import { getUserAttendance } from "@/lib/attendance/queries";
+import { getUserRehearsalAttendance } from "@/lib/rehearsals/queries";
 
 // ── Chain-builder stub (mirrors the news queries test pattern) ──
 
@@ -352,6 +357,7 @@ describe("getMemberDetailWithHistory", () => {
     vi.clearAllMocks();
     vi.mocked(getMyAssignedShifts).mockResolvedValue(sampleShifts);
     vi.mocked(getUserAttendance).mockResolvedValue(sampleAttendance);
+    vi.mocked(getUserRehearsalAttendance).mockResolvedValue([]);
   });
 
   it("returns null without querying history when the member does not exist", async () => {
@@ -362,6 +368,7 @@ describe("getMemberDetailWithHistory", () => {
     expect(result).toBeNull();
     expect(getMyAssignedShifts).not.toHaveBeenCalled();
     expect(getUserAttendance).not.toHaveBeenCalled();
+    expect(getUserRehearsalAttendance).not.toHaveBeenCalled();
   });
 
   it("returns member, assigned shifts and attendance history", async () => {
@@ -373,7 +380,9 @@ describe("getMemberDetailWithHistory", () => {
     expect(result?.member.id).toBe("user-1");
     expect(getMyAssignedShifts).toHaveBeenCalledWith("user-1");
     expect(getUserAttendance).toHaveBeenCalledWith("user-1");
+    expect(getUserRehearsalAttendance).toHaveBeenCalledWith("user-1");
     expect(result!.shifts).toEqual(sampleShifts);
     expect(result!.attendance).toEqual(sampleAttendance);
+    expect(result!.rehearsalAttendance).toEqual([]);
   });
 });

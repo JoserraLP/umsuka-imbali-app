@@ -53,6 +53,16 @@ export interface ProfileHistorySummary {
   absences: number;
   /** shift_assignments rows (shifts the member is assigned to). */
   shifts: number;
+  /**
+   * rehearsal_attendance rows with attended = true, across all sessions
+   * (Sprint 27). A rehearsal counts once per enabled session.
+   */
+  rehearsalsAttended: number;
+  /**
+   * Total rehearsal_attendance rows for the member (marked sessions,
+   * present or absent) — the denominator of the participation ratio.
+   */
+  rehearsalsMarked: number;
 }
 
 /**
@@ -148,16 +158,24 @@ export async function getProfileById(userId: string): Promise<ProfileDetail | nu
 
 /**
  * Returns the count-based participation summary for a member: events
- * registered, attendance (present / absent), absences and shifts. Runs
- * five head-only count queries in parallel, each scoped to the user.
+ * registered, attendance (present / absent), absences, shifts and
+ * rehearsal sessions (attended / marked). Runs seven head-only count
+ * queries in parallel, each scoped to the user.
  */
 export async function getProfileHistorySummary(
   userId: string,
 ): Promise<ProfileHistorySummary> {
   const supabase = await createClient();
 
-  const [registrations, attendancePresent, attendanceAbsent, absences, shiftAssignments] =
-    await Promise.all([
+  const [
+    registrations,
+    attendancePresent,
+    attendanceAbsent,
+    absences,
+    shiftAssignments,
+    rehearsalsAttended,
+    rehearsalsMarked,
+  ] = await Promise.all([
       supabase
         .from("event_registrations")
         .select("*", { count: "exact", head: true })
@@ -180,6 +198,15 @@ export async function getProfileHistorySummary(
         .from("shift_assignments")
         .select("*", { count: "exact", head: true })
         .eq("user_id", userId),
+      supabase
+        .from("rehearsal_attendance")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("attended", true),
+      supabase
+        .from("rehearsal_attendance")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId),
     ]);
 
   const labeled = [
@@ -188,6 +215,8 @@ export async function getProfileHistorySummary(
     ["attendance (not attended)", attendanceAbsent],
     ["absences", absences],
     ["shift_assignments", shiftAssignments],
+    ["rehearsal_attendance (attended)", rehearsalsAttended],
+    ["rehearsal_attendance (marked)", rehearsalsMarked],
   ] as const;
 
   for (const [label, result] of labeled) {
@@ -204,5 +233,7 @@ export async function getProfileHistorySummary(
     attendanceAbsent: attendanceAbsent.count ?? 0,
     absences: absences.count ?? 0,
     shifts: shiftAssignments.count ?? 0,
+    rehearsalsAttended: rehearsalsAttended.count ?? 0,
+    rehearsalsMarked: rehearsalsMarked.count ?? 0,
   };
 }

@@ -18,6 +18,7 @@ erDiagram
 
     EVENTS ||--o{ SHIFTS : has
     EVENTS ||--o{ ATTENDANCE : tracks
+    EVENTS ||--o{ REHEARSAL_ATTENDANCE : tracks
     EVENTS ||--o{ ABSENCES : relates_to
     EVENTS ||--o{ VOTINGS : relates_to
 
@@ -61,6 +62,14 @@ erDiagram
         uuid event_id FK
         uuid user_id FK
         boolean attended
+    }
+    REHEARSAL_ATTENDANCE {
+        uuid id PK
+        uuid event_id FK
+        uuid user_id FK
+        text session
+        boolean attended
+        uuid marked_by FK
     }
     ABSENCES {
         uuid id PK
@@ -126,6 +135,8 @@ erDiagram
 | `20260101004200_member_detail_lead_reads.sql` | Políticas SELECT aditivas en `shift_assignments` y `attendance` para que un workgroup lead lea turnos/asistencia de los miembros de su propio grupo (Sprint 14) |
 | `20260101004300_component_lead_for.sql` | `profiles.component_lead_for` (TEXT, CHECK music/dance, índice único parcial: un responsable por componente), función `umsuka.is_component_lead(text)` y políticas SELECT aditivas en `shift_assignments`/`attendance` para responsables de componente (Sprint 14) |
 | `20260101004900_votings_enhancement.sql` | `votings.voting_deadline` (ficha límite opcional), índice único case-insensitive en `voting_options` (`voting_id, lower(option_text)`), función `umsuka.get_voting_results(uuid)` (SECURITY DEFINER: recuentos y porcentajes por opción, ocultos hasta votar/cerrar salvo management) y política INSERT de `voting_votes` endurecida (la opción debe pertenecer a la misma votación) — Sprint 15 |
+| `20260101005700_rehearsal_event_type.sql` | `ALTER TYPE umsuka.event_type ADD VALUE 'rehearsal'` (migración separada por la restricción de PostgreSQL sobre `ADD VALUE`) — Sprint 27 |
+| `20260101005800_rehearsal_attendance.sql` | `events.morning_session`/`afternoon_session` + CHECKs coherentes, ENUM `umsuka.rehearsal_session` (`morning`/`afternoon`), tabla `umsuka.rehearsal_attendance` (UNIQUE `event_id,user_id,session`, FKs con ON DELETE CASCADE, `marked_by`), trigger `updated_at`, índices y RLS — Sprint 27 |
 
 Apply locally with `npm run supabase:reset`; apply to a remote project with
 `supabase db push` (also run automatically by `deploy.yml` on merge to `main`).
@@ -177,6 +188,7 @@ loosened):
 | `absences` | owner or management | insert: owner · update/delete: management |
 | `questions` | any authenticated user | insert: owner · update: owner or management · delete: management |
 | `voting_votes` | owner or management | insert: owner — opción de la misma votación (`exists` sobre `voting_options`, Sprint 15) · immutable (no update policy) · delete: management |
+| `rehearsal_attendance` | owner or management | insert/update (`upsert` por `event_id,user_id,session`) y delete: management only — Sprint 27 |
 
 ## Extensibility
 

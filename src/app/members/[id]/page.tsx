@@ -16,6 +16,7 @@ import { getCurrentProfile } from "@/lib/auth/session";
 import { isManagementRole } from "@/lib/auth/roles";
 import { canViewMembers, canViewMemberDetail } from "@/lib/members/authorization";
 import { getMemberDetailAction } from "@/app/members/actions";
+import { computeParticipationFromCounts } from "@/lib/rehearsals/stats";
 
 export const metadata: Metadata = {
   title: "Ficha de miembro",
@@ -78,7 +79,7 @@ export default async function MemberDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const { member, shifts, attendance } = result.data;
+  const { member, shifts, attendance, rehearsalAttendance } = result.data;
 
   // Defense in depth: a lead must never see a member outside their
   // group/component (component scope takes precedence when both apply).
@@ -94,6 +95,19 @@ export default async function MemberDetailPage({ params }: PageProps) {
   const isManagement = isManagementRole(profile.role);
   const present = attendance.filter((record) => record.attended).length;
   const absent = attendance.length - present;
+
+  // Sprint 27: per-session rehearsal participation ("Ensayos: X/Y (Z %)").
+  const rehearsalPresent = rehearsalAttendance.filter((record) => record.attended).length;
+  const rehearsalParticipation = computeParticipationFromCounts(
+    rehearsalPresent,
+    rehearsalAttendance.length,
+  );
+  const rehearsalLine =
+    rehearsalAttendance.length > 0
+      ? ` Ensayos: ${rehearsalPresent}/${rehearsalAttendance.length}${
+          rehearsalParticipation !== null ? ` (${rehearsalParticipation}%)` : ""
+        }.`
+      : "";
 
   return (
     <AppShell profile={profile}>
@@ -194,6 +208,7 @@ export default async function MemberDetailPage({ params }: PageProps) {
               {attendance.length === 0
                 ? "Sin registros de asistencia."
                 : `${present} presentes, ${absent} ausentes.`}
+              {rehearsalLine}
             </CardDescription>
           </CardHeader>
           <CardContent>
