@@ -1,0 +1,27 @@
+{
+  "title": "Sprint 26 — Buscador de Personas en Turnos (Shift Member Search)",
+  "description": "Añadir un buscador de personas en la gestión de turnos para permitir al responsable de grupo (o super admin) buscar y marcar rápidamente la asistencia de un miembro concreto en un turno, sin tener que recorrer toda la lista. Incluye capa de negocio lib/shifts/search.ts con searchShiftMembers(shiftId, query), server action con paginación, barra de búsqueda en el panel de gestión del turno con resultados en vivo, marcado/desmarcado de asistencia directo desde los resultados, accesibilidad por teclado/lectores de pantalla y tests.",
+  "branch": "feature/sprint-26-shift-member-search",
+  "status": "published",
+  "adr": "docs/adr-sprint-26-shift-member-search.md",
+  "acceptance_criteria": [
+    "El responsable de grupo puede buscar a cualquier miembro asignado a un turno por nombre.",
+    "Los resultados aparecen en tiempo real y permiten marcar la asistencia sin salir de la búsqueda.",
+    "La búsqueda se combina con el workgroup (telas, barra, estandarte, limpieza): se puede buscar por nombre, apellidos o grupo de trabajo.",
+    "El buscador respeta los permisos existentes: solo el lead del grupo del turno (o super admin/management según reglas actuales) puede marcar asistencia.",
+    "Los resultados son navegables por teclado y compatibles con lectores de pantalla.",
+    "Tests unitarios de la búsqueda y de integración con el panel de turnos pasan."
+  ],
+  "definition_of_done": [
+    "Módulo src/lib/shifts/search.ts con searchShiftMembers(shiftId, query) y guards de rol.",
+    "Server action searchShiftMembersAction con paginación y validación.",
+    "Barra de búsqueda en el panel de gestión del turno con resultados en vivo y botones de marcar/desmarcar asistencia desde los resultados.",
+    "Accesibilidad: navegación por teclado y atributos ARIA correctos.",
+    "Tests unitarios nuevos pasando + suite completa (npx vitest run).",
+    "Typecheck (tsc --noEmit) y lint limpios; next build sin errores.",
+    "Security scan sin issues HIGH.",
+    "ADR documentado en docs/adr-sprint-26-shift-member-search.md.",
+    "PR creada contra master siguiendo docs/git-conventions.md."
+  ],
+  "dependencies": ["Sprint 8 (Shifts)", "Sprint 12 (Asociación de Personas a Turnos)"]
+}
