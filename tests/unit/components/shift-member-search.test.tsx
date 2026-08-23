@@ -266,6 +266,70 @@ describe("ShiftMemberSearch — keyboard navigation", () => {
   });
 });
 
+describe("ShiftMemberSearch — stale responses", () => {
+  it("does not repopulate results when a stale response arrives after Escape", async () => {
+    let resolveSearch!: (value: {
+      success: boolean;
+      data: ShiftMemberSearchPage;
+    }) => void;
+    mockSearchAction.mockReturnValue(
+      new Promise((resolve) => {
+        resolveSearch = resolve;
+      }),
+    );
+
+    renderSearch();
+    const user = userEvent.setup();
+    await user.type(getSearchCombobox(), "ana");
+    await waitFor(() => expect(mockSearchAction).toHaveBeenCalled());
+
+    // Clearing the search must invalidate the in-flight request…
+    fireEvent.keyDown(getSearchCombobox(), { key: "Escape" });
+    await waitFor(() =>
+      expect(screen.queryByRole("listbox")).not.toBeInTheDocument(),
+    );
+
+    // …so the late response is discarded and the list stays empty.
+    await act(async () => {
+      resolveSearch({ success: true, data: pageWith([{ ...telasRow }]) });
+    });
+
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  });
+});
+
+describe("ShiftMemberSearch — optimistic rollback fidelity", () => {
+  it("restores 'Sin marcar' (attended null) after a failed toggle", async () => {
+    mockMarkAttendance.mockResolvedValue({
+      success: false,
+      error: "No se pudo guardar la asistencia.",
+    });
+    await searchAndWaitForResults(
+      "a",
+      pageWith([{ ...telasRow, attended: null as unknown as boolean | null }]),
+    );
+
+    const listbox = screen.getByRole("listbox");
+    expect(within(listbox).getByText("Sin marcar")).toBeInTheDocument();
+
+    const checkbox = screen.getByRole("checkbox", { name: /Cambiar asistencia de Ana García/ });
+    const user = userEvent.setup();
+    await user.click(checkbox);
+
+    // Optimistic flip shows Presente while the request is in flight…
+    await waitFor(() => expect(mockMarkAttendance).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(screen.getByText("No se pudo guardar la asistencia.")).toBeInTheDocument(),
+    );
+
+    // …and the rollback restores the exact previous state (null), not false.
+    expect(checkbox).not.toBeChecked();
+    expect(within(screen.getByRole("listbox")).getByText("Sin marcar")).toBeInTheDocument();
+    expect(within(screen.getByRole("listbox")).queryByText("Ausente")).not.toBeInTheDocument();
+    expect(mockRefresh).not.toHaveBeenCalled();
+  });
+});
+
 describe("ShiftMemberSearch — pagination", () => {
   it("disables Siguiente when there are no more pages and requests the next page otherwise", async () => {
     await searchAndWaitForResults(

@@ -117,17 +117,23 @@ const EMPTY_PAGE = (page = SHIFT_MEMBER_SEARCH_DEFAULT_PAGE, pageSize = SHIFT_ME
  * pagination. Fails closed:
  *
  * 1. Only management roles get unrestricted access.
- * 2. A workgroup lead is ALWAYS scoped to their own group — a requested
- *    workgroup filter is ignored when it differs from their scope
- *    (mirror of page.tsx `leadWorkgroup` handling).
- * 3. Any other role gets an AuthorizationError before any DB access.
+ * 2. A workgroup lead (of a real group, not "ninguno") is ALWAYS scoped
+ *    to their own group — a requested workgroup filter is ignored when
+ *    it differs from their scope (mirror of page.tsx `leadWorkgroup`
+ *    and the panel's manageableWorkgroups rules).
+ * 3. Any other role — including a lead without a group ("ninguno") —
+ *    gets an AuthorizationError before any DB access.
  */
 export async function searchShiftMembers(
   actor: AuthenticatedProfile,
   input: unknown,
 ): Promise<ShiftMemberSearchPage> {
   // 1. Fail-closed authorization BEFORE anything else (no Supabase access).
-  if (!isManagementRole(actor.role) && !actor.isWorkgroupLead) {
+  // A "ninguno" lead does not actually manage any group, so it is treated
+  // like any other unprivileged role instead of being scoped to a
+  // meaningless .eq("workgroup", "ninguno") query.
+  const hasLeadScope = actor.isWorkgroupLead && actor.workgroup !== "ninguno";
+  if (!isManagementRole(actor.role) && !hasLeadScope) {
     throw new AuthorizationError(
       "No tienes permisos para buscar miembros en este turno.",
     );

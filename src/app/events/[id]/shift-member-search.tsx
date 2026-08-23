@@ -71,6 +71,9 @@ export function ShiftMemberSearch({ shiftId, manageableWorkgroups }: ShiftMember
   useEffect(() => {
     const trimmed = debouncedQuery.trim();
     if (trimmed === "") {
+      // Invalidate any in-flight response so it cannot repopulate the
+      // (now empty) list after a clear, e.g. via the Escape key.
+      requestIdRef.current += 1;
       setRows([]);
       setTotal(0);
       setHasMore(false);
@@ -138,7 +141,7 @@ export function ShiftMemberSearch({ shiftId, manageableWorkgroups }: ShiftMember
     return manageableWorkgroups.includes(row.workgroup);
   }
 
-  function patchRow(userId: string, attended: boolean) {
+  function patchRow(userId: string, attended: boolean | null) {
     setRows((prev) =>
       prev.map((row) => (row.userId === userId ? { ...row, attended } : row)),
     );
@@ -146,8 +149,10 @@ export function ShiftMemberSearch({ shiftId, manageableWorkgroups }: ShiftMember
 
   /**
    * Optimistically flips the attendance state and rolls it back when the
-   * server rejects the change. The existing mutation action encapsulates
-   * validation, guards and the idempotent upsert.
+   * server rejects the change, restoring the previous value verbatim
+   * (`null` = "Sin marcar" must not degrade to `false` = "Ausente").
+   * The existing mutation action encapsulates validation, guards and the
+   * idempotent upsert.
    */
   async function applyAttendance(
     row: ShiftMemberSearchRow,
@@ -168,7 +173,7 @@ export function ShiftMemberSearch({ shiftId, manageableWorkgroups }: ShiftMember
       });
 
       if (!result.success) {
-        patchRow(row.userId, previousAttended === true);
+        patchRow(row.userId, previousAttended);
         setError(result.error ?? GENERIC_SAVE_ERROR);
         return;
       }

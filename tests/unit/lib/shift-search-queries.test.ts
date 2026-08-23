@@ -112,6 +112,20 @@ describe("searchShiftMembers — authorization", () => {
     );
     expect(mockFrom).not.toHaveBeenCalled();
   });
+
+  it("treats a lead of the 'ninguno' workgroup as unprivileged (no scope granted)", async () => {
+    const ningunoLeadActor = makeActor({
+      role: "member",
+      isWorkgroupLead: true,
+      workgroup: "ninguno",
+    });
+
+    await expect(searchShiftMembers(ningunoLeadActor, searchInput())).rejects.toThrow(
+      AuthorizationError,
+    );
+    // Fail-closed: not even a scoped query is executed for this actor.
+    expect(mockFrom).not.toHaveBeenCalled();
+  });
 });
 
 describe("searchShiftMembers — empty query short-circuit", () => {
