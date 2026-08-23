@@ -22,6 +22,7 @@ import { getAudienceOptions, getAudienceSummary, getEventAudience } from "@/lib/
 import { isAttendanceOnlyEventType } from "@/lib/events/policy";
 import { getRehearsalAttendance } from "@/lib/rehearsals/queries";
 import type { RehearsalSession } from "@/types/database.types";
+import { ACTIVE_WORKGROUPS, type ActiveWorkgroup } from "@/lib/workgroups/schema";
 import { EventForm } from "@/app/events/event-form";
 import { AudienceEditor } from "@/app/events/[id]/audience-editor";
 import { DeleteEventButton } from "@/app/events/[id]/delete-event-button";
@@ -165,6 +166,17 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
 
   const canViewWorkgroupPanel =
     profile.role === "super_admin" || profile.isWorkgroupLead || isWorkShift;
+
+  // Sprint 26: groups whose attendance the viewer may mark through the
+  // shift member search — same rules as workgroups/mutations
+  // assertCanManageWorkgroup: super_admin → all; a lead → their own group;
+  // everyone else → none.
+  const manageableWorkgroups: ActiveWorkgroup[] =
+    profile.role === "super_admin"
+      ? [...ACTIVE_WORKGROUPS]
+      : profile.isWorkgroupLead && profile.workgroup !== "ninguno"
+        ? [profile.workgroup]
+        : [];
 
   let workgroupMembers: Awaited<ReturnType<typeof getAllWorkgroupMembers>> = [];
   let workgroupAttendanceRecords: Awaited<ReturnType<typeof getWorkgroupAttendanceByShift>> = [];
@@ -399,6 +411,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                 shifts={shifts}
                 availableMembers={availableMembers}
                 canManage={canManage}
+                attendanceContext={{ manageableWorkgroups }}
               />
             </CardContent>
           </Card>

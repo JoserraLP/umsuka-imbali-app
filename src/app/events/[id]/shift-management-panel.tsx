@@ -10,15 +10,22 @@ import {
   updateShiftAction,
   deleteShiftAction,
 } from "@/app/events/[id]/shift-actions";
+import { ShiftMemberSearch } from "@/app/events/[id]/shift-member-search";
 import type { ShiftWithAssignments, MemberOption } from "@/lib/shifts/queries";
 import type { ShiftFormValues } from "@/lib/shifts/schema";
+import type { ActiveWorkgroup } from "@/lib/workgroups/schema";
 
+/** Sprint 26: context needed to render the per-shift member search. */
+export interface AttendanceContext {
+  manageableWorkgroups: ActiveWorkgroup[];
+}
 
 interface ShiftManagementPanelProps {
   eventId: string;
   shifts: ShiftWithAssignments[];
   availableMembers: MemberOption[];
   canManage: boolean;
+  attendanceContext?: AttendanceContext | null;
 }
 
 function toDatetimeLocalValue(isoDate: string): string {
@@ -34,6 +41,7 @@ export function ShiftManagementPanel({
   shifts,
   availableMembers,
   canManage,
+  attendanceContext = null,
 }: ShiftManagementPanelProps) {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingShiftId, setEditingShiftId] = useState<string | null>(null);
@@ -210,6 +218,17 @@ export function ShiftManagementPanel({
                 workgroupFilter={shift.workgroup}
                 canManage={canManage}
               />
+
+              {/* Sprint 26: member search with inline attendance marking,
+                  shown only when the viewer may manage at least one group. */}
+              {attendanceContext && attendanceContext.manageableWorkgroups.length > 0 && (
+                <div className="mt-3 border-t pt-3">
+                  <ShiftMemberSearch
+                    shiftId={shift.id}
+                    manageableWorkgroups={attendanceContext.manageableWorkgroups}
+                  />
+                </div>
+              )}
             </div>
           ))}
         </div>

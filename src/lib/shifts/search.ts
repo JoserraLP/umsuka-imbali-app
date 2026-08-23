@@ -67,7 +67,11 @@ export const shiftMemberSearchSchema = z.object({
   pageSize: pageSizeField,
 });
 
-export type ShiftMemberSearchInput = z.infer<typeof shiftMemberSearchSchema>;
+/**
+ * Wire format sent by clients: pagination fields are optional because
+ * the schema applies defaults/clamps server-side before any query.
+ */
+export type ShiftMemberSearchInput = z.input<typeof shiftMemberSearchSchema>;
 
 // ──────────────────────────────────────────────────────
 // Pure helpers

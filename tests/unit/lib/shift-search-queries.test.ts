@@ -278,7 +278,7 @@ describe("searchShiftMembers — workgroup scoping", () => {
     await searchShiftMembers(managementActor, searchInput());
 
     const workgroupFilters = builders.profiles.eq.mock.calls.filter(
-      ([column]) => column === "workgroup",
+      (call) => (call as unknown[])[0] === "workgroup",
     );
     expect(workgroupFilters).toHaveLength(0);
   });
