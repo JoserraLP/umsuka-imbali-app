@@ -139,9 +139,10 @@ grupo es **imposible en cliente** sin abrir un agujero de privacidad. La migraci
 | Firma | `my_workgroup_shift_average()` — **cero argumentos**, `returns numeric`, `language sql`, `stable`, `security definer`, `set search_path = umsuka, public` |
 | Grupo del llamador | CTE `caller`: `profiles.id = auth.uid()`, `deleted_at is null`, `workgroup <> 'ninguno'` — sin perfil activo o sin grupo → `NULL` |
 | Media | Promedio de las **tasas por miembro** (`100.0 * count(*) filter (where attended) / count(*)`, `round(..., 1)`) de los turnos marcados del grupo; quien no tiene turnos marcados no tiene tasa y se ignora; si nadie marcó, `NULL` |
+| Comparación de grupo | `where a.workgroup::text = (select workgroup from caller)::text` — **casts explícitos a `text` en ambas partes**: la historia del esquema mezcla tipos (`profiles.workgroup` pasó a ser el ENUM `umsuka.workgroup` en 0020 mientras que `workgroup_attendance.workgroup` permaneció `text`), así que un `=` desnudo falla con `42883: operator does not exist: text = workgroup` según el estado real de cada columna. Comparar ambos lados como `text` replica el patrón de la migración 0040 (`s.workgroup::text = ...::text`) y es correcto bajo cualquier estado histórico |
 | Privacidad | Agregado y devuelve **un único número**: ninguna fila ni PII de otros miembros cruza el límite; promediar tasas por miembro evita además que quien tiene muchos turnos marcados pese más que quien tiene pocos |
 | Grants | `REVOKE EXECUTE` a `public` y `anon`, `GRANT EXECUTE` a `authenticated` |
-| Idempotencia | `create or replace` + revoke/grant repetibles; `comment on function` documentado; checklist manual pre-deploy (5 comprobaciones) |
+| Idempotencia | `create or replace` + revoke/grant repetibles; `comment on function` documentado; checklist manual pre-deploy (6 comprobaciones, incluida la verificación de los casts `::text`) |
 
 El consumo en `getMyWorkgroupShiftAverage()` es **fail-closed**: un error del RPC lanza un
 error descriptivo (nunca se inventa un valor) y `null` queda reservado a los casos legítimos

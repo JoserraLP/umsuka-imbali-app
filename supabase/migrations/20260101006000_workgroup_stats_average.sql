@@ -42,7 +42,13 @@ as $$
         from umsuka.workgroup_attendance a
         join umsuka.profiles m
             on m.id = a.user_id and m.deleted_at is null
-        where a.workgroup = (select workgroup from caller)
+        -- Explicit ::text casts on both sides: the schema history mixes
+        -- types here (profiles.workgroup became ENUM umsuka.workgroup in
+        -- 0020 while workgroup_attendance.workgroup stayed text), so a
+        -- bare `=` fails with 42883 depending on each column's actual
+        -- type. Comparing both as text matches the repo pattern used by
+        -- migration 0040 and is correct under every historical state.
+        where a.workgroup::text = (select workgroup from caller)::text
         group by a.user_id
     )
     select round(avg(rate), 1)
@@ -67,6 +73,9 @@ comment on function umsuka.my_workgroup_shift_average() is
 -- [ ] A group where nobody has marked shifts yields NULL.
 -- [ ] anon/public callers are rejected (permission denied); only
 --       authenticated may execute it.
+-- [ ] the workgroup comparison uses explicit ::text casts on both
+--       sides (profiles.workgroup is ENUM umsuka.workgroup since 0020,
+--       workgroup_attendance.workgroup is text — bare `=` raises 42883).
 -- [ ] re-running the migration is safe (create or replace + revoke/
 --       grant are idempotent).
 -- ---------------------------------------------------------
