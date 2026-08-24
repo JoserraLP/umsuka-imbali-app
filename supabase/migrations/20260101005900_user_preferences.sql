@@ -147,6 +147,10 @@ create policy user_preferences_delete_own
 -- [ ] No extra indexes needed: every query filters by the user_id PK.
 -- [ ] No service_role grants: the ordering module only ever touches the
 --       caller's own row through the authenticated client.
--- [ ] supabase db push applies the migration; re-running it is safe
---       (create table if not exists, drop/create trigger).
+-- [ ] supabase db push applies the migration; most statements are safe
+--       to re-run (create table if not exists, drop/create trigger),
+--       EXCEPT the plain "add constraint" for
+--       chk_user_preferences_list_ordering_shape, which would fail with
+--       "constraint already exists" on a second run (repo convention:
+--       migrations run once via supabase db push).
 -- ---------------------------------------------------------

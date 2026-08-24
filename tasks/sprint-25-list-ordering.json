@@ -1,0 +1,52 @@
+{
+  "title": "Sprint 25 — Ordenación de Listados (List Ordering)",
+  "description": "Permitir ordenar los principales listados de la aplicación (miembros, instrumentos y eventos) por distintos criterios, de forma persistente por usuario. Incluye: migración de BD con tabla umsuka.user_preferences (user_id PK, list_ordering jsonb) o reutilización de preferencias existentes del Sprint 19 si ya están definidas; capa de negocio src/lib/ordering/ con utilidades para aplicar ordenaciones (por nombre, fecha de alta, grupo de trabajo, instrumento, asistencia, etc.) y almacenamiento de la preferencia por usuario; menú desplegable 'Ordenar por' en los listados de miembros (/members), instrumentos (/instruments) y eventos; persistencia de la preferencia en BD y re-aplicación al volver a la página; y pruebas unitarias de las funciones de ordenación y de persistencia.",
+  "branch": "feature/sprint-25-list-ordering",
+  "status": "implemented",
+  "plan_summary": "Plan aprobado (task-architect): migración 20260101005900_user_preferences.sql (jsonb list_ordering + RLS own-row espejo de notification_preferences 0052), tipos DB manuales, módulo src/lib/ordering/ (schema Zod con strip de claves desconocidas, sorting puro localeCompare es + nulls al final + tie-breaker id, queries fail-open, mutations upsert merge con doble scope actor.id), server action compartida src/lib/ordering/actions.ts con revalidatePath x3, componente cliente src/components/list-sorting.tsx (2 selects controlados por props + startTransition + router.refresh), integración en /members /instruments /events (sort tras fetch/filtros, antes de render/paginación futura), tests unitarios ordering-{schema,sorting,mutations}.test.ts. Defaults: members=name asc, instruments=name asc, events=event_date asc.",
+  "steps": [
+    {
+      "id": 1,
+      "name": "Migración de BD",
+      "detail": "Crear tabla umsuka.user_preferences (user_id uuid PK references umsuka.profiles, list_ordering jsonb not null default '{}', created_at/updated_at timestamptz) o reutilizar preferencias existentes si el Sprint 19 ya las define. RLS: cada usuario solo puede SELECT/INSERT/UPDATE su propia fila. Seguir convención de nomenclatura de migraciones del proyecto (revisar supabase/migrations/ para la siguiente numeración disponible)."
+    },
+    {
+      "id": 2,
+      "name": "Capa de negocio src/lib/ordering/",
+      "detail": "Utilidades para aplicar ordenaciones: schemas Zod para validar el criterio y la dirección (asc/desc), funciones de ordenación aplicables a miembros (nombre, fecha de alta, grupo de trabajo, componente), instrumentos (nombre, categoría, estado) y eventos (fecha, título). Queries/mutations para leer y guardar la preferencia del usuario en user_preferences."
+    },
+    {
+      "id": 3,
+      "name": "UI de ordenación",
+      "detail": "Menú desplegable 'Ordenar por' en los listados de miembros (/members), instrumentos (/instruments) y eventos, con al menos 3 criterios distintos por listado. Al cambiar el criterio se actualiza el listado y se persiste la preferencia."
+    },
+    {
+      "id": 4,
+      "name": "Persistencia",
+      "detail": "Guardar la preferencia del usuario en umsuka.user_preferences al cambiar la ordenación y re-aplicarla automáticamente al volver a visitar cualquier listado. La preferencia debe convivir correctamente con paginación/búsqueda existente (la ordenación se aplica antes de paginar)."
+    },
+    {
+      "id": 5,
+      "name": "Pruebas",
+      "detail": "Tests unitarios de las funciones de ordenación (criterios asc/desc, casos límite con nulls), de los schemas Zod y de la lógica de persistencia de preferencias con mocks de Supabase. Suite completa pasando (npx vitest run), typecheck (tsc --noEmit) y lint limpios."
+    }
+  ],
+  "acceptance_criteria": [
+    "Los listados de miembros, instrumentos y eventos se pueden ordenar por al menos 3 criterios distintos cada uno.",
+    "La preferencia de ordenación se guarda por usuario en la base de datos y se mantiene entre visitas/sesiones.",
+    "La ordenación funciona correctamente con paginación (el orden se aplica sobre el conjunto completo antes de paginar).",
+    "Cada usuario solo puede leer/escribir sus propias preferencias (RLS + validación en capa de negocio).",
+    "Un criterio inválido o manipulado desde el cliente no rompe el listado (validación Zod + fallback a orden por defecto)."
+  ],
+  "definition_of_done": [
+    "Migración SQL con umsuka.user_preferences, índices y políticas RLS creadas (o integración con preferencias existentes del Sprint 19).",
+    "Módulo src/lib/ordering/ con schemas Zod, utilidades de ordenación, queries y mutations de preferencias.",
+    "Menú 'Ordenar por' funcional en /members, /instruments y el listado de eventos.",
+    "Preferencia persistida en BD y re-aplicada al cargar cada listado.",
+    "Tests unitarios nuevos pasando + suite completa (npx vitest run).",
+    "Typecheck (tsc --noEmit) y lint (eslint . --max-warnings=0) limpios.",
+    "Security scan sin issues HIGH.",
+    "ADR documentado en docs/adr-sprint-25-list-ordering.md."
+  ],
+  "dependencies": ["Sprint 14 (Listado de Miembros)", "Sprint 19 (Perfiles — preferencias de usuario si aplica)"]
+}
