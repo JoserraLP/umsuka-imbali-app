@@ -30,6 +30,7 @@ import { RegistrationPanel } from "@/app/events/[id]/registration-panel";
 import { CommentsSection } from "@/app/events/[id]/comments-section";
 import { AttendancePanel } from "@/app/events/[id]/attendance-panel";
 import { RehearsalAttendancePanel } from "@/app/events/[id]/rehearsal-attendance-panel";
+import { EventStatsCard } from "@/app/events/[id]/event-stats-card";
 import { AbsencePanel } from "@/app/events/[id]/absence-panel";
 import { WorkgroupAttendancePanel } from "@/app/events/[id]/workgroup-panel";
 import { ShiftManagementPanel } from "@/app/events/[id]/shift-management-panel";
@@ -363,7 +364,12 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                 Marca quién asistió a cada sesión del ensayo (mañana/tarde).
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              <EventStatsCard
+                summary={null}
+                rehearsalRecords={rehearsalRecords}
+                sessions={rehearsalSessions}
+              />
               <RehearsalAttendancePanel
                 eventId={event.id}
                 sessions={rehearsalSessions}
@@ -384,7 +390,12 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                   ` ${attendanceSummary.present} presentes, ${attendanceSummary.absent} ausentes.`}
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              <EventStatsCard
+                summary={attendanceSummary}
+                rehearsalRecords={null}
+                sessions={[]}
+              />
               <AttendancePanel
                 eventId={event.id}
                 attendees={registrationSummary.attendees}
