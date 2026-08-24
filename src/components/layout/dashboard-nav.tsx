@@ -12,7 +12,7 @@ export function DashboardNav({ currentRole }: DashboardNavProps) {
     { href: "/events", label: "Eventos" },
     { href: "/calendar", label: "Calendario" },
     { href: "/profile", label: "Mi perfil" },
-    { href: "/profile/history", label: "Historial" },
+    { href: "/profile/stats", label: "Mis estadísticas" },
   ];
 
   if (isManagementRole(currentRole)) {
