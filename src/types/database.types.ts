@@ -774,6 +774,27 @@ export interface Database {
         };
         Relationships: [];
       };
+      user_preferences: {
+        Row: {
+          user_id: string;
+          list_ordering: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          list_ordering?: Json;   // default '{}' in DB
+          created_at?: string;    // default now() in DB
+          updated_at?: string;    // default now() in DB
+        };
+        Update: {
+          user_id?: string;
+          list_ordering?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       settings: {
         Row: {
           key: string;
