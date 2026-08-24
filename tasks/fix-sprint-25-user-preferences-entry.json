@@ -2,7 +2,20 @@
   "title": "Fix Sprint 25 — column entry does not exist en user_preferences",
   "description": "La migración 20260101005900_user_preferences.sql falla con ERROR 42703 column \"entry\" does not exist en la función umsuka.is_valid_list_ordering. Causa: FROM jsonb_each(value) sin alias y referencia a \"entry\" inexistente (jsonb_each devuelve columnas key/value). Solución: alias explícito AS t(k,v) y referenciar v. Se corrige el archivo original y se añade migración de parche 06100 con CREATE OR REPLACE para BBDD ya desplegadas.",
   "branch": "fix/sprint-25-user-preferences-entry",
-  "status": "created",
+  "pr_url": "https://github.com/JoserraLP/umsuka-imbali-app/pull/33",
+  "status": "published",
+  "security_scan": {
+    "verdict": "CLEAN",
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "notes": "Sin secretos, tokens, connection strings ni PII en el diff. Menciones a service_role son comentarios que documentan la ausencia de grants (propiedad de seguridad positiva). RLS force own-row verificado."
+  },
+  "validation": {
+    "typecheck": "npx tsc --noEmit limpio",
+    "tests": "npx vitest run — 1240 tests / 85 archivos pasando",
+    "lint": "npx eslint . --max-warnings=0 limpio"
+  },
   "acceptance_criteria": [
     "La migración 05900 ya no referencia la columna inexistente \"entry\"; usa alias explícito para jsonb_each",
     "Nueva migración 06100 aplica CREATE OR REPLACE de umsuka.is_valid_list_ordering sin error 42703",
