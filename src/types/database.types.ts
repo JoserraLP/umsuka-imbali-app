@@ -930,6 +930,10 @@ export interface Database {
           email: string | null;
         }>;
       };
+      my_workgroup_shift_average: {
+        Args: Record<string, never>;
+        Returns: number | null;
+      };
     };
     Enums: {
       workgroup: Workgroup;
