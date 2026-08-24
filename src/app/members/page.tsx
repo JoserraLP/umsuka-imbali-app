@@ -12,12 +12,19 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { AppShell } from "@/components/layout/app-shell";
+import { ListSortingControl } from "@/components/list-sorting";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { canViewMembers, resolveMemberLocks } from "@/lib/members/authorization";
 import { getMembersAction } from "@/app/members/actions";
 import { memberFiltersSchema, type MemberFilters } from "@/lib/members/schema";
 import { MemberFilters as MemberFiltersControl } from "@/app/members/member-filters";
 import type { MemberListItem } from "@/lib/members/schema";
+import { getListOrdering } from "@/lib/ordering/queries";
+import { sortMembers } from "@/lib/ordering/sorting";
+import {
+  DEFAULT_SORT,
+  MEMBER_SORT_OPTIONS,
+} from "@/lib/ordering/schema";
 
 export const metadata: Metadata = {
   title: "Miembros",
@@ -92,6 +99,9 @@ export default async function MembersPage({ searchParams }: PageProps) {
     redirect("/dashboard");
   }
 
+  // Sprint 25: persisted ordering of the caller ({} → defaults below).
+  const ordering = await getListOrdering(profile.id);
+
   const result = await getMembersAction();
 
   const rawParams = await searchParams;
@@ -110,9 +120,13 @@ export default async function MembersPage({ searchParams }: PageProps) {
   const { lockedWorkgroup, lockedComponent } = resolveMemberLocks(profile);
   const scopeKind = lockedComponent ? "component" : lockedWorkgroup ? "workgroup" : null;
 
-  const members = result.success
-    ? filterMembers(result.data, filters)
-    : [];
+  const filtered = result.success ? filterMembers(result.data, filters) : [];
+
+  // Sprint 25 contract: sort the FULL filtered set before rendering
+  // (there is no pagination today, but any future slicing must come
+  // after this step).
+  const sortSelection = ordering.members ?? DEFAULT_SORT.members;
+  const members = sortMembers(filtered, sortSelection.sortBy, sortSelection.direction);
 
   return (
     <AppShell profile={profile}>
@@ -156,14 +170,22 @@ export default async function MembersPage({ searchParams }: PageProps) {
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <MemberFiltersControl
-              workgroup={parsed.success ? (filters.workgroup ?? "all") : "all"}
-              componentType={parsed.success ? (filters.componentType ?? "all") : "all"}
-              status={parsed.success ? (filters.status ?? "all") : "all"}
-              q={filters.q ?? ""}
-              lockedWorkgroup={lockedWorkgroup}
-              lockedComponent={lockedComponent}
-            />
+            <div className="flex flex-wrap items-center gap-2">
+              <MemberFiltersControl
+                workgroup={parsed.success ? (filters.workgroup ?? "all") : "all"}
+                componentType={parsed.success ? (filters.componentType ?? "all") : "all"}
+                status={parsed.success ? (filters.status ?? "all") : "all"}
+                q={filters.q ?? ""}
+                lockedWorkgroup={lockedWorkgroup}
+                lockedComponent={lockedComponent}
+              />
+              <ListSortingControl
+                listId="members"
+                sortBy={sortSelection.sortBy}
+                direction={sortSelection.direction}
+                sortOptions={MEMBER_SORT_OPTIONS}
+              />
+            </div>
             {members.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 No hay miembros que coincidan con los filtros.

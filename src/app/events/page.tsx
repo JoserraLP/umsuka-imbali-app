@@ -12,10 +12,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { AppShell } from "@/components/layout/app-shell";
+import { ListSortingControl } from "@/components/list-sorting";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { isManagementRole } from "@/lib/auth/roles";
 import { listEvents } from "@/lib/events/queries";
 import { getAudienceSummary, getAudienceUserCounts } from "@/lib/events/audience";
+import { getListOrdering } from "@/lib/ordering/queries";
+import { sortEvents } from "@/lib/ordering/sorting";
+import {
+  DEFAULT_SORT,
+  EVENT_SORT_OPTIONS,
+} from "@/lib/ordering/schema";
 import type { EventTypeValue } from "@/lib/events/schema";
 import type { Workgroup } from "@/types/database.types";
 
@@ -52,11 +59,20 @@ export default async function EventsPage() {
   }
 
   const canManage = isManagementRole(profile.role) || profile.isWorkgroupLead;
-  const events = await listEvents(undefined, {
+
+  // Sprint 25: persisted ordering of the caller ({} → defaults below).
+  const ordering = await getListOrdering(profile.id);
+
+  // listEvents already applies audience filtering for the viewer.
+  const listed = await listEvents(undefined, {
     workgroup: profile.workgroup,
     componentType: profile.componentType,
     isManagement: isManagementRole(profile.role),
   });
+
+  // Sprint 25 contract: sort the full visible set BEFORE rendering.
+  const sortSelection = ordering.events ?? DEFAULT_SORT.events;
+  const events = sortEvents(listed, sortSelection.sortBy, sortSelection.direction);
 
   // Concrete-user counts for the audience badges (ONE batched query).
   const specificUsersEventIds = events
@@ -84,6 +100,15 @@ export default async function EventsPage() {
               </Button>
             )}
           </div>
+        </div>
+
+        <div className="flex justify-end">
+          <ListSortingControl
+            listId="events"
+            sortBy={sortSelection.sortBy}
+            direction={sortSelection.direction}
+            sortOptions={EVENT_SORT_OPTIONS}
+          />
         </div>
 
         <div className="rounded-xl border bg-card">
