@@ -2,6 +2,7 @@
   "title": "Sprint 25 — Ordenación de Listados (List Ordering)",
   "description": "Permitir ordenar los principales listados de la aplicación (miembros, instrumentos y eventos) por distintos criterios, de forma persistente por usuario. Incluye: migración de BD con tabla umsuka.user_preferences (user_id PK, list_ordering jsonb) o reutilización de preferencias existentes del Sprint 19 si ya están definidas; capa de negocio src/lib/ordering/ con utilidades para aplicar ordenaciones (por nombre, fecha de alta, grupo de trabajo, instrumento, asistencia, etc.) y almacenamiento de la preferencia por usuario; menú desplegable 'Ordenar por' en los listados de miembros (/members), instrumentos (/instruments) y eventos; persistencia de la preferencia en BD y re-aplicación al volver a la página; y pruebas unitarias de las funciones de ordenación y de persistencia.",
   "branch": "feature/sprint-25-list-ordering",
+  "pr_url": "https://github.com/JoserraLP/umsuka-imbali-app/pull/31",
   "status": "published",
   "security_scan": {
     "verdict": "CLEAN",
