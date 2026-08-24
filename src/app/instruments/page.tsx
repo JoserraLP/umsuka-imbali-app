@@ -3,9 +3,16 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { AppShell } from "@/components/layout/app-shell";
+import { ListSortingControl } from "@/components/list-sorting";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { isManagementRole } from "@/lib/auth/roles";
 import { getInstruments, type InstrumentItem } from "@/lib/instruments/queries";
+import { getListOrdering } from "@/lib/ordering/queries";
+import { sortInstruments } from "@/lib/ordering/sorting";
+import {
+  DEFAULT_SORT,
+  INSTRUMENT_SORT_OPTIONS,
+} from "@/lib/ordering/schema";
 import { InstrumentForm } from "@/app/instruments/instrument-form";
 import { Music, PackageOpen, User } from "lucide-react";
 
@@ -69,7 +76,15 @@ export default async function InstrumentsPage() {
   }
 
   const canManage = isManagementRole(profile.role);
-  const instruments = await getInstruments({ includeInactive: canManage });
+
+  // Sprint 25: persisted ordering of the caller ({} → defaults below).
+  const ordering = await getListOrdering(profile.id);
+
+  const fetched = await getInstruments({ includeInactive: canManage });
+
+  // Sprint 25 contract: sort the FULL fetched set before rendering.
+  const sortSelection = ordering.instruments ?? DEFAULT_SORT.instruments;
+  const instruments = sortInstruments(fetched, sortSelection.sortBy, sortSelection.direction);
 
   return (
     <AppShell profile={profile}>
@@ -114,11 +129,21 @@ export default async function InstrumentsPage() {
             </p>
           </div>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {instruments.map((item) => (
-              <InstrumentCard key={item.id} item={item} />
-            ))}
-          </div>
+          <>
+            <div className="flex justify-end">
+              <ListSortingControl
+                listId="instruments"
+                sortBy={sortSelection.sortBy}
+                direction={sortSelection.direction}
+                sortOptions={INSTRUMENT_SORT_OPTIONS}
+              />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {instruments.map((item) => (
+                <InstrumentCard key={item.id} item={item} />
+              ))}
+            </div>
+          </>
         )}
       </div>
     </AppShell>
