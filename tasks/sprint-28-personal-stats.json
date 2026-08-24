@@ -2,7 +2,7 @@
   "title": "Sprint 28 — Estadísticas Personales (Personal Stats)",
   "description": "Panel de estadísticas personales para cada miembro: porcentaje de asistencia a turnos, ensayos y eventos, comparación con la media del grupo de trabajo, racha actual y tendencia en el tiempo. El apartado 'Historial' existente del perfil se transforma en una sección de 'Estadísticas' con gráficas (tarjetas KPI, tendencia mensual de los últimos 6 meses, comparativa con el grupo) construidas con CSS/SVG puro siguiendo el patrón existente (results-chart.tsx), conservando las tablas de historial detallado. Incluye capa de negocio lib/stats/, función SQL SECURITY DEFINER para la media del grupo sin exponer filas ajenas, estadísticas por evento para responsables y tests.",
   "branch": "feature/sprint-28-personal-stats",
-  "status": "documented",
+  "status": "published",
   "adr": "docs/adr-sprint-28-personal-stats.md",
   "acceptance_criteria": [
     "Cada miembro ve sus estadísticas personales en su perfil: % asistencia a eventos, % participación en ensayos, % asistencia a turnos, racha actual y mejor racha.",
