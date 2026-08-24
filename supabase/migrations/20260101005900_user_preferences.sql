@@ -63,15 +63,15 @@ as $$
   select jsonb_typeof(value) = 'object'
     and coalesce(
           bool_and(
-            jsonb_typeof(entry) = 'object'
-            and entry ? 'sortBy'
-            and jsonb_typeof(entry -> 'sortBy') = 'string'
-            and length(entry ->> 'sortBy') > 0
-            and entry ->> 'direction' in ('asc', 'desc')
+            jsonb_typeof(v) = 'object'
+            and v ? 'sortBy'
+            and jsonb_typeof(v -> 'sortBy') = 'string'
+            and length(v ->> 'sortBy') > 0
+            and v ->> 'direction' in ('asc', 'desc')
           ),
           true  -- '{}' has no entries: valid (means "use app defaults")
         )
-    from jsonb_each(value)
+    from jsonb_each(value) as t(k, v)
 $$;
 
 comment on function umsuka.is_valid_list_ordering(value jsonb) is
