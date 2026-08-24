@@ -49,7 +49,7 @@ export const NAV_LINKS: NavLink[] = [
   { href: "/votings", label: "Votaciones", icon: Vote },
   { href: "/instruments", label: "Instrumentos", icon: Music },
   { href: "/profile", label: "Mi perfil", icon: User },
-  { href: "/profile/history", label: "Historial", icon: Clock },
+  { href: "/profile/stats", label: "Mis estadísticas", icon: Clock },
   { href: "/notifications", label: "Notificaciones", icon: Bell },
   {
     href: "/members",

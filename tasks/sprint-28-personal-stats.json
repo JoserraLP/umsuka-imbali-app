@@ -1,0 +1,29 @@
+{
+  "title": "Sprint 28 — Estadísticas Personales (Personal Stats)",
+  "description": "Panel de estadísticas personales para cada miembro: porcentaje de asistencia a turnos, ensayos y eventos, comparación con la media del grupo de trabajo, racha actual y tendencia en el tiempo. El apartado 'Historial' existente del perfil se transforma en una sección de 'Estadísticas' con gráficas (tarjetas KPI, tendencia mensual de los últimos 6 meses, comparativa con el grupo) construidas con CSS/SVG puro siguiendo el patrón existente (results-chart.tsx), conservando las tablas de historial detallado. Incluye capa de negocio lib/stats/, función SQL SECURITY DEFINER para la media del grupo sin exponer filas ajenas, estadísticas por evento para responsables y tests.",
+  "branch": "feature/sprint-28-personal-stats",
+  "status": "published",
+  "adr": "docs/adr-sprint-28-personal-stats.md",
+  "acceptance_criteria": [
+    "Cada miembro ve sus estadísticas personales en su perfil: % asistencia a eventos, % participación en ensayos, % asistencia a turnos, racha actual y mejor racha.",
+    "Las estadísticas se calculan en tiempo real sobre los datos de asistencia existentes (attendance, rehearsal_attendance, workgroup_attendance).",
+    "Se muestra la tendencia mensual (últimos 6 meses) mediante un mini-gráfico.",
+    "Se muestra una comparativa entre la asistencia del miembro a turnos y la media de su grupo de trabajo (solo cuando tiene grupo asignado), sin exponer datos individuales de otros miembros.",
+    "El apartado 'Historial' del perfil se convierte en la sección 'Estadísticas' y conserva el detalle de asistencia/ausencias.",
+    "Los responsables ven estadísticas agregadas por evento (presentes/ausentes/% y desglose por sesión en ensayos) en la página del evento."
+  ],
+  "definition_of_done": [
+    "Migración SQL con función SECURITY DEFINER umsuka.my_workgroup_shift_average() (agregados del grupo del llamador, sin PII) aplicada y tipos hand-edited en src/types/database.types.ts.",
+    "Módulo src/lib/stats/stats.ts con funciones puras testeables (tasas, rachas, tendencia mensual, comparativa).",
+    "Módulo src/lib/stats/queries.ts leyendo solo filas propias (RLS) + RPC de media del grupo.",
+    "Nueva página /profile/stats con tarjetas KPI, gráfica de tendencia mensual, comparativa con el grupo y tablas de historial detallado; /profile/history redirige a /profile/stats.",
+    "Card de 'Historial' en /profile convertida en sección 'Estadísticas' enlazando a /profile/stats.",
+    "EventStatsCard para management en /events/[id] con totales de asistencia (y por sesión en ensayos) reutilizando queries ya cargadas.",
+    "Tests unitarios nuevos pasando + suite completa (npx vitest run).",
+    "Typecheck (tsc --noEmit) y lint limpios; next build sin errores.",
+    "Security scan sin issues HIGH.",
+    "ADR documentado en docs/adr-sprint-28-personal-stats.md.",
+    "PR creada contra master siguiendo docs/git-conventions.md."
+  ],
+  "dependencies": ["Sprint 5 (Asistencia)", "Sprint 12 (Turnos)", "Sprint 27 (Ensayos)", "Sprint 17 (Eventos)"]
+}

@@ -137,6 +137,7 @@ erDiagram
 | `20260101004900_votings_enhancement.sql` | `votings.voting_deadline` (ficha límite opcional), índice único case-insensitive en `voting_options` (`voting_id, lower(option_text)`), función `umsuka.get_voting_results(uuid)` (SECURITY DEFINER: recuentos y porcentajes por opción, ocultos hasta votar/cerrar salvo management) y política INSERT de `voting_votes` endurecida (la opción debe pertenecer a la misma votación) — Sprint 15 |
 | `20260101005700_rehearsal_event_type.sql` | `ALTER TYPE umsuka.event_type ADD VALUE 'rehearsal'` (migración separada por la restricción de PostgreSQL sobre `ADD VALUE`) — Sprint 27 |
 | `20260101005800_rehearsal_attendance.sql` | `events.morning_session`/`afternoon_session` + CHECKs coherentes, ENUM `umsuka.rehearsal_session` (`morning`/`afternoon`), tabla `umsuka.rehearsal_attendance` (UNIQUE `event_id,user_id,session`, FKs con ON DELETE CASCADE, `marked_by`), trigger `updated_at`, índices y RLS — Sprint 27 |
+| `20260101006000_workgroup_stats_average.sql` | Función SECURITY DEFINER `umsuka.my_workgroup_shift_average()` (media de asistencia por miembro del workgroup del actor; REVOKE public/anon + GRANT authenticated) — Sprint 28 |
 
 Apply locally with `npm run supabase:reset`; apply to a remote project with
 `supabase db push` (also run automatically by `deploy.yml` on merge to `main`).

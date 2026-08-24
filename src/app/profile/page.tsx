@@ -146,9 +146,9 @@ export default async function ProfilePage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Historial</CardTitle>
+            <CardTitle>Estadísticas</CardTitle>
             <CardDescription>
-              Tu participación en eventos, turnos y asistencia de un vistazo.
+              Tu participación de un vistazo: asistencia, ensayos y turnos.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -161,21 +161,21 @@ export default async function ProfilePage() {
                 <span className="text-xs text-muted-foreground">Eventos apuntados</span>
               </Link>
               <Link
-                href="/profile/history"
+                href="/profile/stats"
                 className="flex flex-col items-center gap-1 rounded-md border border-border p-4 text-center transition-colors hover:bg-muted"
               >
                 <span className="text-2xl font-bold">{history.attendancePresent}</span>
                 <span className="text-xs text-muted-foreground">Asistencias</span>
               </Link>
               <Link
-                href="/profile/history"
+                href="/profile/stats"
                 className="flex flex-col items-center gap-1 rounded-md border border-border p-4 text-center transition-colors hover:bg-muted"
               >
                 <span className="text-2xl font-bold">{history.attendanceAbsent}</span>
                 <span className="text-xs text-muted-foreground">Faltas sin asistir</span>
               </Link>
               <Link
-                href="/profile/history"
+                href="/profile/stats"
                 className="flex flex-col items-center gap-1 rounded-md border border-border p-4 text-center transition-colors hover:bg-muted"
               >
                 <span className="text-2xl font-bold">{history.absences}</span>
@@ -189,7 +189,7 @@ export default async function ProfilePage() {
                 <span className="text-xs text-muted-foreground">Turnos</span>
               </Link>
               <Link
-                href="/profile/history"
+                href="/profile/stats"
                 className="flex flex-col items-center gap-1 rounded-md border border-border p-4 text-center transition-colors hover:bg-muted"
               >
                 <span className="text-2xl font-bold">{history.rehearsalsAttended}</span>
@@ -199,6 +199,14 @@ export default async function ProfilePage() {
                     ? `(${history.rehearsalsAttended}/${history.rehearsalsMarked} · ${rehearsalParticipation}%)`
                     : ""}
                 </span>
+              </Link>
+            </div>
+            <div className="mt-4">
+              <Link
+                href="/profile/stats"
+                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Ver estadísticas completas →
               </Link>
             </div>
           </CardContent>
