@@ -127,9 +127,11 @@ describe("computeMonthlyTrend", () => {
     const trend = computeMonthlyTrend([]);
     expect(trend).toHaveLength(6);
     const last = trend[trend.length - 1]!;
+    // Buckets are UTC-framed (marks are keyed by the UTC prefix of the
+    // Postgres timestamps), so the expectation uses UTC getters too.
     const now = new Date();
     expect(last.key).toBe(
-      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`,
+      `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`,
     );
   });
 
@@ -153,6 +155,16 @@ describe("computeMonthlyTrend", () => {
     ];
     const trend = computeMonthlyTrend(marks, { now: NOW });
     expect(trend.map((point) => point.rate)).toEqual([null, null, 66.7, null, null, 0]);
+  });
+
+  it("frames buckets in UTC so month-boundary marks land correctly regardless of server TZ", () => {
+    // 00:30 UTC on Apr 1 is still Mar 31 in the Americas: a local-frame
+    // implementation would open the window one month early and miss this
+    // April mark entirely.
+    const now = new Date("2026-04-01T00:30:00Z");
+    const trend = computeMonthlyTrend([mark("2026-04-01T00:10:00Z", true)], { now });
+    expect(trend[trend.length - 1]!.key).toBe("2026-04");
+    expect(trend[trend.length - 1]!.rate).toBe(100);
   });
 });
 

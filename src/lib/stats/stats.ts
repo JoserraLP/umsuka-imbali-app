@@ -97,8 +97,14 @@ export function computeStreaks(marks: ActivityMark[]): Streaks {
   return { current, best };
 }
 
+/**
+ * Bucket keys always use the UTC frame: Postgres serializes timestamps
+ * as UTC ISO strings and the trend keys them by their "YYYY-MM" prefix
+ * (see computeMonthlyTrend), so deriving the window from UTC getters
+ * keeps both sides consistent no matter the server's time zone.
+ */
 function bucketKey(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
 /**
@@ -118,10 +124,10 @@ export function computeMonthlyTrend(
   const totalsByKey = new Map<string, { attended: number; total: number }>();
 
   for (let i = months - 1; i >= 0; i -= 1) {
-    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
     points.push({
       key: bucketKey(date),
-      label: MONTH_LABELS[date.getMonth()]!,
+      label: MONTH_LABELS[date.getUTCMonth()]!,
       rate: null,
     });
   }
