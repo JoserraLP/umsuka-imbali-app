@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { AppShell } from "@/components/layout/app-shell";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { getProfileHistorySummary } from "@/lib/profiles/queries";
+import { getMinorWithGuardian, getMinorsByGuardian } from "@/lib/guardians/queries";
 import { computeParticipationFromCounts } from "@/lib/rehearsals/stats";
 import { ProfileForm } from "@/app/profile/profile-form";
 import { ChangePasswordForm } from "@/app/profile/change-password-form";
@@ -64,6 +65,14 @@ export default async function ProfilePage() {
   const joinedAtLabel = formatDate(profile.joinedAt);
   const createdAtLabel = formatDate(profile.createdAt);
 
+  const [minorWithGuardian, minorsInCharge] = await Promise.all([
+    getMinorWithGuardian(profile.id).catch(() => null),
+    getMinorsByGuardian(profile.id).catch(() => []),
+  ]);
+
+  const isMinor = minorWithGuardian?.profile.isMinor ?? false;
+  const guardian = minorWithGuardian?.guardian ?? null;
+
   return (
     <AppShell profile={profile}>
       <div className="animate-fade-in space-y-4">
@@ -99,6 +108,43 @@ export default async function ProfilePage() {
             </div>
 
             {profile.bio && <p className="text-sm text-muted-foreground">{profile.bio}</p>}
+
+            {isMinor && (
+              <div className="flex flex-col gap-1.5 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm">
+                <p className="font-medium">Representante legal</p>
+                {guardian ? (
+                  <>
+                    <p className="text-muted-foreground">
+                      <span className="text-foreground">{guardian.fullName}</span>
+                      {guardian.relationship ? ` · ${guardian.relationship}` : ""}
+                    </p>
+                    {guardian.email && <p className="text-muted-foreground">Email: {guardian.email}</p>}
+                    {guardian.phone && <p className="text-muted-foreground">Tel: {guardian.phone}</p>}
+                    {guardian.isMember && <Badge variant="outline" className="mt-1 w-fit">Miembro</Badge>}
+                  </>
+                ) : (
+                  <p className="text-muted-foreground">Sin representante asignado.</p>
+                )}
+                <Badge variant="secondary" className="mt-1 w-fit">Menor de edad</Badge>
+              </div>
+            )}
+
+            {minorsInCharge.length > 0 && (
+              <div className="flex flex-col gap-1.5 rounded-md border bg-card p-3 text-sm">
+                <p className="font-medium">Menores a cargo</p>
+                <p className="text-muted-foreground">Representas a {minorsInCharge.length} menor(es).</p>
+                <div className="flex flex-col gap-1">
+                  {minorsInCharge.map((m) => (
+                    <a key={m.id} href={`/members/${m.id}`} className="text-primary hover:underline">
+                      {m.firstName} {m.lastName}
+                    </a>
+                  ))}
+                </div>
+                <a href="/guardians/mis-menores" className="text-xs text-muted-foreground hover:text-foreground">
+                  Ver todos →
+                </a>
+              </div>
+            )}
 
             <div className="flex flex-col gap-1.5 text-sm">
               <p className="font-medium">Contacto</p>

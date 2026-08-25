@@ -15,6 +15,7 @@ import {
   Settings,
   ScrollText,
   Wallet,
+  Shield,
   type LucideIcon,
 } from "lucide-react";
 import type { AppRole, ComponentType, Workgroup } from "@/types/database.types";
@@ -53,6 +54,12 @@ export const NAV_LINKS: NavLink[] = [
     href: "/finances",
     label: "Finanzas",
     icon: Wallet,
+    showFor: (ctx) => isManagementRole(ctx.role),
+  },
+  {
+    href: "/guardians",
+    label: "Representantes",
+    icon: Shield,
     showFor: (ctx) => isManagementRole(ctx.role),
   },
   { href: "/profile", label: "Mi perfil", icon: User },

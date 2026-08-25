@@ -138,6 +138,8 @@ erDiagram
 | `20260101005700_rehearsal_event_type.sql` | `ALTER TYPE umsuka.event_type ADD VALUE 'rehearsal'` (migración separada por la restricción de PostgreSQL sobre `ADD VALUE`) — Sprint 27 |
 | `20260101005800_rehearsal_attendance.sql` | `events.morning_session`/`afternoon_session` + CHECKs coherentes, ENUM `umsuka.rehearsal_session` (`morning`/`afternoon`), tabla `umsuka.rehearsal_attendance` (UNIQUE `event_id,user_id,session`, FKs con ON DELETE CASCADE, `marked_by`), trigger `updated_at`, índices y RLS — Sprint 27 |
 | `20260101006000_workgroup_stats_average.sql` | Función SECURITY DEFINER `umsuka.my_workgroup_shift_average()` (media de asistencia por miembro del workgroup del actor; REVOKE public/anon + GRANT authenticated) — Sprint 28 |
+| `20260101006200_finances.sql` | ENUMs `umsuka.transaction_type` / `umsuka.transaction_category` + tabla `umsuka.transactions` (libro de ingresos/gastos, `amount numeric(10,2) > 0`, `transaction_date date`, `created_by`, trigger `updated_at`, índices y RLS directiva exclusiva `is_management()`) — Sprint 29 |
+| `20260101006300_legal_guardians.sql` | Tabla `umsuka.legal_guardians` (representante legal: `full_name` 1-200, contacto opcional, `is_member` + `member_user_id` con CHECK coherencia, `created_by`, índices, trigger `updated_at`, RLS directiva exclusiva `is_management()`) + columnas `profiles.is_minor` + `legal_guardian_id` FK SET NULL, índices parciales/compuestos — Sprint 30 |
 
 Apply locally with `npm run supabase:reset`; apply to a remote project with
 `supabase db push` (also run automatically by `deploy.yml` on merge to `main`).

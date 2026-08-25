@@ -16,6 +16,7 @@ import { getCurrentProfile } from "@/lib/auth/session";
 import { isManagementRole } from "@/lib/auth/roles";
 import { canViewMembers, canViewMemberDetail } from "@/lib/members/authorization";
 import { getMemberDetailAction } from "@/app/members/actions";
+import { getMinorWithGuardian, getMinorsByGuardian } from "@/lib/guardians/queries";
 import { computeParticipationFromCounts } from "@/lib/rehearsals/stats";
 
 export const metadata: Metadata = {
@@ -93,6 +94,13 @@ export default async function MemberDetailPage({ params }: PageProps) {
   }
 
   const isManagement = isManagementRole(profile.role);
+  const [minorWithGuardian, minorsInCharge] = await Promise.all([
+    getMinorWithGuardian(member.id).catch(() => null),
+    getMinorsByGuardian(member.id).catch(() => []),
+  ]);
+  const isMinor = minorWithGuardian?.profile.isMinor ?? false;
+  const guardian = minorWithGuardian?.guardian ?? null;
+
   const present = attendance.filter((record) => record.attended).length;
   const absent = attendance.length - present;
 
@@ -152,6 +160,7 @@ export default async function MemberDetailPage({ params }: PageProps) {
             <Badge variant={member.isActive ? "default" : "destructive"}>
               {member.isActive ? "Alta" : "Baja"}
             </Badge>
+            {isMinor && <Badge variant="secondary">Menor</Badge>}
           </CardContent>
           <CardContent className="border-t pt-4 text-sm text-muted-foreground">
             <p>Fecha de alta: {DATE_FORMATTER.format(new Date(member.createdAt))}</p>
@@ -160,6 +169,46 @@ export default async function MemberDetailPage({ params }: PageProps) {
             )}
           </CardContent>
         </Card>
+
+        {(isMinor || minorsInCharge.length > 0) && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Representante legal</CardTitle>
+              <CardDescription>
+                {isMinor ? "Datos del representante del menor." : "Menores a cargo de este miembro."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              {isMinor && (
+                <div className="rounded-md border p-3">
+                  <p className="font-medium">Representante</p>
+                  {guardian ? (
+                    <>
+                      <p>{guardian.fullName} {guardian.relationship ? `· ${guardian.relationship}` : ""}</p>
+                      {guardian.email && <p className="text-muted-foreground">Email: {guardian.email}</p>}
+                      {guardian.phone && <p className="text-muted-foreground">Tel: {guardian.phone}</p>}
+                      {guardian.isMember && <Badge variant="outline" className="mt-1">Miembro</Badge>}
+                    </>
+                  ) : (
+                    <p className="text-muted-foreground">Sin representante asignado.</p>
+                  )}
+                </div>
+              )}
+              {minorsInCharge.length > 0 && (
+                <div className="rounded-md border p-3">
+                  <p className="font-medium">Menores a cargo ({minorsInCharge.length})</p>
+                  <div className="mt-2 flex flex-col gap-1">
+                    {minorsInCharge.map((m) => (
+                      <Link key={m.id} href={`/members/${m.id}`} className="text-primary hover:underline">
+                        {m.firstName} {m.lastName}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>
