@@ -1047,9 +1047,84 @@ Permitir que un componente menor de edad tenga un representante legal asociado. 
 
 ---
 
-## Sprint 31 — CI/CD y Despliegue Automático
+## Sprint 31 — Control de Pagos y Reparto de Material
 
-**Rama:** `feature/sprint-31-cicd`
+**Rama:** `feature/sprint-31-payment-tracking`
+
+### Descripción
+Permitir que la directiva y el super_admin registren qué miembros han pagado un mes en específico o el año completo (cuotas de la comparsa). Cuando se crea un evento de tipo **"reparto de material"**, el sistema genera automáticamente una lista con todos los miembros que han pagado hasta el mes del evento, para que solo ellos puedan recibir el material. Esto evita que personas sin cuas al día reciban material de la comparsa.
+
+### Pasos
+
+| # | Paso | Detalle |
+|---|---|---|
+| 1 | Migración de BD — pagos | Crear `umsuka.member_payments` (id, user_id FK, payment_type ENUM `monthly`/`yearly`, period_month INT nullable — mes del pago mensual (1-12), period_year INT — año del pago, amount numeric(10,2), paid_at date, registered_by FK, notes text nullable, created_at). Crear índices únicos parciales para evitar pagos duplicados por usuario/mes/año. |
+| 2 | Migración de BD — event_type material_distribution | Añadir `'material_distribution'` como tipo de evento válido. |
+| 3 | RLS | Super_admin y directiva (`is_directiva`) pueden registrar/editar/eliminar pagos. Los miembros autenticados pueden consultar su propio historial de pagos. |
+| 4 | Capa de negocio `lib/payments/` | Schemas Zod (registerPaymentSchema, bulkRegisterSchema), queries (getPaymentsByUser, getPaidMembersUpToMonth, getPaymentStatus), mutations (registerPayment, updatePayment, deletePayment, bulkRegisterMonthly). Función clave: `getPaidMembersForEvent(eventDate)` — devuelve los IDs de miembros que tienen un pago cubriende el mes del evento (pago mensual de ese mes o pago anual que cubra ese año). |
+| 5 | Server actions | `registerPaymentAction`, `bulkRegisterMonthlyAction` (registrar pagos de un mes para varios miembros a la vez), `getPaidMembersForEventAction`. |
+| 6 | UI de registro de pagos | Página `/payments` (solo directiva/super_admin): listado de miembros con su estado de pago (al día / pendiente), formulario para registrar pago mensual o anual, opción de registro masivo por mes. |
+| 7 | Vista de estado de pago | En el perfil de cada miembro, tarjeta "Estado de cuotas" visible para el propio miembro: meses pagados, próximo vencimiento. |
+| 8 | Integración con eventos de reparto | Al crear un evento de tipo `material_distribution`, el sistema muestra la lista de miembros elegibles (los que han pagado hasta el mes del evento). Esta lista se genera automáticamente y se puede exportar/imprimir el día del evento. |
+| 9 | Fallback —缺 de pago | Si un miembro no tiene pago registrado para el mes del evento, aparece en una lista separada "Pendientes de pago" y no puede recibir material. |
+| 10 | Pruebas | Tests unitarios de `getPaidMembersForEvent` con escenarios: pago mensual vigente, pago anual vigente, sin pago, pago vencido. Tests de bulk register. Tests de RLS: solo directiva/super_admin registran, miembros solo leen su propio historial. |
+
+### Dependencias
+- Sprint 2/21 (Roles — directiva y super_admin)
+- Sprint 17 (Eventos — para el tipo `material_distribution`)
+- Sprint 19 (Perfiles — para la vista de estado de pago en el perfil)
+
+### Criterios de Aceptación
+- La directiva y el super_admin pueden registrar pagos mensuales o anuales para cualquier miembro.
+- Se puede hacer registro masivo de pagos de un mes completo para múltiples miembros a la vez.
+- Los miembros ven su propio historial de pagos en su perfil.
+- Al crear un evento de tipo "reparto de material", el sistema genera automáticamente la lista de miembros que han pagado hasta el mes del evento.
+- La lista de elegibles se puede exportar/imprimir el día del evento.
+- Un miembro sin pago al día queda en la lista de "pendientes" y no puede recibir material.
+- No se permiten pagos duplicados para el mismo mes/año del mismo miembro.
+
+---
+
+## Sprint 32 — Inscripción Automática a Ensayos
+
+**Rama:** `feature/sprint-32-rehearsal-auto-enroll`
+
+### Descripción
+Cuando se crea un ensayo (evento de tipo `rehearsal`), el sistema **inscribe automáticamente** a todos los miembros del grupo de trabajo correspondiente (música o baile) en ese ensayo. Los miembros **no pueden inscribirse por sí mismos**; solo el sistema al crear el ensayo o el super_admin/directiva pueden gestionar las inscripciones. Esto permite que los responsables marquen la asistencia de los ya inscritos, sin tener que añadirlos uno a uno.
+
+### Pasos
+
+| # | Paso | Detalle |
+|---|---|---|
+| 1 | Migración de BD — rehearsal category | Añadir columna `rehearsal_category` ENUM (`music`/`dance`) a `umsuka.events` (nullable, solo para eventos tipo `rehearsal`). |
+| 2 | Extender `umsuka.rehearsal_attendance` | Añadir campo `enrolled` (boolean, default false) y `enrolled_at` (timestamptz). Los registros pre-inscritos se crean automáticamente con `enrolled = true`. |
+| 3 | Server action de auto-inscripción | Al crear un evento tipo `rehearsal` con `rehearsal_category` definida, ejecutar una server action que busque todos los miembros cuyo `workgroup` coincida (`music` → miembros de música, `dance` → miembros de baile) y cree registros en `rehearsal_attendance` con `enrolled = true` y `attended = false`. |
+| 4 | Bloqueo de auto-inscripción | Las políticas RLS de `rehearsal_attendance` impiden que un miembro se auto-inserte. Solo el sistema (server actions con service_role) y el super_admin/directiva pueden crear registros. |
+| 5 | Capa de negocio `lib/rehearsals/auto-enroll.ts` | Función `autoEnrollRehearsal(eventId, category)` que: (1) valida que el evento sea tipo `rehearsal`, (2) busca miembros del workgroup correspondiente, (3) inserta en `rehearsal_attendance` ignorando duplicados (upsert). |
+| 6 | UI de ensayo | En la página de detalle del ensayo, mostrar la lista de inscritos con su estado (asistió / no asistió / pendiente). El responsable solo puede marcar asistencia, no añadir/eliminar inscritos. |
+| 7 | notificación | Cuando se crea un ensayo, notificar a los miembros inscritos automáticamente (integrar con Sprint 20 — Notificaciones). |
+| 8 | Pruebas | Tests de `autoEnrollRehearsal`: verifica que se inscriben todos los miembros del workgroup correcto, que no se duplican si ya existen, que un miembro de otro workgroup no se inscribe. Tests de RLS: miembro no puede auto-insertarse. |
+
+### Dependencias
+- Sprint 2 (Workgroup Roles — workgroup `music`/`dance` en profiles)
+- Sprint 5 (Asistencia — extiende `rehearsal_attendance`)
+- Sprint 17 (Eventos — tipo `rehearsal`)
+- Sprint 27 (Asistencia a Ensayos — esta funcionalidad se integra con el registro de asistencia de ese sprint)
+
+### Criterios de Aceptación
+- Al crear un ensayo de música, se inscriben automáticamente **todos** los miembros con workgroup = `music`.
+- Al crear un ensayo de baile, se inscriben automáticamente **todos** los miembros con workgroup = `dance`.
+- Los miembros **no pueden** inscribirse por sí mismos en un ensayo.
+- Los miembros de un workgroup incorrecto no se inscriben en un ensayo de otro workgroup.
+- Si un miembro ya estaba inscrito (caso raro), no se duplica el registro.
+- Los responsables pueden marcar asistencia sobre los ya inscritos.
+- Se envía notificación automática a los miembros inscritos al crear el ensayo.
+
+---
+
+## Sprint 33 — CI/CD y Despliegue Automático
+
+**Rama:** `feature/sprint-33-cicd`
 
 ### Descripción
 Configurar GitHub Actions para linting, typecheck, tests, build y despliegue automático a Vercel desde la rama `main`.
@@ -1076,9 +1151,9 @@ Configurar GitHub Actions para linting, typecheck, tests, build y despliegue aut
 
 ---
 
-## Sprint 32 — Hardening Final
+## Sprint 34 — Hardening Final
 
-**Rama:** `feature/sprint-32-hardening`
+**Rama:** `feature/sprint-34-hardening`
 
 ### Descripción
 Auditorías finales de seguridad, rendimiento, accesibilidad y validación general para producción.
@@ -1142,8 +1217,10 @@ Auditorías finales de seguridad, rendimiento, accesibilidad y validación gener
 | Sprint 28 — Personal Stats | `feature/sprint-28-personal-stats` | Sprint 5, Sprint 12, Sprint 27, Sprint 17 (pendiente) |
 | Sprint 29 — Money Management | `feature/sprint-29-money-management` | Sprint 2, Sprint 21, Sprint 3 (pendiente) |
 | Sprint 30 — Legal Guardian (Menores) | `feature/sprint-30-legal-guardian` | Sprint 6, Sprint 19, Sprint 14 (pendiente) |
-| Sprint 31 — CI/CD | `feature/sprint-31-cicd` | — (pendiente) |
-| Sprint 32 — Hardening | `feature/sprint-32-hardening` | Todos los anteriores (pendiente) |
+| Sprint 31 — Payment Tracking & Material Distribution | `feature/sprint-31-payment-tracking` | Sprint 2, Sprint 21, Sprint 17, Sprint 19 (pendiente) |
+| Sprint 32 — Rehearsal Auto-Enrollment | `feature/sprint-32-rehearsal-auto-enroll` | Sprint 2, Sprint 5, Sprint 17, Sprint 27 (pendiente) |
+| Sprint 33 — CI/CD | `feature/sprint-33-cicd` | — (pendiente) |
+| Sprint 34 — Hardening | `feature/sprint-34-hardening` | Todos los anteriores (pendiente) |
 
 ---
 

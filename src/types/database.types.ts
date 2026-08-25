@@ -7,8 +7,9 @@
 export type Json = string | number | boolean | null | { [key: string]: Json } | Json[];
 
 export type ComponentType = "music" | "dance" | "member";
-export type EventType = "general" | "meeting" | "carnival" | "work_shift" | "rehearsal";
+export type EventType = "general" | "meeting" | "carnival" | "work_shift" | "rehearsal" | "material_distribution";
 export type RehearsalSession = "morning" | "afternoon";
+export type PaymentType = "monthly" | "yearly";
 export type Workgroup = "telas" | "barra" | "estandarte" | "limpieza" | "ninguno";
 export type UserStatus = "pending" | "active" | "suspended";
 export type AuthMethod = "google" | "email_alias" | "phone";
@@ -975,6 +976,60 @@ export interface Database {
           },
         ];
       };
+      member_payments: {
+        Row: {
+          id: string;
+          user_id: string | null;
+          payment_type: PaymentType;
+          period_month: number | null;
+          period_year: number;
+          amount: number;
+          paid_at: string;
+          registered_by: string | null;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string | null;
+          payment_type: PaymentType;
+          period_month?: number | null;
+          period_year: number;
+          amount: number;
+          paid_at?: string;
+          registered_by?: string | null;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string | null;
+          payment_type?: PaymentType;
+          period_month?: number | null;
+          period_year?: number;
+          amount?: number;
+          paid_at?: string;
+          registered_by?: string | null;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "member_payments_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "member_payments_registered_by_fkey";
+            columns: ["registered_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -1062,6 +1117,7 @@ export interface Database {
       audience_type: AudienceType;
       transaction_type: TransactionType;
       transaction_category: TransactionCategory;
+      payment_type: PaymentType;
     };
     CompositeTypes: Record<string, never>;
   };

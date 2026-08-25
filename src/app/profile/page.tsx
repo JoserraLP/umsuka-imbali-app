@@ -12,6 +12,7 @@ import { computeParticipationFromCounts } from "@/lib/rehearsals/stats";
 import { ProfileForm } from "@/app/profile/profile-form";
 import { ChangePasswordForm } from "@/app/profile/change-password-form";
 import { WorkgroupSection } from "@/app/profile/workgroup-section";
+import { PaymentStatusCard } from "@/app/profile/payment-status-card";
 
 export const metadata: Metadata = {
   title: "Mi perfil",
@@ -293,6 +294,8 @@ export default async function ProfilePage() {
             <WorkgroupSection currentWorkgroup={profile.workgroup} />
           </CardContent>
         </Card>
+
+        <PaymentStatusCard userId={profile.id} />
 
         {profile.authMethod === "email_alias" && (
           <Card>

@@ -1,0 +1,63 @@
+{
+  "title": "Sprint 31 — Control de Pagos y Reparto de Material (Payment Tracking)",
+  "description": "Permitir que la directiva y el super_admin registren qué miembros han pagado un mes específico o el año completo (cuotas de la comparsa). Cuando se crea un evento de tipo 'reparto de material' (material_distribution), el sistema genera automáticamente la lista de miembros elegibles (pagados hasta el mes del evento) y la lista de pendientes. Solo elegibles pueden recibir material. Incluye UI /payments solo directiva, tarjeta de estado de cuotas en perfil, integración con eventos de reparto (export/print), bloqueo de pagos duplicados y RLS con is_management().",
+  "branch": "feature/sprint-31-payment-tracking",
+  "status": "published",
+  "adr": "docs/adr-sprint-31-payment-tracking.md",
+  "plan_summary": {
+    "migrations": [
+      "supabase/migrations/20260101006400_member_payments.sql — ENUM umsuka.payment_type (monthly/yearly) + tabla umsuka.member_payments (id uuid PK, user_id FK profiles SET NULL, payment_type, period_month 1-12 nullable, period_year 1-9999, amount numeric(10,2) >0, paid_at date, registered_by FK, notes <=2000, created_at) + ALTER TYPE event_type ADD VALUE material_distribution + índices (user_id, period_year, (user_id,period_year), registered_by) + índices únicos parciales monthly(year,month) y yearly(year) + RLS ENABLE+FORCE (select: is_management OR user_id=auth.uid(), all: is_management) + comments + checklist"
+    ],
+    "key_decisions": [
+      "D1: ENUM payment_type monthly/yearly (estable, tipado fuerte) vs text libre",
+      "D2: period_month NULL para yearly + CHECKs coherentes (monthly requiere 1-12, yearly requiere null) vs dos tablas separadas",
+      "D3: índices únicos parciales para deduplicación (monthly: user+year+month, yearly: user+year) como invariante DB + validación app-layer",
+      "D4: reutiliza is_management() sin crear is_directiva duplicado",
+      "D5: RLS híbrida select (directiva ve todo + miembro ve su propio historial) vs directiva exclusiva como transactions",
+      "D6: material_distribution como nuevo valor de event_type (ADD VALUE sin recrear ENUM)",
+      "D7: Zod isomórfico con amount coerce, period validation, notes optionalTrimmedText, mensajes es-ES",
+      "D8: eligibility getPaidMembersForEvent: pago anual cubre todo el año OR pago mensual del mes del evento (sin meses intermedios)",
+      "D9: bulkRegisterMonthly: loop idempotente con skip duplicados + reporte parcial",
+      "D10: database.types.ts hand-edited + checklist manual (sin Supabase CLI local)"
+    ],
+    "phases": [
+      "Fase 0: rama feature/sprint-31-payment-tracking desde master (git-conventions)",
+      "Fase 1: migración 0064 + tipos hand-edited (EventType material_distribution, member_payments table) + DATABASE.md",
+      "Fase 2: src/lib/payments/ (schema.ts, queries.ts, mutations.ts, actions.ts) con requireManagementGuard + eligibility helpers",
+      "Fase 3: actualizar src/lib/events/schema.ts EVENT_TYPES incluye material_distribution",
+      "Fase 4: UI directiva /payments (listado + estado, formulario individual + bulk, filtros mes/año) + componentes",
+      "Fase 5: integración perfil /profile tarjeta Estado de cuotas + eventos material_distribution eligibility lists (eligible/pending + export/print)",
+      "Fase 6: nav-links payments showFor isManagementRole",
+      "Fase 7: tests unitarios schema (30+) + mutations mocks (20+) + queries pure (eligibility)",
+      "Fase 8: ADR docs/adr-sprint-31-payment-tracking.md + PR [feature] Sprint 31 contra master"
+    ]
+  },
+  "acceptance_criteria": [
+    "La directiva y el super_admin pueden registrar pagos mensuales o anuales para cualquier miembro.",
+    "Se puede hacer registro masivo de pagos de un mes completo para múltiples miembros a la vez.",
+    "Los miembros ven su propio historial de pagos en su perfil (tarjeta Estado de cuotas).",
+    "Al crear un evento de tipo 'reparto de material', el sistema genera automáticamente la lista de miembros que han pagado hasta el mes del evento (elegibles vs pendientes).",
+    "La lista de elegibles se puede exportar/imprimir el día del evento.",
+    "Un miembro sin pago al día queda en la lista de 'pendientes' y no puede recibir material.",
+    "No se permiten pagos duplicados para el mismo mes/año del mismo miembro (índices únicos parciales + validación)."
+  ],
+  "definition_of_done": [
+    "Migración SQL 20260101006400_member_payments.sql con ENUM payment_type (monthly/yearly), tabla umsuka.member_payments (id uuid PK default gen_random_uuid(), user_id uuid FK profiles(id) ON DELETE SET NULL, payment_type umsuka.payment_type not null, period_month int null check 1-12, period_year int not null check 1-9999, amount numeric(10,2) not null check >0, paid_at date not null default CURRENT_DATE, registered_by uuid FK profiles SET NULL, notes text check <=2000, created_at timestamptz default now()), ALTER TYPE event_type ADD VALUE 'material_distribution' (si no existe), índices, índices únicos parciales (monthly: uniq_member_monthly_payment ON (user_id, period_year, period_month) WHERE payment_type='monthly'; yearly: uniq_member_yearly_payment ON (user_id, period_year) WHERE payment_type='yearly'), RLS ENABLE+FORCE (select: is_management() OR user_id=auth.uid(), all: is_management()), comentarios y checklist manual idempotente.",
+    "Tipos hand-edited en src/types/database.types.ts: PaymentType, EventType incluye material_distribution, Tables.member_payments Row/Insert/Update + Relationships, Enums payment_type.",
+    "EVENT_TYPES ampliado en src/lib/events/schema.ts para incluir 'material_distribution' con validación igual que rehearsal (sin sesiones requeridas).",
+    "Módulo src/lib/payments/schema.ts con Zod schemas (registerPaymentSchema, updatePaymentSchema, deletePaymentSchema, bulkRegisterMonthlySchema) con validaciones coherentes payment_type/period_month/period_year, amount positivo 2 decimales, paid_at YYYY-MM-DD, notes optionalTrimmedText, is_member coherence, mensajes es-ES, testeables.",
+    "Módulo src/lib/payments/queries.ts con getPaymentsByUser(userId), getAllPayments(filters), getPaymentStatus(userId, year), getPaidMembersForEvent(eventDate), getEligibilityForEvent(eventId) — con lógica elegibilidad: yearly(year) OR monthly(year,month), helpers puros testeables (isPaidForMonth).",
+    "Módulo src/lib/payments/mutations.ts con registerPayment, updatePayment, deletePayment, bulkRegisterMonthly — validación directiva vía requireManagementGuard (fail-closed), deduplicación por índices únicos, manejo errores Zod/Supabase.",
+    "Server actions thin en src/lib/payments/actions.ts con revalidatePath('/payments','/profile','/events').",
+    "UI directiva: página /payments (route group protegida directiva) con listado miembros+estado pago, formulario registro individual (tipo, mes/año, importe, fecha, notas), bulk register (selector múlti usuarios + mes/año), filtros, feedback y lista elegible/pending por evento de reparto.",
+    "Vista perfil: tarjeta 'Estado de cuotas' en /profile con historial pagos del usuario, meses pagados, próximo vencimiento.",
+    "Integración eventos: en eventos tipo material_distribution, sección con lista elegibles y pendientes generada desde getEligibilityForEvent, botón export CSV / print.",
+    "Navegación actualizada (Pagos visible solo para directiva) y guards en páginas/mutations (RLS + isManagementRole).",
+    "Tests unitarios nuevos pasando + suite completa (npx vitest run).",
+    "Typecheck (tsc --noEmit) y lint (eslint . --max-warnings=0) limpios; next build sin errores.",
+    "Security scan sin issues HIGH.",
+    "ADR documentado en docs/adr-sprint-31-payment-tracking.md.",
+    "PR creada contra master siguiendo docs/git-conventions.md."
+  ],
+  "dependencies": ["Sprint 2 (Roles — is_management)", "Sprint 17 (Eventos — event_type)", "Sprint 19 (Perfiles — profile view)"]
+}
