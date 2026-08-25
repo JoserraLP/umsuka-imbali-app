@@ -2,7 +2,7 @@
   "title": "Sprint 29 — Gestión de Dinero de la Comparsa (Money Management)",
   "description": "Permitir llevar el control del dinero de la comparsa desde la aplicación: registrar ingresos (p. ej. turnos de barra) y gastos (p. ej. compras de barra, compras de material del traje, compras de material para baile, otros). Incluye vista de resumen con totales y estadísticas mensuales. Solo la directiva (super_admin, admin, board_member, event_manager) y el super_admin pueden ver y gestionar esta funcionalidad; el resto de roles no ve la sección ni sus datos (RLS + guards).",
   "branch": "feature/sprint-29-money-management",
-  "status": "documented",
+  "status": "published",
   "adr": "docs/adr-sprint-29-money-management.md",
   "acceptance_criteria": [
     "La directiva y el super_admin pueden registrar ingresos y gastos con categorías predefinidas (turno de barra, compras de barra, material del traje, material para baile, otros).",
