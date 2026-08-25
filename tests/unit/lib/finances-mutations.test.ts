@@ -111,7 +111,7 @@ describe("createTransaction", () => {
     const builders = setupTables({ transactions: { data: [{ id: "tx-1" }] } });
     const result = await createTransaction(validCreate());
     expect(result).toEqual({ success: true, id: "tx-1" });
-    expect(builders.transactions.insert).toHaveBeenCalledWith({
+    expect(builders.transactions!.insert).toHaveBeenCalledWith({
       type: "income",
       category: "bar_shift",
       amount: 150.5,
@@ -125,7 +125,7 @@ describe("createTransaction", () => {
     const builders = setupTables({ transactions: { data: [{ id: "tx-1" }] } });
     const result = await createTransaction({ ...validCreate(), description: "" });
     expect(result.success).toBe(true);
-    expect(builders.transactions.insert).toHaveBeenCalledWith(expect.objectContaining({ description: null }));
+    expect(builders.transactions!.insert).toHaveBeenCalledWith(expect.objectContaining({ description: null }));
   });
 
   it("rejects invalid input without touching DB", async () => {
@@ -158,7 +158,7 @@ describe("updateTransaction", () => {
     const builders = setupTables({ transactions: { data: [{ id: TRANSACTION_ID }] } });
     const result = await updateTransaction({ ...validCreate(), id: TRANSACTION_ID, amount: 200 });
     expect(result).toEqual({ success: true });
-    expect(builders.transactions.update).toHaveBeenCalledWith({
+    expect(builders.transactions!.update).toHaveBeenCalledWith({
       type: "income",
       category: "bar_shift",
       amount: 200,
@@ -190,7 +190,7 @@ describe("deleteTransaction", () => {
     const builders = setupTables({ transactions: { data: [{ id: TRANSACTION_ID }] } });
     const result = await deleteTransaction({ id: TRANSACTION_ID });
     expect(result).toEqual({ success: true });
-    expect(builders.transactions.delete).toHaveBeenCalledTimes(1);
+    expect(builders.transactions!.delete).toHaveBeenCalledTimes(1);
   });
 
   it("rejects invalid uuid", async () => {

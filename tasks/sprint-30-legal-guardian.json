@@ -1,0 +1,57 @@
+{
+  "title": "Sprint 30 — Representante Legal para Menores de Edad (Legal Guardian)",
+  "description": "Permitir que un perfil menor de edad tenga un representante legal asociado. El representante legal puede ser otro componente de la comparsa (member_user_id) o una persona externa dada de alta como representante con sus datos de contacto (full_name, document_id, email, phone, relationship). Solo super_admin y directiva (is_management) pueden gestionar los vínculos y los datos de representantes. El representante con cuenta de usuario puede ver la información del menor que representa. Incluye flujo de alta de menor con is_minor y asignación de representante, gestión en /admin y /members, y visibilidad controlada por RLS + guards.",
+  "branch": "feature/sprint-30-legal-guardian",
+  "status": "published",
+  "adr": "docs/adr-sprint-30-legal-guardian.md",
+  "plan_summary": {
+    "migrations": [
+      "supabase/migrations/20260101006300_legal_guardians.sql — tabla umsuka.legal_guardians (id uuid PK, full_name not null, document_id/email/phone/relationship nullable, is_member boolean default false, member_user_id uuid FK profiles SET NULL, created_by uuid SET NULL, created_at/updated_at) + CHECK chk_guardian_member_has_user + columnas is_minor boolean not null default false + legal_guardian_id uuid FK legal_guardians SET NULL en profiles + índices (member_user_id, created_by, legal_guardian_id, is_minor partial, (is_minor,legal_guardian_id)) + trigger trg_legal_guardians_updated_at via update_updated_at_column() + comments + RLS ENABLE+FORCE 2 policies is_management() (select + all)"
+    ],
+    "key_decisions": [
+      "D1: FK profiles.legal_guardian_id -> legal_guardians (nullable SET NULL, 1:N guardian->menores) vs tabla puente N:M",
+      "D2: is_member + member_user_id coherentes por CHECK (unifica interno/externo en una tabla)",
+      "D3: reutiliza umsuka.is_management() (0013) sin crear is_directiva duplicado",
+      "D4: is_minor default false + guardian nullable (flujo progresivo, validación app-layer no CHECK DB)",
+      "D5: RLS legal_guardians ENABLE+FORCE solo is_management() (invisibilidad real como transactions)",
+      "D6: RLS profiles intacta (ADR-14), guardian ve menores via queries app-layer evitando recursión; plantilla SECURITY DEFINER comentada para futuro",
+      "D7: Zod isomórfico con optionalTrimmedText->null, isValidEmail/Phone, refine is_member coherence, mensajes es-ES",
+      "D8: database.types.ts hand-edited + checklist manual pre-deploy (sin Supabase CLI local)"
+    ],
+    "phases": [
+      "Fase 0: rama feature/sprint-30-legal-guardian desde master (git-conventions)",
+      "Fase 1: migración 0063 + tipos hand-edited + DATABASE.md",
+      "Fase 2: src/lib/guardians/ (schema.ts, queries.ts, mutations.ts, actions.ts) con requireManagementGuard",
+      "Fase 3: integración profiles/members (getMinors, getAvailableMembersForGuardian)",
+      "Fase 4: server actions thin con revalidatePath('/admin/users','/members','/profile','/guardians')",
+      "Fase 5: UI gestión directiva (/guardians o /admin/users) + vista representante (/guardians/mis-menores, /profile) + nav Guardianes showFor isManagementRole",
+      "Fase 6: tests unitarios schemas (20+) + mutations mocks (13+) + vitest/tsc/eslint/next build",
+      "Fase 7: ADR docs/adr-sprint-30-legal-guardian.md + PR [feature] Sprint 30 contra master"
+    ]
+  },
+  "acceptance_criteria": [
+    "Un perfil puede marcarse como menor de edad (is_minor boolean).",
+    "Todo menor de edad debe tener un representante legal asignado (obligatorio al registrarse o asignado posteriormente por super_admin/directiva).",
+    "El representante legal puede ser otro componente de la comparsa (is_member=true + member_user_id) o una persona externa dada de alta en el sistema (is_member=false con datos de contacto).",
+    "El representante con cuenta de usuario puede ver la información del menor que representa y ejercer las acciones permitidas (ver perfil, asistencia, notificaciones).",
+    "El super_admin y la directiva pueden administrar las asignaciones y los datos de los representantes (crear, editar, asignar, cambiar, desasignar).",
+    "RLS y guards garantizan que solo directiva/super_admin gestionan vínculos y que el representante ve solo a sus menores asignados."
+  ],
+  "definition_of_done": [
+    "Migración SQL 20260101006300_legal_guardians.sql con tabla umsuka.legal_guardians (id uuid PK, full_name text not null, document_id text, email text, phone text, relationship text, is_member boolean default false, member_user_id uuid nullable FK profiles(id) ON DELETE SET NULL, created_by uuid, created_at/updated_at) + columnas is_minor boolean default false y legal_guardian_id uuid nullable FK legal_guardians(id) ON DELETE SET NULL en umsuka.profiles, índices, trigger updated_at, comentarios y RLS (SELECT: directiva/super_admin ven todo + guardian ve sus menores vía member_user_id = auth.uid() + el propio menor ve su guardian; ALL: solo directiva/super_admin) usando umsuka.is_management() sin crear helper duplicado.",
+    "Tipos hand-edited en src/types/database.types.ts: LegalGuardian Row/Insert/Update, profiles is_minor + legal_guardian_id, Relationships, y Functions.is_management si falta.",
+    "Módulo src/lib/guardians/schema.ts con Zod schemas (createGuardianSchema, updateGuardianSchema, assignGuardianSchema, unassignGuardianSchema) con validaciones is_member/member_user_id, mensajes en español, isValidEmail/phone helpers, testeables.",
+    "Módulo src/lib/guardians/queries.ts con getGuardians, getGuardianById, getMinorsByGuardian, getMinorWithGuardian, getAvailableMembersForGuardian (excluye menores y soft-deleted).",
+    "Módulo src/lib/guardians/mutations.ts con createGuardian, updateGuardian, assignGuardian, unassignGuardian, setMinorStatus — validación de rol directiva/super_admin vía requireManagementGuard (fail-closed) y manejo de errores Zod/Supabase.",
+    "Server actions thin en src/lib/guardians/actions.ts con revalidatePath('/admin/users', '/members', '/profile', '/guardians').",
+    "UI de gestión para directiva/super_admin: página /guardians o sección en /admin/users con listado de menores con su representante, formulario crear representante (selección miembro existente vs persona externa), asignar/cambiar/desasignar representante, editar datos del representante, marcar/desmarcar is_minor.",
+    "UI del representante: si is_member y member_user_id = auth.uid(), ve en su perfil o en /guardians/mis-menores los menores que representa con datos básicos y enlace a perfil del menor (solo lectura).",
+    "Navegación actualizada si aplica (Guardianes visible solo para directiva) y guards en páginas/mutations.",
+    "Tests unitarios nuevos pasando + suite completa (npx vitest run).",
+    "Typecheck (tsc --noEmit) y lint (eslint . --max-warnings=0) limpios; next build sin errores.",
+    "Security scan sin issues HIGH.",
+    "ADR documentado en docs/adr-sprint-30-legal-guardian.md.",
+    "PR creada contra master siguiendo docs/git-conventions.md."
+  ],
+  "dependencies": ["Sprint 6 (Registration Approval)", "Sprint 19 (Perfiles — campos y edición)", "Sprint 14 (Listado de Miembros — selección representante)", "Sprint 2 (Roles — is_management)"]
+}

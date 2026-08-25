@@ -66,6 +66,8 @@ export interface Database {
           joined_at: string | null;
           created_at: string;
           deleted_at: string | null;
+          is_minor: boolean;
+          legal_guardian_id: string | null;
         };
         Insert: {
           id: string;
@@ -88,6 +90,8 @@ export interface Database {
           joined_at?: string | null;
           created_at?: string;
           deleted_at?: string | null;
+          is_minor?: boolean; // default false in DB
+          legal_guardian_id?: string | null;
         };
         Update: {
           id?: string;
@@ -110,8 +114,18 @@ export interface Database {
           joined_at?: string | null;
           created_at?: string;
           deleted_at?: string | null;
+          is_minor?: boolean;
+          legal_guardian_id?: string | null;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "profiles_legal_guardian_id_fkey";
+            columns: ["legal_guardian_id"];
+            isOneToOne: false;
+            referencedRelation: "legal_guardians";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       events: {
         Row: {
@@ -903,6 +917,63 @@ export interface Database {
           updated_at?: string;
         };
         Relationships: [];
+      };
+      legal_guardians: {
+        Row: {
+          id: string;
+          full_name: string;
+          document_id: string | null;
+          email: string | null;
+          phone: string | null;
+          relationship: string | null;
+          is_member: boolean;
+          member_user_id: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          full_name: string;
+          document_id?: string | null;
+          email?: string | null;
+          phone?: string | null;
+          relationship?: string | null;
+          is_member?: boolean;
+          member_user_id?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          full_name?: string;
+          document_id?: string | null;
+          email?: string | null;
+          phone?: string | null;
+          relationship?: string | null;
+          is_member?: boolean;
+          member_user_id?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "legal_guardians_member_user_id_fkey";
+            columns: ["member_user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "legal_guardians_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
     };
     Views: Record<string, never>;
