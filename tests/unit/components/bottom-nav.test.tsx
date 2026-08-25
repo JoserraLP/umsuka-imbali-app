@@ -37,11 +37,11 @@ const ctxFor = (role: AppRole) => ({
 });
 
 describe("BottomNav", () => {
-  it("muestra las 18 secciones para super_admin (ninguna queda inaccesible)", () => {
+  it("muestra las 19 secciones para super_admin (ninguna queda inaccesible)", () => {
     render(<BottomNav currentRole="super_admin" {...baseProps} />);
 
     const labels = getVisibleLinks(ctxFor("super_admin")).map((link) => link.label);
-    expect(labels).toHaveLength(18);
+    expect(labels).toHaveLength(19);
     expect(screen.getAllByRole("link")).toHaveLength(labels.length);
     for (const label of labels) {
       expect(screen.getByText(label)).toBeInTheDocument();

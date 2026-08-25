@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { AUDIENCE_FORM_FIELDS, audienceCrossFieldIssueFn } from "@/lib/events/audience-shared";
 
-export const EVENT_TYPES = ["general", "meeting", "carnival", "work_shift", "rehearsal"] as const;
+export const EVENT_TYPES = ["general", "meeting", "carnival", "work_shift", "rehearsal", "material_distribution"] as const;
 export type EventTypeValue = (typeof EVENT_TYPES)[number];
 
 /** Workgroups a group-scoped event can target (excludes "ninguno"). */

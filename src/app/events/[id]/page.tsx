@@ -36,6 +36,7 @@ import { WorkgroupAttendancePanel } from "@/app/events/[id]/workgroup-panel";
 import { ShiftManagementPanel } from "@/app/events/[id]/shift-management-panel";
 import { CalendarClock, MapPin } from "lucide-react";
 import type { EventTypeValue, EventWorkgroup } from "@/lib/events/schema";
+import { PaymentEligibility } from "@/app/events/[id]/payment-eligibility";
 
 export const metadata: Metadata = {
   title: "Evento",
@@ -47,6 +48,7 @@ const EVENT_TYPE_LABELS: Record<EventTypeValue, string> = {
   carnival: "Carnaval",
   work_shift: "Turno de trabajo",
   rehearsal: "Ensayo",
+  material_distribution: "Reparto de material",
 };
 
 const WORKGROUP_LABELS: Record<string, string> = {
@@ -450,6 +452,8 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             </CardContent>
           </Card>
         )}
+
+        {event.eventType === "material_distribution" && canManage && <PaymentEligibility eventId={event.id} />}
 
         {canHaveAbsences && (
           <Card>
