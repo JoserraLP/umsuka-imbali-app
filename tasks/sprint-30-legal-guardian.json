@@ -2,7 +2,7 @@
   "title": "Sprint 30 — Representante Legal para Menores de Edad (Legal Guardian)",
   "description": "Permitir que un perfil menor de edad tenga un representante legal asociado. El representante legal puede ser otro componente de la comparsa (member_user_id) o una persona externa dada de alta como representante con sus datos de contacto (full_name, document_id, email, phone, relationship). Solo super_admin y directiva (is_management) pueden gestionar los vínculos y los datos de representantes. El representante con cuenta de usuario puede ver la información del menor que representa. Incluye flujo de alta de menor con is_minor y asignación de representante, gestión en /admin y /members, y visibilidad controlada por RLS + guards.",
   "branch": "feature/sprint-30-legal-guardian",
-  "status": "planned",
+  "status": "published",
   "adr": "docs/adr-sprint-30-legal-guardian.md",
   "plan_summary": {
     "migrations": [
