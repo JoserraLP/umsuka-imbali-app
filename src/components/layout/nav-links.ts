@@ -14,6 +14,7 @@ import {
   Bell,
   Settings,
   ScrollText,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import type { AppRole, ComponentType, Workgroup } from "@/types/database.types";
@@ -48,6 +49,12 @@ export const NAV_LINKS: NavLink[] = [
   { href: "/questions", label: "Preguntas", icon: MessageSquare },
   { href: "/votings", label: "Votaciones", icon: Vote },
   { href: "/instruments", label: "Instrumentos", icon: Music },
+  {
+    href: "/finances",
+    label: "Finanzas",
+    icon: Wallet,
+    showFor: (ctx) => isManagementRole(ctx.role),
+  },
   { href: "/profile", label: "Mi perfil", icon: User },
   { href: "/profile/stats", label: "Mis estadísticas", icon: Clock },
   { href: "/notifications", label: "Notificaciones", icon: Bell },

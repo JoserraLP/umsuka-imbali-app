@@ -1,0 +1,32 @@
+{
+  "title": "Sprint 29 — Gestión de Dinero de la Comparsa (Money Management)",
+  "description": "Permitir llevar el control del dinero de la comparsa desde la aplicación: registrar ingresos (p. ej. turnos de barra) y gastos (p. ej. compras de barra, compras de material del traje, compras de material para baile, otros). Incluye vista de resumen con totales y estadísticas mensuales. Solo la directiva (super_admin, admin, board_member, event_manager) y el super_admin pueden ver y gestionar esta funcionalidad; el resto de roles no ve la sección ni sus datos (RLS + guards).",
+  "branch": "feature/sprint-29-money-management",
+  "status": "documented",
+  "adr": "docs/adr-sprint-29-money-management.md",
+  "acceptance_criteria": [
+    "La directiva y el super_admin pueden registrar ingresos y gastos con categorías predefinidas (turno de barra, compras de barra, material del traje, material para baile, otros).",
+    "La página /finances y todos sus datos son invisibles para el resto de roles (no solo ocultos en el menú) — RLS y guards devuelven 403/redirección.",
+    "La vista de resumen muestra totales de ingresos, gastos, saldo y desglose por categoría.",
+    "Se pueden consultar estadísticas mensuales de ingresos vs gastos (gráfico CSS/SVG puro).",
+    "Las transacciones se pueden filtrar por tipo, categoría y rango de fechas.",
+    "Las transacciones se pueden crear, editar y eliminar (solo directiva/super_admin).",
+    "La ruta y la navegación de Finanzas solo aparece para directiva/super_admin."
+  ],
+  "definition_of_done": [
+    "Migración SQL 20260101006200_finances.sql con tabla umsuka.transactions (id, type ENUM income/expense, category ENUM, amount numeric(10,2), description, transaction_date, created_by, created_at), índices y RLS (solo directiva/super_admin con is_management/is_admin). Tipos hand-edited en src/types/database.types.ts y enums TransactionType/TransactionCategory.",
+    "Helper SQL documentado: NO se crea is_directiva duplicado — se reutiliza umsuka.is_management() (0013) que ya cubre directiva (super_admin, admin, board_member, event_manager), coherente con ADR-24.",
+    "Módulo src/lib/finances/schema.ts con Zod schemas (createTransactionSchema, updateTransactionSchema, filterSchema) testeables.",
+    "Módulo src/lib/finances/queries.ts con getTransactions (filtros tipo/categoría/fechas), getTransactionById, getSummary (totales, por categoría, por mes), getMonthlyStats.",
+    "Módulo src/lib/finances/mutations.ts con createTransaction, updateTransaction, deleteTransaction (validación de rol directiva + RLS).",
+    "Server actions thin en src/lib/finances/actions.ts con revalidatePath('/finances').",
+    "Página /finances (src/app/finances/page.tsx) con guard de directiva, tarjetas resumen, gráfico mensual, lista filtrable y formulario crear/editar/eliminar (client components).",
+    "Navegación actualizada en src/components/layout/nav-links.ts (Finanzas solo para directiva) y middleware si aplica.",
+    "Tests unitarios nuevos pasando + suite completa (npx vitest run).",
+    "Typecheck (tsc --noEmit) y lint limpios; next build sin errores.",
+    "Security scan sin issues HIGH.",
+    "ADR documentado en docs/adr-sprint-29-money-management.md.",
+    "PR creada contra master siguiendo docs/git-conventions.md."
+  ],
+  "dependencies": ["Sprint 2 (Roles — directiva/super_admin)", "Sprint 21 (Admin Panel — roles/permisos)", "Sprint 3 (Barra — ingresos vinculados)"]
+}
