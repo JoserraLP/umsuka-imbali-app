@@ -21,6 +21,13 @@ export type AppRole =
   | "guest";
 export type WaitlistStatus = "waiting" | "promoted" | "declined" | "removed";
 export type AudienceType = "all" | "workgroup" | "member_type" | "specific_users";
+export type TransactionType = "income" | "expense";
+export type TransactionCategory =
+  | "bar_shift"
+  | "bar_purchases"
+  | "costume_materials"
+  | "dance_materials"
+  | "other";
 export type NotificationType =
   | "event_created"
   | "news_created"
@@ -861,6 +868,42 @@ export interface Database {
         };
         Relationships: [];
       };
+      transactions: {
+        Row: {
+          id: string;
+          type: TransactionType;
+          category: TransactionCategory;
+          amount: number;
+          description: string | null;
+          transaction_date: string;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          type: TransactionType;
+          category: TransactionCategory;
+          amount: number;
+          description?: string | null;
+          transaction_date?: string;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          type?: TransactionType;
+          category?: TransactionCategory;
+          amount?: number;
+          description?: string | null;
+          transaction_date?: string;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -934,6 +977,10 @@ export interface Database {
         Args: Record<string, never>;
         Returns: number | null;
       };
+      is_management: {
+        Args: Record<string, never>;
+        Returns: boolean;
+      };
     };
     Enums: {
       workgroup: Workgroup;
@@ -942,6 +989,8 @@ export interface Database {
       auth_method: AuthMethod;
       waitlist_status: WaitlistStatus;
       audience_type: AudienceType;
+      transaction_type: TransactionType;
+      transaction_category: TransactionCategory;
     };
     CompositeTypes: Record<string, never>;
   };
