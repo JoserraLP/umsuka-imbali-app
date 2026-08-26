@@ -9,8 +9,9 @@ const optionalTrimmedText = (maxLength: number, message: string) =>
     .string()
     .trim()
     .max(maxLength, message)
-    .transform((value) => (value === "" ? null : value))
-    .optional();
+    .nullable()
+    .optional()
+    .transform((value) => (value === "" ? null : value));
 
 // ── Instrument create / update ─────────────────────────
 

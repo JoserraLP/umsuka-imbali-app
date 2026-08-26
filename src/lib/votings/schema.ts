@@ -16,9 +16,9 @@ export const votingFormSchema = z.object({
     .string()
     .trim()
     .max(5000, "La descripción debe tener 5000 caracteres o menos.")
-    .transform((value) => (value ? value : null))
     .nullable()
-    .optional(),
+    .optional()
+    .transform((value) => (value ? value : null)),
   voting_deadline: z
     .string()
     .datetime({ message: "La fecha límite debe ser una fecha válida." })
