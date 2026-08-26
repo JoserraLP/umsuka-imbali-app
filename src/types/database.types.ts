@@ -1040,6 +1040,143 @@ export interface Database {
           },
         ];
       };
+      dance_formations: {
+        Row: {
+          id: string;
+          name: string;
+          event_id: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          event_id?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          event_id?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "dance_formations_event_id_fkey";
+            columns: ["event_id"];
+            isOneToOne: false;
+            referencedRelation: "events";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "dance_formations_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      dance_positions: {
+        Row: {
+          id: string;
+          formation_id: string;
+          row_number: number;
+          seat_number: number;
+          member_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          formation_id: string;
+          row_number: number;
+          seat_number: number;
+          member_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          formation_id?: string;
+          row_number?: number;
+          seat_number?: number;
+          member_id?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "dance_positions_formation_id_fkey";
+            columns: ["formation_id"];
+            isOneToOne: false;
+            referencedRelation: "dance_formations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "dance_positions_member_id_fkey";
+            columns: ["member_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      musician_instruments: {
+        Row: {
+          id: string;
+          user_id: string;
+          instrument_id: string;
+          formation_id: string | null;
+          assigned_by: string | null;
+          assigned_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          instrument_id: string;
+          formation_id?: string | null;
+          assigned_by?: string | null;
+          assigned_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          instrument_id?: string;
+          formation_id?: string | null;
+          assigned_by?: string | null;
+          assigned_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "musician_instruments_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "musician_instruments_instrument_id_fkey";
+            columns: ["instrument_id"];
+            isOneToOne: false;
+            referencedRelation: "instruments";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "musician_instruments_formation_id_fkey";
+            columns: ["formation_id"];
+            isOneToOne: false;
+            referencedRelation: "dance_formations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "musician_instruments_assigned_by_fkey";
+            columns: ["assigned_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: {
