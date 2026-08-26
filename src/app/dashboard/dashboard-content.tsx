@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { NotificationsWidget } from "@/components/dashboard/notifications-widget";
 import { SectionHeader } from "@/components/dashboard/section-header";
-import { Instagram, CalendarDays, Newspaper, ExternalLink, Users, Image as ImageIcon, Heart } from "lucide-react";
+import { Instagram, CalendarDays, Newspaper, ExternalLink, Users, Image as ImageIcon, Heart, Plane, Music2, ArrowRight } from "lucide-react";
 import type { AuthenticatedProfile } from "@/types/auth";
 import type { InstagramProfile } from "@/lib/social/instagram";
 import type { EventListItem } from "@/lib/events/queries";
@@ -218,6 +218,31 @@ export function DashboardContent({ profile, instagramProfile, events, latestNews
             ))}
           </div>
         )}
+      </section>
+
+      {/* ── Formaciones (Sprint 33) ─────────────────────── */}
+      <section className="rounded-xl border bg-card p-5">
+        <SectionHeader
+          title="Formaciones"
+          icon={Plane}
+          action={
+            <Link href="/formation" className="text-xs text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1">
+              {["super_admin","admin","board_member","event_manager"].includes(profile.role) ? "Gestionar" : "Ver"} <ArrowRight className="h-3 w-3" />
+            </Link>
+          }
+        />
+        <p className="mt-2 text-xs text-muted-foreground">
+          Plano de bailarinas (6 por fila tipo avión 3+pasillo+3) e instrumentos de músicos. {["super_admin","admin","board_member","event_manager"].includes(profile.role) ? "Crea formaciones, asigna bailarinas a asientos y asigna instrumentos." : "Consulta las formaciones publicadas."}
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Link href="/formation" className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+            <Plane className="h-3.5 w-3.5" />
+            {["super_admin","admin","board_member","event_manager"].includes(profile.role) ? "Gestionar formaciones" : "Ver formaciones"}
+          </Link>
+          <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+            <Music2 className="h-3 w-3" /> Músicos con instrumento por formación
+          </span>
+        </div>
       </section>
 
       {/* ── Notifications + Calendar ──────────────────────── */}

@@ -17,6 +17,7 @@ import {
   Wallet,
   Shield,
   CreditCard,
+  Plane,
   type LucideIcon,
 } from "lucide-react";
 import type { AppRole, ComponentType, Workgroup } from "@/types/database.types";
@@ -51,6 +52,11 @@ export const NAV_LINKS: NavLink[] = [
   { href: "/questions", label: "Preguntas", icon: MessageSquare },
   { href: "/votings", label: "Votaciones", icon: Vote },
   { href: "/instruments", label: "Instrumentos", icon: Music },
+  {
+    href: "/formation",
+    label: "Formaciones",
+    icon: Plane,
+  },
   {
     href: "/finances",
     label: "Finanzas",
