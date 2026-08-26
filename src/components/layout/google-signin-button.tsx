@@ -84,8 +84,7 @@ export function GoogleSignInButton({ redirectTo }: GoogleSignInButtonProps) {
       options: {
         redirectTo: callbackUrl.toString(),
         queryParams: {
-          access_type: "offline",
-          prompt: "consent",
+          prompt: "select_account",
         },
       },
     });
