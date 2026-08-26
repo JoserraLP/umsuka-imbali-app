@@ -58,6 +58,7 @@ function makeEvent(overrides: Partial<EventListItem> = {}): EventListItem {
     morningSession: false,
     afternoonSession: false,
     visibleToGroup: null,
+    rehearsalCategory: null,
     createdByWorkgroup: null,
     audienceType: "all",
     audienceWorkgroup: null,

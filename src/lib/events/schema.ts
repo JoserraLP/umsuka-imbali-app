@@ -4,6 +4,9 @@ import { AUDIENCE_FORM_FIELDS, audienceCrossFieldIssueFn } from "@/lib/events/au
 export const EVENT_TYPES = ["general", "meeting", "carnival", "work_shift", "rehearsal", "material_distribution"] as const;
 export type EventTypeValue = (typeof EVENT_TYPES)[number];
 
+export const REHEARSAL_CATEGORIES = ["music", "dance"] as const;
+export type RehearsalCategoryValue = (typeof REHEARSAL_CATEGORIES)[number];
+
 /** Workgroups a group-scoped event can target (excludes "ninguno"). */
 export const EVENT_WORKGROUPS = ["telas", "barra", "estandarte", "limpieza"] as const;
 export type EventWorkgroup = (typeof EVENT_WORKGROUPS)[number];
@@ -92,16 +95,26 @@ const EVENT_FORM_FIELDS = {
     .nullable()
     .optional()
     .transform((value) => value ?? null),
-  /**
-   * Rehearsal session flags (Sprint 27). Only meaningful for
-   * `rehearsal` events; at least one must be true (refined below).
-   * Checkboxes default to unchecked, and the DB CHECK constraints
-   * mirror these rules (`chk_events_rehearsal_has_session`,
-   * `chk_events_non_rehearsal_no_sessions`).
-   */
-  morningSession: z.boolean().default(false),
-  afternoonSession: z.boolean().default(false),
-} as const;
+   /**
+    * Rehearsal session flags (Sprint 27). Only meaningful for
+    * `rehearsal` events; at least one must be true (refined below).
+    * Checkboxes default to unchecked, and the DB CHECK constraints
+    * mirror these rules (`chk_events_rehearsal_has_session`,
+    * `chk_events_non_rehearsal_no_sessions`).
+    */
+   morningSession: z.boolean().default(false),
+   afternoonSession: z.boolean().default(false),
+   /**
+    * Rehearsal ensemble category (Sprint 32). Only for rehearsal events:
+    * music = todos los miembros con component_type=music, dance = baile.
+    * NULL for non-rehearsal. Maps to profiles.component_type, NOT workgroup.
+    */
+   rehearsalCategory: z
+     .enum(REHEARSAL_CATEGORIES)
+     .nullable()
+     .optional()
+     .transform((value) => value ?? null),
+ } as const;
 
 function isWorkShift(data: { eventType?: string | null; workgroup?: string | null }): boolean {
   return data.eventType === "work_shift";
@@ -123,6 +136,16 @@ function hasRequiredRehearsalSessions(data: {
   return data.morningSession === true || data.afternoonSession === true;
 }
 
+function hasRequiredRehearsalCategory(data: {
+  eventType?: string | null;
+  rehearsalCategory?: string | null;
+}): boolean {
+  if (data.eventType !== "rehearsal") {
+    return data.rehearsalCategory === null || data.rehearsalCategory === undefined;
+  }
+  return data.rehearsalCategory === "music" || data.rehearsalCategory === "dance";
+}
+
 /**
  * Shared shape used by the client-side form (React Hook Form + Zod). Both
  * create and update use this exact shape for the editable fields, so the
@@ -142,6 +165,10 @@ export const eventFormSchema = z
     message: "Un ensayo debe tener al menos una sesión (mañana o tarde).",
     path: ["morningSession"],
   })
+  .refine(hasRequiredRehearsalCategory, {
+    message: "Elige categoría de ensayo: música o baile.",
+    path: ["rehearsalCategory"],
+  })
   .superRefine(audienceCrossFieldIssueFn);
 export type EventFormValues = z.infer<typeof eventFormSchema>;
 
@@ -154,6 +181,10 @@ export const createEventSchema = z
   .refine(hasRequiredRehearsalSessions, {
     message: "Un ensayo debe tener al menos una sesión (mañana o tarde).",
     path: ["morningSession"],
+  })
+  .refine(hasRequiredRehearsalCategory, {
+    message: "Elige categoría de ensayo: música o baile.",
+    path: ["rehearsalCategory"],
   })
   .superRefine(audienceCrossFieldIssueFn);
 export type CreateEventInput = z.infer<typeof createEventSchema>;
@@ -171,6 +202,10 @@ export const updateEventSchema = z
   .refine(hasRequiredRehearsalSessions, {
     message: "Un ensayo debe tener al menos una sesión (mañana o tarde).",
     path: ["morningSession"],
+  })
+  .refine(hasRequiredRehearsalCategory, {
+    message: "Elige categoría de ensayo: música o baile.",
+    path: ["rehearsalCategory"],
   })
   .superRefine(audienceCrossFieldIssueFn);
 export type UpdateEventInput = z.infer<typeof updateEventSchema>;

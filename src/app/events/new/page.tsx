@@ -65,6 +65,7 @@ export default async function NewEventPage() {
                   registrationDeadline: "",
                   morningSession: false,
                   afternoonSession: false,
+                  rehearsalCategory: null,
                   workgroup: (isManagement ? null : profile.workgroup) as EventWorkgroup | null,
                   audienceType: "all",
                   audienceWorkgroup: null,

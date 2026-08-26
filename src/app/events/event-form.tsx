@@ -238,22 +238,38 @@ export function EventForm({
         )}
 
         {eventType === "rehearsal" && (
-          <fieldset className="flex flex-col gap-2 sm:col-span-2">
-            <legend className="text-sm font-medium leading-none">Sesiones del ensayo</legend>
-            <div className="flex items-center gap-2">
-              <input id="morningSession" type="checkbox" {...register("morningSession")} />
-              <Label htmlFor="morningSession">Mañana</Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <input id="afternoonSession" type="checkbox" {...register("afternoonSession")} />
-              <Label htmlFor="afternoonSession">Tarde</Label>
-            </div>
-            {(errors.morningSession || errors.afternoonSession) && (
-              <p role="alert" className="text-xs text-destructive">
-                {errors.morningSession?.message ?? errors.afternoonSession?.message}
+          <>
+            <fieldset className="flex flex-col gap-2 sm:col-span-2">
+              <legend className="text-sm font-medium leading-none">Sesiones del ensayo</legend>
+              <div className="flex items-center gap-2">
+                <input id="morningSession" type="checkbox" {...register("morningSession")} />
+                <Label htmlFor="morningSession">Mañana</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <input id="afternoonSession" type="checkbox" {...register("afternoonSession")} />
+                <Label htmlFor="afternoonSession">Tarde</Label>
+              </div>
+              {(errors.morningSession || errors.afternoonSession) && (
+                <p role="alert" className="text-xs text-destructive">
+                  {errors.morningSession?.message ?? errors.afternoonSession?.message}
+                </p>
+              )}
+            </fieldset>
+            <div className="flex flex-col gap-1.5 sm:col-span-2">
+              <Label htmlFor="rehearsalCategory">Categoría del ensayo</Label>
+              <Select id="rehearsalCategory" {...register("rehearsalCategory")}>
+                <option value="">Selecciona categoría</option>
+                <option value="music">Música</option>
+                <option value="dance">Baile</option>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Se inscribirá automáticamente a todos los miembros de {eventType === "rehearsal" ? "la categoría elegida" : "música/baile"}.
               </p>
-            )}
-          </fieldset>
+              {errors.rehearsalCategory && (
+                <p className="text-xs text-destructive">{errors.rehearsalCategory.message}</p>
+              )}
+            </div>
+          </>
         )}
 
         {canConfigureAudience && (

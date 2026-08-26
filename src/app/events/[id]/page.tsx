@@ -42,13 +42,18 @@ export const metadata: Metadata = {
   title: "Evento",
 };
 
-const EVENT_TYPE_LABELS: Record<EventTypeValue, string> = {
+  const EVENT_TYPE_LABELS: Record<EventTypeValue, string> = {
   general: "General",
   meeting: "Reunión",
   carnival: "Carnaval",
   work_shift: "Turno de trabajo",
   rehearsal: "Ensayo",
   material_distribution: "Reparto de material",
+};
+
+const REHEARSAL_CATEGORY_LABELS: Record<string, string> = {
+  music: "Música",
+  dance: "Baile",
 };
 
 const WORKGROUP_LABELS: Record<string, string> = {
@@ -150,6 +155,16 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     ...(event.afternoonSession ? (["afternoon"] as const) : []),
   ];
 
+  // Sprint 32: derive attendees for rehearsal from enrolled records (auto-enroll), not registrations
+  const rehearsalAttendees = isRehearsal
+    ? Array.from(
+        new Map(
+          rehearsalRecords.map((r) => [r.userId, { userId: r.userId, firstName: r.firstName, lastName: r.lastName }]),
+        ).values(),
+      )
+    : [];
+  const panelAttendees = isRehearsal ? (rehearsalAttendees.length > 0 ? rehearsalAttendees : registrationSummary.attendees) : [];
+
   const viewerAbsence = await (canManage
     ? Promise.resolve(absences.find((a) => a.userId === profile.id) ?? null)
     : canHaveAbsences
@@ -210,6 +225,9 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                 <Badge variant="outline">
                   {getAudienceSummary(event, eventAudience?.users.length)}
                 </Badge>
+              )}
+              {isRehearsal && event.rehearsalCategory && (
+                <Badge variant="secondary">Categoría: {REHEARSAL_CATEGORY_LABELS[event.rehearsalCategory] ?? event.rehearsalCategory}</Badge>
               )}
               <Badge variant="outline">{EVENT_TYPE_LABELS[event.eventType]}</Badge>
             </div>
@@ -278,6 +296,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                     : "",
                   morningSession: event.morningSession,
                   afternoonSession: event.afternoonSession,
+                  rehearsalCategory: (event.rehearsalCategory as "music" | "dance" | null) ?? null,
                   workgroup: event.visibleToGroup as EventWorkgroup | null,
                   audienceType: event.audienceType,
                   audienceWorkgroup: event.audienceWorkgroup as EventWorkgroup | null,
@@ -363,7 +382,9 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             <CardHeader>
               <CardTitle>Asistencia a ensayos</CardTitle>
               <CardDescription>
-                Marca quién asistió a cada sesión del ensayo (mañana/tarde).
+                {event.rehearsalCategory
+                  ? `Ensayo de ${REHEARSAL_CATEGORY_LABELS[event.rehearsalCategory]} — ${rehearsalRecords.filter((r) => r.enrolled).length} inscritos · Marca quién asistió a cada sesión.`
+                  : "Marca quién asistió a cada sesión del ensayo (mañana/tarde)."}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -375,9 +396,14 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               <RehearsalAttendancePanel
                 eventId={event.id}
                 sessions={rehearsalSessions}
-                attendees={registrationSummary.attendees}
+                attendees={panelAttendees}
                 records={rehearsalRecords}
               />
+              {event.rehearsalCategory && rehearsalRecords.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Inscritos automáticamente: {rehearsalRecords.filter((r) => r.enrolled).length} · Pendientes de marcar: {rehearsalRecords.filter((r) => r.enrolled && !r.attended).length}
+                </p>
+              )}
             </CardContent>
           </Card>
         )}

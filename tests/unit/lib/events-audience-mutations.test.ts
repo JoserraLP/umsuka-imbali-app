@@ -201,6 +201,7 @@ function createInput(overrides: Record<string, unknown> = {}): CreateEventInput 
     audienceType: "all",
     audienceWorkgroup: null,
     audienceMemberType: null,
+    rehearsalCategory: null,
     audienceUserIds: [],
     ...overrides,
   } as CreateEventInput;

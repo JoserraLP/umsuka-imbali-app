@@ -55,6 +55,14 @@ function resolveSessionFlags(
   };
 }
 
+function resolveRehearsalCategory(
+  eventType: CreateEventInput["eventType"],
+  category: CreateEventInput["rehearsalCategory"],
+): string | null {
+  if (eventType !== "rehearsal") return null;
+  return category ?? null;
+}
+
 /**
  * Resolves the target workgroup for a work_shift event.
  * Management can choose any active group; a workgroup lead can only use
@@ -145,13 +153,14 @@ export async function createEvent(input: CreateEventInput): Promise<MutationResu
       image_url: parsed.data.imageUrl,
       registration_deadline: parsed.data.registrationDeadline,
       ...resolveSessionFlags(parsed.data.eventType, parsed.data),
+      rehearsal_category: resolveRehearsalCategory(parsed.data.eventType, parsed.data.rehearsalCategory) as unknown as never,
       created_by: actor.id,
       visible_to_group: resolvedGroup,
       created_by_workgroup: resolvedGroup,
       audience_type: audience.audience.audienceType,
       audience_workgroup: audience.audience.audienceWorkgroup,
       audience_member_type: audience.audience.audienceMemberType,
-    })
+    } as never)
     .select("id")
     .single();
 
@@ -190,22 +199,64 @@ export async function createEvent(input: CreateEventInput): Promise<MutationResu
     }
   }
 
+  // Sprint 32: rehearsal auto-enroll (best-effort, never blocks creation)
+  if (parsed.data.eventType === "rehearsal" && parsed.data.rehearsalCategory) {
+    try {
+      const { autoEnrollRehearsalSystem } = await import("@/lib/rehearsals/auto-enroll");
+      const enrollResult = await autoEnrollRehearsalSystem(data.id, parsed.data.rehearsalCategory);
+      if (!enrollResult.success) {
+        console.error("createEvent: autoEnroll falló (no bloqueante):", enrollResult.error);
+      } else if (enrollResult.enrolledCount > 0) {
+        // Notify enrolled members
+        const admin = createAdminClient();
+        const { data: enrolled } = await admin
+          .from("profiles")
+          .select("id")
+          .eq("component_type", parsed.data.rehearsalCategory)
+          .eq("status", "active")
+          .is("deleted_at", null)
+          .eq("is_active", true);
+        const enrolledIds = (enrolled ?? []).map((p) => p.id);
+        if (enrolledIds.length > 0) {
+          try {
+            await notifyUsers({
+              userIds: enrolledIds,
+              type: "event_created",
+              title: `Nuevo ensayo: ${parsed.data.title}`,
+              message: parsed.data.description ? parsed.data.description.slice(0, 200) : undefined,
+              link: `/events/${data.id}`,
+            });
+          } catch (notifyErr) {
+            console.error("createEvent: notify enrolled falló (no bloqueante):", notifyErr);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("createEvent: autoEnroll throw (no bloqueante):", err);
+    }
+  }
+
   // Sprint 20: notify the event audience (best-effort — a notification
   // failure, even an unexpected throw from the emitter, can never fail
   // the event creation).
+  // For rehearsal with auto-enroll we already notified enrolled members;
+  // we still notify audience if distinct (but avoid duplicate for same ids).
   try {
-    await notifyUsers({
-      userIds: await resolveEventRecipients({
-        audience_type: audience.audience.audienceType,
-        audience_workgroup: audience.audience.audienceWorkgroup,
-        audience_member_type: audience.audience.audienceMemberType,
-        audience_user_ids: audience.audience.audienceUserIds,
-      }),
-      type: "event_created",
-      title: `Nuevo evento: ${parsed.data.title}`,
-      message: parsed.data.description ? parsed.data.description.slice(0, 200) : undefined,
-      link: `/events/${data.id}`,
-    });
+    // Skip generic audience notify for rehearsal that was auto-enrolled (avoid double)
+    if (!(parsed.data.eventType === "rehearsal" && parsed.data.rehearsalCategory)) {
+      await notifyUsers({
+        userIds: await resolveEventRecipients({
+          audience_type: audience.audience.audienceType,
+          audience_workgroup: audience.audience.audienceWorkgroup,
+          audience_member_type: audience.audience.audienceMemberType,
+          audience_user_ids: audience.audience.audienceUserIds,
+        }),
+        type: "event_created",
+        title: `Nuevo evento: ${parsed.data.title}`,
+        message: parsed.data.description ? parsed.data.description.slice(0, 200) : undefined,
+        link: `/events/${data.id}`,
+      });
+    }
   } catch (err) {
     console.error("createEvent: la notificación falló (no bloqueante):", err);
   }
@@ -322,6 +373,7 @@ export async function updateEvent(input: UpdateEventInput): Promise<MutationResu
       image_url: parsed.data.imageUrl,
       registration_deadline: parsed.data.registrationDeadline,
       ...resolveSessionFlags(parsed.data.eventType, parsed.data),
+      rehearsal_category: resolveRehearsalCategory(parsed.data.eventType, parsed.data.rehearsalCategory) as unknown as never,
       visible_to_group: resolvedGroup,
       created_by_workgroup: resolvedGroup,
       audience_type: audience.audience.audienceType,

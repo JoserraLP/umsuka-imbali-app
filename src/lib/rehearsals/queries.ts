@@ -10,6 +10,8 @@ export interface RehearsalAttendanceRecord {
   userId: string;
   session: RehearsalSession;
   attended: boolean;
+  enrolled: boolean;
+  enrolledAt: string | null;
   updatedAt: string;
   firstName: string;
   lastName: string;
@@ -28,6 +30,7 @@ export interface RehearsalAttendanceSummary {
   morningPresent: number;
   afternoonPresent: number;
   totalRecords: number;
+  enrolledCount: number;
 }
 
 // ── Queries ───────────────────────────────────────────
@@ -42,7 +45,7 @@ export async function getRehearsalAttendance(eventId: string): Promise<Rehearsal
 
   const { data: records, error } = await supabase
     .from("rehearsal_attendance")
-    .select("id, event_id, user_id, session, attended, updated_at")
+    .select("id, event_id, user_id, session, attended, enrolled, enrolled_at, updated_at")
     .eq("event_id", eventId)
     .order("session", { ascending: true })
     .order("updated_at", { ascending: true });
@@ -85,6 +88,8 @@ export async function getRehearsalAttendance(eventId: string): Promise<Rehearsal
       userId: row.user_id ?? "",
       session: (row.session ?? "morning") as RehearsalSession,
       attended: row.attended,
+      enrolled: (row as unknown as { enrolled?: boolean }).enrolled ?? false,
+      enrolledAt: (row as unknown as { enrolled_at?: string | null }).enrolled_at ?? null,
       updatedAt: row.updated_at,
       firstName: profile?.first_name ?? "Miembro",
       lastName: profile?.last_name ?? "",
@@ -186,7 +191,7 @@ export async function getRehearsalAttendanceSummary(
 
   const { data: records, error } = await supabase
     .from("rehearsal_attendance")
-    .select("session, attended")
+    .select("session, attended, enrolled")
     .eq("event_id", eventId);
 
   if (error) {
@@ -201,5 +206,6 @@ export async function getRehearsalAttendanceSummary(
     morningPresent: rows.filter((r) => r.session === "morning" && r.attended).length,
     afternoonPresent: rows.filter((r) => r.session === "afternoon" && r.attended).length,
     totalRecords: rows.length,
+    enrolledCount: rows.filter((r) => (r as unknown as { enrolled?: boolean }).enrolled).length,
   };
 }
