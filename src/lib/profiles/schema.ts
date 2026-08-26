@@ -64,23 +64,23 @@ export const updateOwnProfileSchema = z.object({
   firstName: z
     .string()
     .trim()
-    .min(1, "First name is required.")
-    .max(100, "First name must be 100 characters or fewer."),
+    .min(1, "El nombre es obligatorio.")
+    .max(100, "El nombre debe tener 100 caracteres o menos."),
   lastName: z
     .string()
     .trim()
-    .min(1, "Last name is required.")
-    .max(100, "Last name must be 100 characters or fewer."),
+    .min(1, "Los apellidos son obligatorios.")
+    .max(100, "Los apellidos deben tener 100 caracteres o menos."),
   birthDate: z
     .string()
     .trim()
     .optional()
     .transform((value) => (value ? value : null))
     .refine((value) => value === null || !Number.isNaN(Date.parse(value)), {
-      message: "Birth date must be a valid date.",
+      message: "La fecha de nacimiento debe ser una fecha válida.",
     }),
   componentType: z.enum(["music", "dance", "member"], {
-    errorMap: () => ({ message: "Component type must be music, dance or member." }),
+    errorMap: () => ({ message: "El componente debe ser música, baile o socio/a." }),
   }),
   bio: z
     .string()
@@ -135,9 +135,9 @@ export const updateOwnProfileSchema = z.object({
 export type UpdateOwnProfileInput = z.infer<typeof updateOwnProfileSchema>;
 
 export const updateMemberRoleSchema = z.object({
-  userId: z.string().uuid("userId must be a valid UUID."),
+  userId: z.string().uuid("El ID de usuario debe ser un UUID válido."),
   role: z.enum(APP_ROLES as [string, ...string[]], {
-    errorMap: () => ({ message: "role must be one of the defined application roles." }),
+    errorMap: () => ({ message: "El rol debe ser uno de los roles permitidos por la aplicación." }),
   }),
 });
 
@@ -150,7 +150,7 @@ export type UpdateMemberRoleInput = z.infer<typeof updateMemberRoleSchema>;
  * own dedicated privilege checks.
  */
 export const updateMemberProfileSchema = updateOwnProfileSchema.extend({
-  userId: z.string().uuid("userId must be a valid UUID."),
+  userId: z.string().uuid("El ID de usuario debe ser un UUID válido."),
   // When omitted, the member's current workgroup is preserved.
   workgroup: z.enum(["telas", "barra", "estandarte", "limpieza", "ninguno"]).optional(),
 });
@@ -163,7 +163,7 @@ export type UpdateMemberProfileInput = z.infer<typeof updateMemberProfileSchema>
  * regardless of holding a valid Supabase Auth session.
  */
 export const setMemberActiveSchema = z.object({
-  userId: z.string().uuid("userId must be a valid UUID."),
+  userId: z.string().uuid("El ID de usuario debe ser un UUID válido."),
   isActive: z.boolean(),
 });
 
@@ -174,9 +174,9 @@ export type SetMemberActiveInput = z.infer<typeof setMemberActiveSchema>;
  * the directory table, without touching any other personal field.
  */
 export const setMemberComponentTypeSchema = z.object({
-  userId: z.string().uuid("userId must be a valid UUID."),
+  userId: z.string().uuid("El ID de usuario debe ser un UUID válido."),
   componentType: z.enum(["music", "dance", "member"], {
-    errorMap: () => ({ message: "Component type must be music, dance or member." }),
+    errorMap: () => ({ message: "El componente debe ser música, baile o socio/a." }),
   }),
 });
 
@@ -188,10 +188,10 @@ export type SetMemberComponentTypeInput = z.infer<typeof setMemberComponentTypeS
  * rule is enforced against the member's CURRENT component type.
  */
 export const setMemberWorkgroupSchema = z.object({
-  userId: z.string().uuid("userId must be a valid UUID."),
+  userId: z.string().uuid("El ID de usuario debe ser un UUID válido."),
   workgroup: z.enum(["telas", "barra", "estandarte", "limpieza", "ninguno"], {
     errorMap: () => ({
-      message: "Workgroup must be one of telas, barra, estandarte, limpieza or ninguno.",
+      message: "El grupo de trabajo debe ser telas, barra, estandarte, limpieza o ninguno.",
     }),
   }),
 });
@@ -206,7 +206,7 @@ export type SetMemberWorkgroupInput = z.infer<typeof setMemberWorkgroupSchema>;
  */
 export const setMyWorkgroupSchema = z.object({
   workgroup: z.enum(["telas", "barra", "estandarte", "limpieza"], {
-    errorMap: () => ({ message: "Workgroup must be one of telas, barra, estandarte or limpieza." }),
+    errorMap: () => ({ message: "El grupo de trabajo debe ser telas, barra, estandarte o limpieza." }),
   }),
 });
 

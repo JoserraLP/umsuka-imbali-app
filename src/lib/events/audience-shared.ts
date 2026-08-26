@@ -136,7 +136,7 @@ export type AudienceValues = z.infer<typeof audienceSchema>;
 /** Audience update mutation input (`updateEventAudience`). */
 export const updateEventAudienceSchema = z
   .object({
-    eventId: z.string().uuid("eventId must be a valid UUID."),
+    eventId: z.string().uuid("El ID del evento debe ser un UUID válido."),
     ...AUDIENCE_FORM_FIELDS,
   })
   .superRefine(audienceCrossFieldIssueFn);

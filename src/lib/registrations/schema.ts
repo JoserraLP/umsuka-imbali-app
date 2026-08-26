@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const registerForEventSchema = z.object({
-  eventId: z.string().uuid("eventId must be a valid UUID."),
+  eventId: z.string().uuid("El ID del evento debe ser un UUID válido."),
 });
 export type RegisterForEventInput = z.infer<typeof registerForEventSchema>;
 
@@ -12,7 +12,7 @@ export type RegisterForEventInput = z.infer<typeof registerForEventSchema>;
  * never trusted from the client.
  */
 export const unregisterFromEventSchema = z.object({
-  eventId: z.string().uuid("eventId must be a valid UUID."),
-  userId: z.string().uuid("userId must be a valid UUID.").optional(),
+  eventId: z.string().uuid("El ID del evento debe ser un UUID válido."),
+  userId: z.string().uuid("El ID del usuario debe ser un UUID válido.").optional(),
 });
 export type UnregisterFromEventInput = z.infer<typeof unregisterFromEventSchema>;

@@ -116,8 +116,8 @@ export type DeletePaymentInput = z.infer<typeof deletePaymentSchema>;
 export const bulkRegisterMonthlySchema = z
   .object({
     user_ids: z.array(z.string().uuid("user_id debe ser un UUID válido.")).min(1, "Debe seleccionar al menos un miembro."),
-    period_month: z.number().int().min(1).max(12),
-    period_year: z.number().int().min(1).max(9999),
+    period_month: z.number().int("El mes debe ser un entero.").min(1, "El mes debe ser entre 1 y 12.").max(12, "El mes debe ser entre 1 y 12."),
+    period_year: z.number().int("El año debe ser un entero.").min(1, "El año debe ser >= 1.").max(9999, "El año debe ser <= 9999."),
     amount: z.coerce
       .number({ message: "El importe debe ser un número." })
       .positive("El importe debe ser mayor que 0.")

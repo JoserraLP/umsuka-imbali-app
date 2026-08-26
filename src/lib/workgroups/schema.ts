@@ -34,10 +34,10 @@ const barraTaskField = z
 
 export const markWorkgroupAttendanceSchema = z
   .object({
-    shiftId: z.string().uuid("shiftId must be a valid UUID."),
-    userId: z.string().uuid("userId must be a valid UUID."),
+    shiftId: z.string().uuid("El ID del turno debe ser un UUID válido."),
+    userId: z.string().uuid("El ID del usuario debe ser un UUID válido."),
     workgroup: activeWorkgroupSchema,
-    attended: z.boolean({ required_error: "attended is required." }),
+    attended: z.boolean({ required_error: "Debes indicar si asistió.", invalid_type_error: "Debes indicar si asistió." }),
     hoursWorked: hoursWorkedField,
     barraTask: barraTaskField,
   })
@@ -65,8 +65,8 @@ export type MarkWorkgroupAttendanceInput = z.infer<typeof markWorkgroupAttendanc
 
 export const updateWorkgroupAttendanceSchema = z
   .object({
-    id: z.string().uuid("id must be a valid UUID."),
-    attended: z.boolean({ required_error: "attended is required." }),
+    id: z.string().uuid("El ID del registro debe ser un UUID válido."),
+    attended: z.boolean({ required_error: "Debes indicar si asistió.", invalid_type_error: "Debes indicar si asistió." }),
     hoursWorked: hoursWorkedField,
     barraTask: barraTaskField,
   })
