@@ -24,9 +24,9 @@ export function isRehearsalCategory(value: string): value is RehearsalCategoryVa
 // ── Schemas ───────────────────────────────────────
 
 export const autoEnrollRehearsalSchema = z.object({
-  eventId: z.string().uuid("eventId must be a valid UUID."),
+  eventId: z.string().uuid("El ID del evento debe ser un UUID válido."),
   category: z.enum(REHEARSAL_CATEGORIES, {
-    errorMap: () => ({ message: "category must be 'music' or 'dance'." }),
+    errorMap: () => ({ message: "La categoría debe ser música o baile." }),
   }),
 });
 

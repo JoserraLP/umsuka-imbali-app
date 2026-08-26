@@ -16,6 +16,8 @@ export const votingFormSchema = z.object({
     .string()
     .trim()
     .max(5000, "La descripción debe tener 5000 caracteres o menos.")
+    .transform((value) => (value ? value : null))
+    .nullable()
     .optional(),
   voting_deadline: z
     .string()

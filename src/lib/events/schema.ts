@@ -15,25 +15,25 @@ const EVENT_FORM_FIELDS = {
   title: z
     .string()
     .trim()
-    .min(1, "Title is required.")
-    .max(200, "Title must be 200 characters or fewer."),
+    .min(1, "El título es obligatorio.")
+    .max(200, "El título debe tener 200 caracteres o menos."),
   description: z
     .string()
     .trim()
-    .max(2000, "Description must be 2000 characters or fewer.")
+    .max(2000, "La descripción debe tener 2000 caracteres o menos.")
     .optional()
     .transform((value) => (value ? value : null)),
   eventType: z.enum(EVENT_TYPES, {
     errorMap: () => ({
-      message: "Event type must be general, meeting, carnival, work_shift or rehearsal.",
+      message: "El tipo de evento debe ser general, reunión, carnaval, turno de trabajo, ensayo o reparto de material.",
     }),
   }),
   eventDate: z
     .string()
     .trim()
-    .min(1, "Event date is required.")
+    .min(1, "La fecha del evento es obligatoria.")
     .refine((value) => !Number.isNaN(Date.parse(value)), {
-      message: "Event date must be a valid date/time.",
+      message: "La fecha del evento debe ser una fecha válida.",
     }),
   /**
    * Maximum number of registrations. `null` means unlimited. The form
@@ -41,13 +41,13 @@ const EVENT_FORM_FIELDS = {
    * field arrives here as `NaN` — normalized to `null` below.
    */
   capacity: z
-    .union([z.number(), z.nan()])
-    .nullable()
-    .optional()
-    .transform((value) => (typeof value === "number" && !Number.isNaN(value) ? value : null))
-    .refine((value) => value === null || (Number.isInteger(value) && value > 0), {
-      message: "Capacity must be a positive whole number.",
-    }),
+     .union([z.number(), z.nan()])
+     .nullable()
+     .optional()
+     .transform((value) => (typeof value === "number" && !Number.isNaN(value) ? value : null))
+     .refine((value) => value === null || (Number.isInteger(value) && value > 0), {
+       message: "El aforo debe ser un número entero positivo.",
+     }),
   /**
    * Optional free-text venue/location. An empty or whitespace-only input
    * is normalized to `null` (no location shown).
@@ -55,7 +55,7 @@ const EVENT_FORM_FIELDS = {
   location: z
     .string()
     .trim()
-    .max(300, "Location must be 300 characters or fewer.")
+    .max(300, "La ubicación debe tener 300 caracteres o menos.")
     .optional()
     .transform((value) => (value ? value : null)),
   /**
@@ -66,11 +66,11 @@ const EVENT_FORM_FIELDS = {
   imageUrl: z
     .string()
     .trim()
-    .max(2000, "Image URL must be 2000 characters or fewer.")
+    .max(2000, "La URL de la imagen debe tener 2000 caracteres o menos.")
     .optional()
     .transform((value) => (value ? value : null))
     .refine((value) => value === null || /^https?:\/\/[^\s]+$/.test(value), {
-      message: "Image URL must be a valid http(s) URL.",
+      message: "La URL de la imagen debe ser una URL http(s) válida.",
     }),
   /**
    * Optional cutoff instant for new registrations. After it passes,
@@ -84,7 +84,7 @@ const EVENT_FORM_FIELDS = {
     .optional()
     .transform((value) => (value ? value : null))
     .refine((value) => value === null || !Number.isNaN(Date.parse(value)), {
-      message: "Registration deadline must be a valid date/time.",
+      message: "La fecha límite de inscripción debe ser una fecha válida.",
     }),
   /**
    * Target workgroup for `work_shift` events. Required for work_shift
@@ -158,7 +158,7 @@ function hasRequiredRehearsalCategory(data: {
 export const eventFormSchema = z
   .object({ ...EVENT_FORM_FIELDS, ...AUDIENCE_FORM_FIELDS })
   .refine((data) => !isWorkShift(data) || data.workgroup !== null, {
-    message: "For work shift events you must choose the target workgroup.",
+    message: "Para eventos de turno de trabajo debes elegir el grupo de trabajo.",
     path: ["workgroup"],
   })
   .refine(hasRequiredRehearsalSessions, {
@@ -175,7 +175,7 @@ export type EventFormValues = z.infer<typeof eventFormSchema>;
 export const createEventSchema = z
   .object({ ...EVENT_FORM_FIELDS, ...AUDIENCE_FORM_FIELDS })
   .refine((data) => !isWorkShift(data) || data.workgroup !== null, {
-    message: "For work shift events you must choose the target workgroup.",
+    message: "Para eventos de turno de trabajo debes elegir el grupo de trabajo.",
     path: ["workgroup"],
   })
   .refine(hasRequiredRehearsalSessions, {
@@ -193,10 +193,10 @@ export const updateEventSchema = z
   .object({
     ...EVENT_FORM_FIELDS,
     ...AUDIENCE_FORM_FIELDS,
-    id: z.string().uuid("id must be a valid UUID."),
+    id: z.string().uuid("El ID del evento debe ser un UUID válido."),
   })
   .refine((data) => !isWorkShift(data) || data.workgroup !== null, {
-    message: "For work shift events you must choose the target workgroup.",
+    message: "Para eventos de turno de trabajo debes elegir el grupo de trabajo.",
     path: ["workgroup"],
   })
   .refine(hasRequiredRehearsalSessions, {
@@ -211,25 +211,25 @@ export const updateEventSchema = z
 export type UpdateEventInput = z.infer<typeof updateEventSchema>;
 
 export const deleteEventSchema = z.object({
-  id: z.string().uuid("id must be a valid UUID."),
+  id: z.string().uuid("El ID del evento debe ser un UUID válido."),
 });
 export type DeleteEventInput = z.infer<typeof deleteEventSchema>;
 
 // ── Event comments ────────────────────────────────────
 
 export const addEventCommentSchema = z.object({
-  eventId: z.string().uuid("eventId must be a valid UUID."),
+  eventId: z.string().uuid("El ID del evento debe ser un UUID válido."),
   body: z
     .string()
     .trim()
-    .min(1, "The comment cannot be empty.")
-    .max(1000, "The comment must be 1000 characters or fewer."),
+    .min(1, "El comentario no puede estar vacío.")
+    .max(1000, "El comentario debe tener 1000 caracteres o menos."),
 });
 export type AddEventCommentInput = z.infer<typeof addEventCommentSchema>;
 
 export const deleteEventCommentSchema = z.object({
-  eventId: z.string().uuid("eventId must be a valid UUID."),
-  commentId: z.string().uuid("commentId must be a valid UUID."),
+  eventId: z.string().uuid("El ID del evento debe ser un UUID válido."),
+  commentId: z.string().uuid("El ID del comentario debe ser un UUID válido."),
 });
 export type DeleteEventCommentInput = z.infer<typeof deleteEventCommentSchema>;
 
@@ -239,21 +239,21 @@ export const WAITLIST_STATUSES = ["waiting", "promoted", "declined", "removed"] 
 export type WaitlistStatusValue = (typeof WAITLIST_STATUSES)[number];
 
 export const joinWaitlistSchema = z.object({
-  eventId: z.string().uuid("eventId must be a valid UUID."),
+  eventId: z.string().uuid("El ID del evento debe ser un UUID válido."),
 });
 export type JoinWaitlistInput = z.infer<typeof joinWaitlistSchema>;
 
 export const leaveWaitlistSchema = z.object({
-  eventId: z.string().uuid("eventId must be a valid UUID."),
+  eventId: z.string().uuid("El ID del evento debe ser un UUID válido."),
 });
 export type LeaveWaitlistInput = z.infer<typeof leaveWaitlistSchema>;
 
 export const setWaitlistEntryStatusSchema = z.object({
-  eventId: z.string().uuid("eventId must be a valid UUID."),
-  entryId: z.string().uuid("entryId must be a valid UUID."),
+  eventId: z.string().uuid("El ID del evento debe ser un UUID válido."),
+  entryId: z.string().uuid("El ID de la entrada debe ser un UUID válido."),
   status: z.enum(WAITLIST_STATUSES, {
     errorMap: () => ({
-      message: "Waitlist status must be waiting, promoted, declined or removed.",
+      message: "El estado de la lista de espera debe ser en espera, promocionado, rechazado o eliminado.",
     }),
   }),
 });
@@ -264,7 +264,7 @@ export type SetWaitlistEntryStatusInput = z.infer<typeof setWaitlistEntryStatusS
  * renumbers every later position, keeping the list gapless).
  */
 export const removeWaitlistEntrySchema = z.object({
-  eventId: z.string().uuid("eventId must be a valid UUID."),
-  entryId: z.string().uuid("entryId must be a valid UUID."),
+  eventId: z.string().uuid("El ID del evento debe ser un UUID válido."),
+  entryId: z.string().uuid("El ID de la entrada debe ser un UUID válido."),
 });
 export type RemoveWaitlistEntryInput = z.infer<typeof removeWaitlistEntrySchema>;

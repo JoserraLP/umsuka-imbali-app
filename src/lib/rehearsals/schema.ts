@@ -21,28 +21,28 @@ export function isRehearsalSession(value: string): value is RehearsalSession {
 // ── Schemas ───────────────────────────────────────────
 
 export const markRehearsalAttendanceSchema = z.object({
-  eventId: z.string().uuid("eventId must be a valid UUID."),
-  userId: z.string().uuid("userId must be a valid UUID."),
+  eventId: z.string().uuid("El ID del evento debe ser un UUID válido."),
+  userId: z.string().uuid("El ID del usuario debe ser un UUID válido."),
   session: z.enum(["morning", "afternoon"], {
-    errorMap: () => ({ message: "session must be 'morning' or 'afternoon'." }),
+    errorMap: () => ({ message: "La sesión debe ser mañana o tarde." }),
   }),
-  attended: z.boolean({ required_error: "attended is required." }),
+  attended: z.boolean({ required_error: "Debes indicar si asistió.", invalid_type_error: "Debes indicar si asistió." }),
 });
 export type MarkRehearsalAttendanceInput = z.infer<typeof markRehearsalAttendanceSchema>;
 
 export const markMultipleRehearsalAttendanceSchema = z.object({
   records: z
     .array(markRehearsalAttendanceSchema)
-    .min(1, "At least one rehearsal attendance record is required."),
+    .min(1, "Se requiere al menos un registro de asistencia al ensayo."),
 });
 export type MarkMultipleRehearsalAttendanceInput = z.infer<
   typeof markMultipleRehearsalAttendanceSchema
 >;
 
 export const clearRehearsalSessionSchema = z.object({
-  eventId: z.string().uuid("eventId must be a valid UUID."),
+  eventId: z.string().uuid("El ID del evento debe ser un UUID válido."),
   session: z.enum(["morning", "afternoon"], {
-    errorMap: () => ({ message: "session must be 'morning' or 'afternoon'." }),
+    errorMap: () => ({ message: "La sesión debe ser mañana o tarde." }),
   }),
 });
 export type ClearRehearsalSessionInput = z.infer<typeof clearRehearsalSessionSchema>;
