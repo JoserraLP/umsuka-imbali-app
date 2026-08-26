@@ -74,6 +74,7 @@ export const updateOwnProfileSchema = z.object({
   birthDate: z
     .string()
     .trim()
+    .nullable()
     .optional()
     .transform((value) => (value ? value : null))
     .refine((value) => value === null || !Number.isNaN(Date.parse(value)), {
@@ -85,6 +86,7 @@ export const updateOwnProfileSchema = z.object({
   bio: z
     .string()
     .trim()
+    .nullable()
     .optional()
     .transform((value) => (value ? value : null))
     .refine((value) => value === null || value.length <= 500, {
@@ -93,6 +95,7 @@ export const updateOwnProfileSchema = z.object({
   phone: z
     .string()
     .trim()
+    .nullable()
     .optional()
     .transform((value) => (value ? value : null))
     .refine((value) => value === null || /^[+0-9 ()-]{6,20}$/.test(value), {
@@ -113,6 +116,7 @@ export const updateOwnProfileSchema = z.object({
   avatarUrl: z
     .string()
     .trim()
+    .nullable()
     .optional()
     .transform((value) => (value ? value : null))
     .refine((value) => value === null || isAllowedAvatarUrl(value), {
@@ -122,6 +126,7 @@ export const updateOwnProfileSchema = z.object({
   joinedAt: z
     .string()
     .trim()
+    .nullable()
     .optional()
     .transform((value) => (value ? value : null))
     .refine((value) => value === null || !Number.isNaN(Date.parse(value)), {

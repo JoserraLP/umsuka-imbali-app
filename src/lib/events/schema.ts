@@ -21,6 +21,7 @@ const EVENT_FORM_FIELDS = {
     .string()
     .trim()
     .max(2000, "La descripción debe tener 2000 caracteres o menos.")
+    .nullable()
     .optional()
     .transform((value) => (value ? value : null)),
   eventType: z.enum(EVENT_TYPES, {
@@ -56,6 +57,7 @@ const EVENT_FORM_FIELDS = {
     .string()
     .trim()
     .max(300, "La ubicación debe tener 300 caracteres o menos.")
+    .nullable()
     .optional()
     .transform((value) => (value ? value : null)),
   /**
@@ -67,6 +69,7 @@ const EVENT_FORM_FIELDS = {
     .string()
     .trim()
     .max(2000, "La URL de la imagen debe tener 2000 caracteres o menos.")
+    .nullable()
     .optional()
     .transform((value) => (value ? value : null))
     .refine((value) => value === null || /^https?:\/\/[^\s]+$/.test(value), {
@@ -81,6 +84,7 @@ const EVENT_FORM_FIELDS = {
   registrationDeadline: z
     .string()
     .trim()
+    .nullable()
     .optional()
     .transform((value) => (value ? value : null))
     .refine((value) => value === null || !Number.isNaN(Date.parse(value)), {

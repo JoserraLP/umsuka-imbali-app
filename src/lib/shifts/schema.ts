@@ -36,6 +36,7 @@ const SHIFT_FORM_FIELDS = {
     .string()
     .trim()
     .max(500, "Las notas deben tener 500 caracteres o menos.")
+    .nullable()
     .optional()
     .transform((value) => (value ? value : null)),
 } as const;
