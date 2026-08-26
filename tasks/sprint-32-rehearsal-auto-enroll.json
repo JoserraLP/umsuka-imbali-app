@@ -1,0 +1,31 @@
+﻿{
+  "title": "Sprint 32 — Inscripción Automática a Ensayos (Rehearsal Auto-Enroll)",
+  "description": "Cuando se crea un ensayo (evento tipo rehearsal), el sistema inscribe automáticamente a todos los miembros del componente correspondiente (music o dance) en ese ensayo. Los miembros no pueden inscribirse por sí mismos; solo el sistema al crear el ensayo o el super_admin/directiva pueden gestionar las inscripciones. Permite que los responsables marquen asistencia sobre los ya inscritos sin añadirlos uno a uno. Incluye migración rehearsal_category (music/dance), enrolled/enrolled_at en rehearsal_attendance, auto-enroll idempotente, RLS bloqueo auto-inscripción, notificación a inscritos y UI de inscritos.",
+  "branch": "feature/sprint-32-rehearsal-auto-enroll",
+  "status": "published",
+  "adr": "docs/adr-sprint-32-rehearsal-auto-enroll.md",
+  "acceptance_criteria": [
+    "Al crear un ensayo de música (rehearsal_category=music), se inscriben automáticamente todos los miembros con component_type=music.",
+    "Al crear un ensayo de baile (rehearsal_category=dance), se inscriben automáticamente todos los miembros con component_type=dance.",
+    "Los miembros no pueden inscribirse por sí mismos en un ensayo (RLS bloquea INSERT no-management).",
+    "Los miembros de un componente incorrecto no se inscriben en un ensayo de otro componente.",
+    "Si un miembro ya estaba inscrito, no se duplica el registro (upsert/onConflict idempotente).",
+    "Los responsables pueden marcar asistencia sobre los ya inscritos (flujo Sprint 27 intacto).",
+    "Se envía notificación automática a los miembros inscritos al crear el ensayo."
+  ],
+  "definition_of_done": [
+    "Migración SQL 20260101006500_rehearsal_auto_enroll.sql con: CREATE TYPE umsuka.rehearsal_category AS ENUM ('music','dance') o reutilizar texto con CHECK; ALTER TABLE umsuka.events ADD COLUMN rehearsal_category umsuka.rehearsal_category NULL + CHECK (event_type='rehearsal' OR rehearsal_category IS NULL) + comentario; ALTER TABLE umsuka.rehearsal_attendance ADD COLUMN enrolled boolean NOT NULL DEFAULT false + enrolled_at timestamptz NULL + índice (event_id,enrolled) + CHECK enrolled_at coherente; comentarios y checklist manual idempotente.",
+    "Tipos hand-edited en src/types/database.types.ts: RehearsalCategory = 'music'|'dance', events.Row/Insert/Update incluyen rehearsal_category, rehearsal_attendance Row incluye enrolled/enrolled_at, Enums añade rehearsal_category.",
+    "Capa lib/rehearsals/auto-enroll.ts con función autoEnrollRehearsal(eventId, category): valida event_type='rehearsal', busca miembros por component_type, inserta en rehearsal_attendance con enrolled=true, enrolled_at=now(), attended=false, marked_by=null, ignorando duplicados (upsert onConflict event_id,user_id,session o insert con ON CONFLICT DO NOTHING), retorna conteo.",
+    "RLS/validación: policies revisadas para que INSERT en rehearsal_attendance solo management/service_role pueda crear; SELECT mantiene own_or_management; miembros no pueden auto-insertarse (test RLS).",
+    "Integración en creación de evento: al crear evento tipo rehearsal con rehearsal_category definida, server action dispara autoEnrollRehearsal y crea notificación tipo event_created para cada inscrito (reutiliza lib/notifications).",
+    "UI de ensayo: en página detalle del ensayo, lista de inscritos con estado (asistió/no asistió/pendiente) + enrolled badge; responsable solo marca asistencia, no añade/elimina inscritos manualmente (o solo management puede ajustar si se requiere).",
+    "Schemas Zod actualizados: rehearsal_category validado en events/schema.ts y en auto-enroll schema.",
+    "Tests unitarios nuevos pasando (autoEnroll logic, enrolled idempotencia, filtro por componente, bloqueo auto-inscripción) + suite completa npx vitest run.",
+    "Typecheck (tsc --noEmit) y lint limpios; next build sin errores.",
+    "Security scan sin issues HIGH.",
+    "ADR documentado en docs/adr-sprint-32-rehearsal-auto-enroll.md.",
+    "PR creada contra master siguiendo docs/git-conventions.md."
+  ],
+  "dependencies": ["Sprint 2 (Roles — component_type music/dance)", "Sprint 5 (Asistencia)", "Sprint 17 (Eventos — rehearsal)", "Sprint 27 (Rehearsal attendance)"]
+}

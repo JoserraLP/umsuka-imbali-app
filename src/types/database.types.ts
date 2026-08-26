@@ -9,6 +9,7 @@ export type Json = string | number | boolean | null | { [key: string]: Json } | 
 export type ComponentType = "music" | "dance" | "member";
 export type EventType = "general" | "meeting" | "carnival" | "work_shift" | "rehearsal" | "material_distribution";
 export type RehearsalSession = "morning" | "afternoon";
+export type RehearsalCategory = "music" | "dance";
 export type PaymentType = "monthly" | "yearly";
 export type Workgroup = "telas" | "barra" | "estandarte" | "limpieza" | "ninguno";
 export type UserStatus = "pending" | "active" | "suspended";
@@ -141,6 +142,7 @@ export interface Database {
           image_url: string | null;
           morning_session: boolean;   // default false in DB (rehearsal only)
           afternoon_session: boolean; // default false in DB (rehearsal only)
+          rehearsal_category: RehearsalCategory | null; // Sprint 32: music/dance, NULL for non-rehearsal
           visible_to_group: Workgroup | null;
           created_by_workgroup: Workgroup | null;
           audience_type: AudienceType;
@@ -161,6 +163,7 @@ export interface Database {
           image_url?: string | null;
           morning_session?: boolean;   // default false in DB
           afternoon_session?: boolean; // default false in DB
+          rehearsal_category?: RehearsalCategory | null;
           visible_to_group?: Workgroup | null;
           created_by_workgroup?: Workgroup | null;
           audience_type?: AudienceType;   // default 'all' in DB
@@ -181,6 +184,7 @@ export interface Database {
           image_url?: string | null;
           morning_session?: boolean;
           afternoon_session?: boolean;
+          rehearsal_category?: RehearsalCategory | null;
           visible_to_group?: Workgroup | null;
           created_by_workgroup?: Workgroup | null;
           audience_type?: AudienceType;
@@ -572,6 +576,8 @@ export interface Database {
           user_id: string;
           session: RehearsalSession;
           attended: boolean;
+          enrolled: boolean;
+          enrolled_at: string | null;
           marked_by: string | null;
           created_at: string;
           updated_at: string;
@@ -582,6 +588,8 @@ export interface Database {
           user_id: string;
           session: RehearsalSession;
           attended: boolean;
+          enrolled?: boolean; // default false
+          enrolled_at?: string | null;
           marked_by?: string | null;
           created_at?: string;   // default now() in DB
           updated_at?: string;   // default now() in DB
@@ -592,6 +600,8 @@ export interface Database {
           user_id?: string;
           session?: RehearsalSession;
           attended?: boolean;
+          enrolled?: boolean;
+          enrolled_at?: string | null;
           marked_by?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -1115,6 +1125,8 @@ export interface Database {
       auth_method: AuthMethod;
       waitlist_status: WaitlistStatus;
       audience_type: AudienceType;
+      rehearsal_category: RehearsalCategory;
+      rehearsal_session: RehearsalSession;
       transaction_type: TransactionType;
       transaction_category: TransactionCategory;
       payment_type: PaymentType;
