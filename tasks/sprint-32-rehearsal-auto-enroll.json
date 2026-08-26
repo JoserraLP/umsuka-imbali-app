@@ -2,7 +2,7 @@
   "title": "Sprint 32 — Inscripción Automática a Ensayos (Rehearsal Auto-Enroll)",
   "description": "Cuando se crea un ensayo (evento tipo rehearsal), el sistema inscribe automáticamente a todos los miembros del componente correspondiente (music o dance) en ese ensayo. Los miembros no pueden inscribirse por sí mismos; solo el sistema al crear el ensayo o el super_admin/directiva pueden gestionar las inscripciones. Permite que los responsables marquen asistencia sobre los ya inscritos sin añadirlos uno a uno. Incluye migración rehearsal_category (music/dance), enrolled/enrolled_at en rehearsal_attendance, auto-enroll idempotente, RLS bloqueo auto-inscripción, notificación a inscritos y UI de inscritos.",
   "branch": "feature/sprint-32-rehearsal-auto-enroll",
-  "status": "documented",
+  "status": "published",
   "adr": "docs/adr-sprint-32-rehearsal-auto-enroll.md",
   "acceptance_criteria": [
     "Al crear un ensayo de música (rehearsal_category=music), se inscriben automáticamente todos los miembros con component_type=music.",
