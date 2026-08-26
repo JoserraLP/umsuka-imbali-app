@@ -343,7 +343,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           </Card>
         )}
 
-        {!isWorkShift && (
+        {!isWorkShift && !isRehearsal && (
           <Card>
             <CardHeader>
               <CardTitle>Inscripción</CardTitle>
@@ -357,6 +357,27 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                 waitlist={waitlist}
                 canManageAttendees={canManage}
               />
+            </CardContent>
+          </Card>
+        )}
+        {isRehearsal && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Inscripción</CardTitle>
+              <CardDescription>La inscripción a ensayos es automática por categoría (música/baile).</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                {event.rehearsalCategory
+                  ? `Este ensayo es de ${REHEARSAL_CATEGORY_LABELS[event.rehearsalCategory]}: los miembros de ese componente fueron inscritos automáticamente al crear el evento.`
+                  : "Este ensayo no tiene categoría asignada."}{" "}
+                Ve a la sección de asistencia para marcar quién asistió.
+              </p>
+              {canManage && registrationSummary.attendees.length > 0 && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Nota: {registrationSummary.attendees.length} inscripciones antiguas por evento siguen visibles aquí, pero la asistencia real del ensayo se gestiona arriba.
+                </p>
+              )}
             </CardContent>
           </Card>
         )}

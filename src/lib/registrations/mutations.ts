@@ -56,12 +56,17 @@ export async function registerForEvent(
 
   const { data: event } = await supabase
     .from("events")
-    .select("capacity, registration_deadline")
+    .select("capacity, registration_deadline, event_type")
     .eq("id", parsed.data.eventId)
     .maybeSingle();
 
   if (!event) {
     return { success: false, error: "Evento no encontrado." };
+  }
+
+  // Sprint 32: rehearsals use auto-enroll, no self-registration
+  if ((event as { event_type?: string }).event_type === "rehearsal") {
+    return { success: false, error: "Los ensayos no permiten inscripción individual, la inscripción es automática por categoría." };
   }
 
   const { count: registeredCount } = await supabase
