@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { NotificationsWidget } from "@/components/dashboard/notifications-widget";
 import { SectionHeader } from "@/components/dashboard/section-header";
-import { Instagram, CalendarDays, Newspaper, ExternalLink, Users, Image as ImageIcon, Heart, Plane, Music2, ArrowRight } from "lucide-react";
+import { Instagram, CalendarDays, Newspaper, ExternalLink, Users, Image as ImageIcon, Heart, ClipboardList, Music2, ArrowRight } from "lucide-react";
 import type { AuthenticatedProfile } from "@/types/auth";
 import type { InstagramProfile } from "@/lib/social/instagram";
 import type { EventListItem } from "@/lib/events/queries";
@@ -97,7 +97,7 @@ export function DashboardContent({ profile, instagramProfile, events, latestNews
           <section className="rounded-xl border-2 border-primary/20 bg-card p-5 shadow-sm">
             <SectionHeader
               title="Formaciones"
-              icon={Plane}
+              icon={ClipboardList}
               action={
                 <Link href="/formation" className="text-xs text-primary hover:text-primary/80 transition-colors inline-flex items-center gap-1 font-medium">
                   Gestionar <ArrowRight className="h-3 w-3" />
@@ -109,7 +109,7 @@ export function DashboardContent({ profile, instagramProfile, events, latestNews
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <Link href="/formation" className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors shadow">
-                <Plane className="h-3.5 w-3.5" />
+                <ClipboardList className="h-3.5 w-3.5" />
                 Gestionar formaciones {isManagement ? "" : `de ${label}`}
               </Link>
               <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">

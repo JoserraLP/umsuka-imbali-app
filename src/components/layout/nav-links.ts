@@ -17,7 +17,7 @@ import {
   Wallet,
   Shield,
   CreditCard,
-  Plane,
+  ClipboardList,
   type LucideIcon,
 } from "lucide-react";
 import type { AppRole, ComponentType, Workgroup } from "@/types/database.types";
@@ -55,7 +55,7 @@ export const NAV_LINKS: NavLink[] = [
   {
     href: "/formation",
     label: "Formaciones",
-    icon: Plane,
+    icon: ClipboardList,
     showFor: (ctx) => isManagementRole(ctx.role) || ctx.componentLeadFor !== null,
   },
   {
