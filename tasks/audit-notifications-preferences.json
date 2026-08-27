@@ -1,0 +1,29 @@
+{
+  "title": "Auditoría — Notificaciones con preferencias por audiencia (votación, evento, noticias)",
+  "description": "Verificar que al crear una nueva votación, evento o noticia se notifique a todos los destinatarios que deben responder/contestar, respetando notification_preferences. Revisar emit.ts notifyUsers (filtrado por types), resolveEventRecipients (audience all/workgroup/member_type/specific_users) y los call-sites en votings/mutations.ts, news/mutations.ts, events/mutations.ts y shifts/assignments.ts.",
+  "branch": "feature/notifications-preferences-check",
+  "status": "verified",
+  "adr": "docs/audit-notifications-preferences.md",
+  "acceptance_criteria": [
+    "Al crear votación se notifica a getAllActiveMemberIds() filtrado por notification_preferences via notifyUsers type=voting_created",
+    "Al crear evento se resuelve audiencia con resolveEventRecipients(audience_type/workgroup/member_type/specific_users) y se notifica via notifyUsers type=event_created respetando preferencias",
+    "Al crear noticia publicada se notifica a getAllActiveMemberIds() filtrado por preferencias type=news_created (drafts no notifican)",
+    "Al asignar turno se notifica a shift_assigned con el mismo filtro",
+    "notifyUsers en emit.ts honra preferencias: missing row o types=[] => recibe todo; types no-vacío => solo si incluye el type; uso de SINGLE INSERT + best-effort try/catch",
+    "Preferencias editables en /notifications via updateNotificationPreferences y visibles en NotificationPreferencesCard"
+  ],
+  "definition_of_done": [
+    "Revisión manual de src/lib/notifications/emit.ts (notifyUsers filtra por notification_preferences)",
+    "Revisión de sprints 20 y 18: eventos usan resolveEventRecipients + notifyUsers(event_created)",
+    "Revisión de votings/mutations.ts:115 notifyUsers con getAllActiveMemberIds() type voting_created",
+    "Revisión de news/mutations.ts:84 notifyUsers con getAllActiveMemberIds() solo si published, type news_created",
+    "Revisión de shifts/assignments.ts:368 notifyUsers type shift_assigned",
+    "Revisión de approvals/mutations.ts:54 notifyUsers type profile_approved",
+    "Confirmado que notification_preferences tiene RLS own-row y UI en /notifications",
+    "Rama creada desde master, sin cambios funcionales necesarios (funcionalidad ya implementada y cubierta por tests y best-effort)"
+  ],
+  "dependencies": ["Sprint 18 (Audience)", "Sprint 20 (Notifications)"],
+  "verified_at": "2026-08-27",
+  "verifier": "master-agent",
+  "findings": "Funcionalidad YA IMPLEMENTADA y correcta. No se requiere código nuevo; solo auditoría. notifyUsers ya filtra por preferencias. Eventos ya usan audiencia, votings y noticias usan todos los activos. Todo best-effort y con service_role."
+}
