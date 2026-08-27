@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { NotificationsWidget } from "@/components/dashboard/notifications-widget";
 import { SectionHeader } from "@/components/dashboard/section-header";
 import { Instagram, CalendarDays, Newspaper, ExternalLink, Users, Image as ImageIcon, Heart } from "lucide-react";
+import { getRoleLabel, getComponentTypeLabel } from "@/lib/auth/roles";
 import type { AuthenticatedProfile } from "@/types/auth";
 import type { InstagramProfile } from "@/lib/social/instagram";
 import type { EventListItem } from "@/lib/events/queries";
@@ -72,8 +73,8 @@ export function DashboardContent({ profile, instagramProfile, events, latestNews
           Panel principal de Umsuka Imbali.
         </p>
         <div className="mt-3 flex items-center gap-3">
-          <Badge variant="secondary">{profile.role}</Badge>
-          <Badge variant="outline">{profile.componentType}</Badge>
+          <Badge variant="secondary">{getRoleLabel(profile.role)}</Badge>
+          <Badge variant="outline">{getComponentTypeLabel(profile.componentType)}</Badge>
         </div>
       </div>
 

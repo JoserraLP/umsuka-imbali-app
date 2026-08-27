@@ -52,3 +52,41 @@ export function roleRank(role: AppRole): number {
 export function hasAtLeastRole(role: AppRole, minimumRole: AppRole): boolean {
   return roleRank(role) <= roleRank(minimumRole);
 }
+
+/** Human-readable labels for roles (es-ES). */
+export const ROLE_LABELS: Record<AppRole, string> = {
+  super_admin: "Super Admin",
+  admin: "Administrador",
+  board_member: "Directiva",
+  event_manager: "Gestor de Eventos",
+  member: "Miembro",
+  guest: "Invitado",
+};
+
+export function getRoleLabel(role: AppRole): string {
+  return ROLE_LABELS[role] ?? role;
+}
+
+/** Human-readable labels for component types (es-ES). */
+export const COMPONENT_TYPE_LABELS: Record<string, string> = {
+  music: "Música",
+  dance: "Baile",
+  member: "Miembro",
+};
+
+export function getComponentTypeLabel(componentType: string): string {
+  return COMPONENT_TYPE_LABELS[componentType] ?? componentType;
+}
+
+/** Human-readable labels for workgroups (es-ES). */
+export const WORKGROUP_LABELS: Record<string, string> = {
+  telas: "Telas",
+  barra: "Barra",
+  estandarte: "Estandarte",
+  limpieza: "Limpieza",
+  ninguno: "Sin grupo",
+};
+
+export function getWorkgroupLabel(workgroup: string): string {
+  return WORKGROUP_LABELS[workgroup] ?? workgroup;
+}
