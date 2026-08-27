@@ -42,6 +42,21 @@ async function requireManagementGuard(
   return actor;
 }
 
+function canManageFormation(actor: AuthenticatedProfile, formationType: string): boolean {
+  return isManagementRole(actor.role) || actor.componentLeadFor === formationType;
+}
+
+async function requireFormationManagerGuard(
+  formationType: string,
+  errorMessage = "Solo la directiva o el responsable del componente puede gestionar esta formación.",
+): Promise<AuthenticatedProfile | MutationResult> {
+  const actor = await requireAuthenticatedProfile();
+  if (!canManageFormation(actor, formationType)) {
+    return { success: false, error: errorMessage };
+  }
+  return actor;
+}
+
 function parseError(errors: { issues: { message: string }[] }): MutationResult {
   return {
     success: false,
@@ -55,7 +70,7 @@ export async function createFormation(input: CreateFormationInput): Promise<Muta
   const parsed = createFormationSchema.safeParse(input);
   if (!parsed.success) return parseError(parsed.error);
 
-  const authResult = await requireManagementGuard();
+  const authResult = await requireFormationManagerGuard(parsed.data.formationType);
   if (!("id" in authResult)) return authResult;
 
   const supabase = await createClient();
@@ -88,9 +103,6 @@ export async function assignDancerToSeat(input: AssignDancerInput): Promise<Muta
   const parsed = assignDancerSchema.safeParse(input);
   if (!parsed.success) return parseError(parsed.error);
 
-  const authResult = await requireManagementGuard();
-  if (!("id" in authResult)) return authResult;
-
   const supabase = await createClient();
 
   // Validate formation is dance type
@@ -104,6 +116,9 @@ export async function assignDancerToSeat(input: AssignDancerInput): Promise<Muta
   if ((formation.formation_type as string) !== "dance") {
     return { success: false, error: "Esta formación es de música; no se pueden asignar bailarinas." };
   }
+
+  const authResult = await requireFormationManagerGuard(formation.formation_type as string);
+  if (!("id" in authResult)) return authResult;
 
   // Validate component_type = dance
   const { data: member, error: memberError } = await supabase
@@ -196,9 +211,6 @@ export async function removeDancerFromSeat(input: RemoveDancerInput): Promise<Mu
   const parsed = removeDancerSchema.safeParse(input);
   if (!parsed.success) return parseError(parsed.error);
 
-  const authResult = await requireManagementGuard();
-  if (!("id" in authResult)) return authResult;
-
   const supabase = await createClient();
 
   // Validate formation is dance
@@ -212,6 +224,9 @@ export async function removeDancerFromSeat(input: RemoveDancerInput): Promise<Mu
   if ((formation.formation_type as string) !== "dance") {
     return { success: false, error: "Esta formación es de música; no contiene posiciones de baile." };
   }
+
+  const authResult = await requireFormationManagerGuard(formation.formation_type as string);
+  if (!("id" in authResult)) return authResult;
 
   const { data, error } = await supabase
     .from("dance_positions")
@@ -231,9 +246,6 @@ export async function removeDancerFromSeat(input: RemoveDancerInput): Promise<Mu
 export async function moveDancer(input: MoveDancerInput): Promise<MutationResult> {
   const parsed = moveDancerSchema.safeParse(input);
   if (!parsed.success) return parseError(parsed.error);
-
-  const authResult = await requireManagementGuard();
-  if (!("id" in authResult)) return authResult;
 
   // No-op if same seat
   if (
@@ -256,6 +268,9 @@ export async function moveDancer(input: MoveDancerInput): Promise<MutationResult
   if ((formation.formation_type as string) !== "dance") {
     return { success: false, error: "Esta formación es de música; no se pueden mover bailarinas." };
   }
+
+  const authResult = await requireFormationManagerGuard(formation.formation_type as string);
+  if (!("id" in authResult)) return authResult;
 
   // Fetch source seat (must exist with a member)
   const { data: source, error: sourceError } = await supabase
@@ -364,13 +379,11 @@ export async function assignInstrumentToMusician(input: AssignInstrumentInput): 
   const parsed = assignInstrumentSchema.safeParse(input);
   if (!parsed.success) return parseError(parsed.error);
 
-  const authResult = await requireManagementGuard();
-  if (!("id" in authResult)) return authResult;
-
   const supabase = await createClient();
 
   // If linked to formation, validate formation is music type
   const _formationId = parsed.data.formationId ?? null;
+  let formationTypeForAuth: string | null = null;
   if (_formationId) {
     const { data: formation, error: formationError } = await supabase
       .from("dance_formations")
@@ -382,7 +395,13 @@ export async function assignInstrumentToMusician(input: AssignInstrumentInput): 
     if ((formation.formation_type as string) !== "music") {
       return { success: false, error: "Esta formación es de baile; no se pueden asignar instrumentos." };
     }
+    formationTypeForAuth = formation.formation_type as string;
+  } else {
+    formationTypeForAuth = "music";
   }
+
+  const authResult = await requireFormationManagerGuard(formationTypeForAuth!);
+  if (!("id" in authResult)) return authResult;
 
   // Validate musician component_type = music
   const { data: musician, error: musicianError } = await supabase
@@ -471,10 +490,28 @@ export async function unassignInstrument(input: UnassignInstrumentInput): Promis
   const parsed = unassignInstrumentSchema.safeParse(input);
   if (!parsed.success) return parseError(parsed.error);
 
-  const authResult = await requireManagementGuard();
-  if (!("id" in authResult)) return authResult;
-
   const supabase = await createClient();
+
+  const formationIdForAuth = parsed.data.formationId ?? null;
+  let formationTypeForAuth: string | null = null;
+  if (formationIdForAuth) {
+    const { data: formation, error: formationError } = await supabase
+      .from("dance_formations")
+      .select("formation_type")
+      .eq("id", formationIdForAuth)
+      .maybeSingle();
+    if (formationError) return { success: false, error: formationError.message };
+    if (!formation) return { success: false, error: "Formación no encontrada." };
+    if ((formation.formation_type as string) !== "music") {
+      return { success: false, error: "Esta formación es de baile; no contiene instrumentos." };
+    }
+    formationTypeForAuth = formation.formation_type as string;
+  } else {
+    formationTypeForAuth = "music";
+  }
+
+  const authResult = await requireFormationManagerGuard(formationTypeForAuth!);
+  if (!("id" in authResult)) return authResult;
 
   let query = supabase.from("musician_instruments").delete().eq("user_id", parsed.data.userId);
   const formationId = parsed.data.formationId ?? null;
@@ -493,9 +530,6 @@ export async function unassignInstrument(input: UnassignInstrumentInput): Promis
 }
 
 export async function duplicateFormation(formationId: string): Promise<MutationResult> {
-  const authResult = await requireManagementGuard();
-  if (!("id" in authResult)) return authResult;
-
   if (!formationId || typeof formationId !== "string") {
     return { success: false, error: "ID de formación no válido." };
   }
@@ -510,6 +544,9 @@ export async function duplicateFormation(formationId: string): Promise<MutationR
 
   if (originalError) return { success: false, error: originalError.message };
   if (!original) return { success: false, error: "Formación no encontrada." };
+
+  const authResult = await requireFormationManagerGuard(original.formation_type as string);
+  if (!("id" in authResult)) return authResult;
 
   const newName = `${original.name} (copia)`.slice(0, 200);
 

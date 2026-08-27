@@ -56,6 +56,7 @@ export const NAV_LINKS: NavLink[] = [
     href: "/formation",
     label: "Formaciones",
     icon: Plane,
+    showFor: (ctx) => isManagementRole(ctx.role) || ctx.componentLeadFor !== null,
   },
   {
     href: "/finances",

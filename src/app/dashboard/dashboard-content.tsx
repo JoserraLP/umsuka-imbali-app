@@ -85,30 +85,40 @@ export function DashboardContent({ profile, instagramProfile, events, latestNews
         </div>
       </div>
 
-      {/* ── Formaciones (Sprint 33) ─── destacado arriba para visibilidad ─ */}
-      <section className="rounded-xl border-2 border-primary/20 bg-card p-5 shadow-sm">
-        <SectionHeader
-          title="Formaciones"
-          icon={Plane}
-          action={
-            <Link href="/formation" className="text-xs text-primary hover:text-primary/80 transition-colors inline-flex items-center gap-1 font-medium">
-              {["super_admin","admin","board_member","event_manager"].includes(profile.role) ? "Gestionar" : "Ver"} <ArrowRight className="h-3 w-3" />
-            </Link>
-          }
-        />
-        <p className="mt-2 text-xs text-muted-foreground">
-          Plano de bailarinas (6 por fila tipo avión 3+pasillo+3) e instrumentos de músicos. {["super_admin","admin","board_member","event_manager"].includes(profile.role) ? "Crea formaciones, asigna bailarinas a asientos y asigna instrumentos." : "Consulta las formaciones publicadas."}
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Link href="/formation" className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors shadow">
-            <Plane className="h-3.5 w-3.5" />
-            {["super_admin","admin","board_member","event_manager"].includes(profile.role) ? "Gestionar formaciones" : "Ver formaciones"}
-          </Link>
-          <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-            <Music2 className="h-3 w-3" /> Músicos con instrumento por formación
-          </span>
-        </div>
-      </section>
+      {/* ── Formaciones (Sprint 33) ─── destacado arriba para visibilidad: solo directiva o responsable de componente ─ */}
+      {(() => {
+        const isManagement = ["super_admin","admin","board_member","event_manager"].includes(profile.role);
+        const isComponentLead = profile.componentLeadFor !== null;
+        const canSeeFormations = isManagement || isComponentLead;
+        if (!canSeeFormations) return null;
+        const leadType = profile.componentLeadFor;
+        const label = isManagement ? "baile y música" : leadType === "dance" ? "baile" : leadType === "music" ? "música" : "";
+        return (
+          <section className="rounded-xl border-2 border-primary/20 bg-card p-5 shadow-sm">
+            <SectionHeader
+              title="Formaciones"
+              icon={Plane}
+              action={
+                <Link href="/formation" className="text-xs text-primary hover:text-primary/80 transition-colors inline-flex items-center gap-1 font-medium">
+                  Gestionar <ArrowRight className="h-3 w-3" />
+                </Link>
+              }
+            />
+            <p className="mt-2 text-xs text-muted-foreground">
+              {isManagement ? "Gestiona formaciones de baile (plano 6 por fila, juntas) y de música (instrumentos)." : `Gestiona formaciones de ${label} — 6 por fila, juntas.`} Filas añadibles con +Añadir fila.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Link href="/formation" className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors shadow">
+                <Plane className="h-3.5 w-3.5" />
+                Gestionar formaciones {isManagement ? "" : `de ${label}`}
+              </Link>
+              <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                <Music2 className="h-3 w-3" /> {isManagement ? "Baile y música separados por tipo" : `Solo ${label}`}
+              </span>
+            </div>
+          </section>
+        );
+      })()}
 
       {/* ── Instagram Profile — full width above the grid ── */}
       <section className="rounded-xl border bg-card p-5">

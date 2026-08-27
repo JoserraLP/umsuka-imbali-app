@@ -73,7 +73,7 @@ describe("BottomNav", () => {
     render(<BottomNav currentRole="member" {...baseProps} />);
 
     const labels = getVisibleLinks(ctxFor("member")).map((link) => link.label);
-    expect(labels).toHaveLength(11);
+    expect(labels).toHaveLength(10);
     expect(screen.getAllByRole("link")).toHaveLength(labels.length);
 
     for (const label of labels) {
