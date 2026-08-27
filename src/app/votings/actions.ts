@@ -6,12 +6,14 @@ import {
   addOption,
   castVote,
   closeVoting,
+  deleteVoting,
 } from "@/lib/votings/mutations";
 import type {
   CreateVotingInput,
   AddOptionInput,
   CastVoteInput,
   CloseVotingInput,
+  DeleteVotingInput,
 } from "@/lib/votings/schema";
 import type { MutationResult } from "@/lib/votings/mutations";
 
@@ -57,6 +59,19 @@ export async function closeVotingAction(
   input: CloseVotingInput,
 ): Promise<MutationResult> {
   const result = await closeVoting(input);
+
+  if (result.success) {
+    revalidatePath("/votings");
+    revalidatePath(`/votings/${input.voting_id}`);
+  }
+
+  return result;
+}
+
+export async function deleteVotingAction(
+  input: DeleteVotingInput,
+): Promise<MutationResult> {
+  const result = await deleteVoting(input);
 
   if (result.success) {
     revalidatePath("/votings");
