@@ -16,6 +16,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { hasPermission } from "@/lib/admin/permissions";
 import { listUsersOverview } from "@/lib/admin/queries";
+import { getRoleLabel, getComponentTypeLabel, getWorkgroupLabel } from "@/lib/auth/roles";
 import { UserRoleSelect } from "@/app/admin/users/user-role-select";
 import { MemberComponentTypeSelect } from "@/app/admin/users/member-component-type-select";
 import { MemberWorkgroupSelect } from "@/app/admin/users/member-workgroup-select";
@@ -115,7 +116,7 @@ export default async function AdminUsersPage() {
                             disableSelf={isSelf}
                           />
                         ) : (
-                          <Badge variant="outline">{member.componentType}</Badge>
+                          <Badge variant="outline">{getComponentTypeLabel(member.componentType)}</Badge>
                         )}
                       </TableCell>
                       <TableCell>
@@ -128,7 +129,7 @@ export default async function AdminUsersPage() {
                             }
                           />
                         ) : (
-                          <Badge variant="outline">{member.workgroup}</Badge>
+                          <Badge variant="outline">{getWorkgroupLabel(member.workgroup)}</Badge>
                         )}
                       </TableCell>
                       <TableCell>
@@ -140,7 +141,7 @@ export default async function AdminUsersPage() {
                             disableSelf={isSelf}
                           />
                         ) : (
-                          <Badge variant="secondary">{member.role}</Badge>
+                          <Badge variant="secondary">{getRoleLabel(member.role)}</Badge>
                         )}
                       </TableCell>
                       <TableCell>
