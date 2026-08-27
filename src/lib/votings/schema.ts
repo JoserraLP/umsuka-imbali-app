@@ -79,3 +79,8 @@ export const closeVotingSchema = z.object({
   voting_id: z.string().uuid("voting_id debe ser un UUID válido."),
 });
 export type CloseVotingInput = z.infer<typeof closeVotingSchema>;
+
+export const deleteVotingSchema = z.object({
+  voting_id: z.string().uuid("voting_id debe ser un UUID válido."),
+});
+export type DeleteVotingInput = z.infer<typeof deleteVotingSchema>;

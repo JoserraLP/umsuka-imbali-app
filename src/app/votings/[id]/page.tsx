@@ -10,6 +10,7 @@ import { canViewResults } from "@/lib/votings/logic";
 import { VoteForm } from "@/app/votings/[id]/vote-form";
 import { AddOptionForm } from "@/app/votings/[id]/add-option-form";
 import { CloseVotingButton } from "@/app/votings/[id]/close-voting-button";
+import { DeleteVotingButton } from "@/app/votings/[id]/delete-voting-button";
 import { ResultsChart } from "@/app/votings/[id]/results-chart";
 import { ArrowLeft, CalendarClock, CheckCircle2, Lock, Vote } from "lucide-react";
 
@@ -175,17 +176,27 @@ export default async function VotingDetailPage({ params }: PageProps) {
             still close a voting whose deadline already passed (the close
             action only needs is_open, while addOption re-checks the
             effective state and rejects closed votings itself). */}
-        {canManage && voting.isOpenRaw && (
+        {canManage && (
           <section className="space-y-4 rounded-xl border bg-card p-5 sm:p-8">
             <h2 className="text-sm font-semibold">Gestión</h2>
             <div className="space-y-4">
-              <div className="space-y-1.5">
-                <p className="text-xs font-medium text-muted-foreground">
-                  Añadir opción
+              {voting.isOpenRaw && (
+                <>
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      Añadir opción
+                    </p>
+                    <AddOptionForm votingId={voting.id} />
+                  </div>
+                  <CloseVotingButton votingId={voting.id} />
+                </>
+              )}
+              <div className="pt-2 border-t">
+                <p className="text-xs font-medium text-muted-foreground mb-2">
+                  Zona de peligro
                 </p>
-                <AddOptionForm votingId={voting.id} />
+                <DeleteVotingButton votingId={voting.id} />
               </div>
-              <CloseVotingButton votingId={voting.id} />
             </div>
           </section>
         )}

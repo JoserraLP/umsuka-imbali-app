@@ -9,11 +9,13 @@ import {
   addOptionSchema,
   castVoteSchema,
   closeVotingSchema,
+  deleteVotingSchema,
   MAX_VOTING_OPTIONS,
   type CreateVotingInput,
   type AddOptionInput,
   type CastVoteInput,
   type CloseVotingInput,
+  type DeleteVotingInput,
 } from "@/lib/votings/schema";
 
 export interface MutationResult {
@@ -283,6 +285,40 @@ export async function closeVoting(input: CloseVotingInput): Promise<MutationResu
   const { data, error } = await supabase
     .from("votings")
     .update({ is_open: false })
+    .eq("id", parsed.data.voting_id)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  if (!data) {
+    return { success: false, error: "Votación no encontrada." };
+  }
+
+  return { success: true };
+}
+
+/**
+ * Deletes a voting and its options/votes (cascade). Only management can delete.
+ */
+export async function deleteVoting(input: DeleteVotingInput): Promise<MutationResult> {
+  const parsed = deleteVotingSchema.safeParse(input);
+  if (!parsed.success) {
+    return parseError(parsed.error);
+  }
+
+  const authResult = await requireManagementGuard("Solo la directiva puede eliminar votaciones.");
+  if (!("id" in authResult)) {
+    return authResult;
+  }
+
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("votings")
+    .delete()
     .eq("id", parsed.data.voting_id)
     .select("id")
     .maybeSingle();
