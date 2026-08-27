@@ -25,6 +25,15 @@ export async function getListOrdering(userId: string): Promise<ListOrdering> {
       .maybeSingle();
 
     if (error) {
+      const msg = error.message ?? "";
+      const isMissingTable =
+        msg.includes("Could not find the table") ||
+        msg.includes("schema cache") ||
+        (error as { code?: string }).code === "PGRST205";
+      if (isMissingTable) {
+        console.warn("getListOrdering: tabla user_preferences no encontrada en cache (migración pendiente), usando orden por defecto.");
+        return {};
+      }
       console.error("getListOrdering: error al leer user_preferences:", error.message);
       return {};
     }
