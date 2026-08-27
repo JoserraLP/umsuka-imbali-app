@@ -1122,9 +1122,49 @@ Cuando se crea un ensayo (evento de tipo `rehearsal`), el sistema **inscribe aut
 
 ---
 
-## Sprint 33 — CI/CD y Despliegue Automático
+## Sprint 33 — Posicionamiento de Bailarinas e Instrumentos de Músicos
 
-**Rama:** `feature/sprint-33-cicd`
+**Rama:** `feature/sprint-33-dance-formation-instruments`
+
+### Descripción
+Permitir ordenar a las **bailarinas por posición** en una vista gráfica tipo **asientos de avión**, donde cada fila tiene **6 posiciones** y se pueden asignar/arrastrar personas del grupo de baile a cada asiento. Además, para cada **músico** se podrá asignar un **instrumento del inventario** (Sprint 24) que tocará en el desfile/ensayo. La directiva y el super_admin gestionan la formación; todos los miembros pueden consultarla.
+
+### Pasos
+
+| # | Paso | Detalle |
+|---|---|---|
+| 1 | Migración de BD — formación | Crear `umsuka.dance_formations` (id, name, event_id FK nullable — formación ligada a un evento/desfile o formación base reutilizable, created_by, created_at) y `umsuka.dance_positions` (id, formation_id FK, row_number INT, seat_number INT 1-6, member_id FK nullable — bailarina asignada, created_at). Índice único (formation_id, row_number, seat_number). |
+| 2 | Migración de BD — instrumento por músico | Crear `umsuka.musician_instruments` (id, user_id FK, instrument_id FK → `umsuka.instruments`, formation_id FK nullable, assigned_by, assigned_at) o reutilizar/extender `umsuka.instrument_assignments` del Sprint 24 añadiendo `formation_id`. Un músico solo puede tener un instrumento activo a la vez por formación. |
+| 3 | RLS | Directiva y super_admin pueden crear/editar formaciones y asignar bailarinas/músicos. Todos los miembros autenticados pueden consultar la formación. |
+| 4 | Capa de negocio `lib/formation/` | Schemas Zod (createFormationSchema, assignDancerSchema, assignInstrumentSchema), queries (getFormation, getFormations, getAvailableDancers, getAvailableInstruments), mutations (createFormation, assignDancerToSeat, removeDancerFromSeat, moveDancer, assignInstrumentToMusician, unassignInstrument). Validar que solo miembros con workgroup = `baile`/`dance` se asignen a asientos y solo `música`/`music` a instrumentos. |
+| 5 | Server actions | `createFormationAction`, `assignDancerAction`, `moveDancerAction`, `assignInstrumentAction` — con validación de rol y revalidación. |
+| 6 | UI — Plano de bailarinas (tipo avión) | Componente `DanceFormationGrid` que renderiza filas de 6 asientos (3-3 con pasillo visual en medio, como un avión). Cada asiento muestra avatar/nombre de la bailarina asignada o estado vacío. Drag & drop para mover bailarinas entre asientos, panel lateral con listado de bailarinas sin asignar para arrastrar al plano. Botón guardar y vista de solo lectura para miembros. |
+| 7 | UI — Asignación de instrumentos | Panel `MusicianInstrumentList` con listado de músicos y selector de instrumento del inventario (solo instrumentos disponibles). Indicador de instrumento ya asignado a otro músico. Historial de asignaciones por músico. |
+| 8 | Integración con eventos | Si la formación está ligada a un evento (desfile), mostrar el plano y los instrumentos en la página de detalle del evento. Permitir duplicar una formación base a un nuevo evento. |
+| 9 | Exportar / Imprimir | Botón para exportar el plano a PDF/imagen para llevar al ensayo/desfile. |
+| 10 | Pruebas | Tests unitarios de asignación (no duplicar asiento, no asignar bailarina ya colocada en otro asiento, validar workgroup). Tests de integración RLS: solo directiva/super_admin asignan. Tests visuales del grid con 6 por fila. |
+
+### Dependencias
+- Sprint 2 (Workgroup Roles — workgroup `baile`/`dance` y `música`/`music`)
+- Sprint 17 (Eventos — formación opcionalmente ligada a un evento)
+- Sprint 24 (Instrument Management — inventario de instrumentos)
+- Sprint 19 (Perfiles — listado de miembros por workgroup)
+
+### Criterios de Aceptación
+- Las filas del plano de bailarinas son siempre de **6 personas** y se visualizan gráficamente como asientos de avión (rejilla con pasillo central).
+- Se puede asignar cualquier bailarina del grupo de baile a un asiento vacío mediante drag & drop o selección.
+- Se puede mover una bailarina de un asiento a otro y quitarla de su posición.
+- No se puede asignar la misma bailarina a dos asientos simultáneamente.
+- Solo la directiva y el super_admin pueden editar la formación; el resto solo la consulta.
+- Cada músico puede tener asignado un instrumento del inventario y se valida que el instrumento esté disponible.
+- La formación se puede ligar a un evento y visualizarse en su detalle.
+- El plano se puede exportar/imprimir.
+
+---
+
+## Sprint 34 — CI/CD y Despliegue Automático
+
+**Rama:** `feature/sprint-34-cicd`
 
 ### Descripción
 Configurar GitHub Actions para linting, typecheck, tests, build y despliegue automático a Vercel desde la rama `main`.
@@ -1151,9 +1191,9 @@ Configurar GitHub Actions para linting, typecheck, tests, build y despliegue aut
 
 ---
 
-## Sprint 34 — Hardening Final
+## Sprint 35 — Hardening Final
 
-**Rama:** `feature/sprint-34-hardening`
+**Rama:** `feature/sprint-35-hardening`
 
 ### Descripción
 Auditorías finales de seguridad, rendimiento, accesibilidad y validación general para producción.
@@ -1219,8 +1259,9 @@ Auditorías finales de seguridad, rendimiento, accesibilidad y validación gener
 | Sprint 30 — Legal Guardian (Menores) | `feature/sprint-30-legal-guardian` | Sprint 6, Sprint 19, Sprint 14 (pendiente) |
 | Sprint 31 — Payment Tracking & Material Distribution | `feature/sprint-31-payment-tracking` | Sprint 2, Sprint 21, Sprint 17, Sprint 19 (pendiente) |
 | Sprint 32 — Rehearsal Auto-Enrollment | `feature/sprint-32-rehearsal-auto-enroll` | Sprint 2, Sprint 5, Sprint 17, Sprint 27 (pendiente) |
-| Sprint 33 — CI/CD | `feature/sprint-33-cicd` | — (pendiente) |
-| Sprint 34 — Hardening | `feature/sprint-34-hardening` | Todos los anteriores (pendiente) |
+| Sprint 33 — Dance Formation & Musician Instruments | `feature/sprint-33-dance-formation-instruments` | Sprint 2, Sprint 17, Sprint 24, Sprint 19 (pendiente) |
+| Sprint 34 — CI/CD | `feature/sprint-34-cicd` | — (pendiente) |
+| Sprint 35 — Hardening | `feature/sprint-35-hardening` | Todos los anteriores (pendiente) |
 
 ---
 

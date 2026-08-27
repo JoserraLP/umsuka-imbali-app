@@ -7,6 +7,7 @@
 export type Json = string | number | boolean | null | { [key: string]: Json } | Json[];
 
 export type ComponentType = "music" | "dance" | "member";
+export type FormationType = "dance" | "music";
 export type EventType = "general" | "meeting" | "carnival" | "work_shift" | "rehearsal" | "material_distribution";
 export type RehearsalSession = "morning" | "afternoon";
 export type RehearsalCategory = "music" | "dance";
@@ -1040,6 +1041,146 @@ export interface Database {
           },
         ];
       };
+      dance_formations: {
+        Row: {
+          id: string;
+          name: string;
+          event_id: string | null;
+          created_by: string | null;
+          created_at: string;
+          formation_type: FormationType;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          event_id?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+          formation_type: FormationType;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          event_id?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+          formation_type?: FormationType;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "dance_formations_event_id_fkey";
+            columns: ["event_id"];
+            isOneToOne: false;
+            referencedRelation: "events";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "dance_formations_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      dance_positions: {
+        Row: {
+          id: string;
+          formation_id: string;
+          row_number: number;
+          seat_number: number;
+          member_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          formation_id: string;
+          row_number: number;
+          seat_number: number;
+          member_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          formation_id?: string;
+          row_number?: number;
+          seat_number?: number;
+          member_id?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "dance_positions_formation_id_fkey";
+            columns: ["formation_id"];
+            isOneToOne: false;
+            referencedRelation: "dance_formations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "dance_positions_member_id_fkey";
+            columns: ["member_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      musician_instruments: {
+        Row: {
+          id: string;
+          user_id: string;
+          instrument_id: string;
+          formation_id: string | null;
+          assigned_by: string | null;
+          assigned_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          instrument_id: string;
+          formation_id?: string | null;
+          assigned_by?: string | null;
+          assigned_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          instrument_id?: string;
+          formation_id?: string | null;
+          assigned_by?: string | null;
+          assigned_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "musician_instruments_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "musician_instruments_instrument_id_fkey";
+            columns: ["instrument_id"];
+            isOneToOne: false;
+            referencedRelation: "instruments";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "musician_instruments_formation_id_fkey";
+            columns: ["formation_id"];
+            isOneToOne: false;
+            referencedRelation: "dance_formations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "musician_instruments_assigned_by_fkey";
+            columns: ["assigned_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -1117,6 +1258,10 @@ export interface Database {
         Args: Record<string, never>;
         Returns: boolean;
       };
+      current_user_component_type: {
+        Args: Record<string, never>;
+        Returns: string;
+      };
     };
     Enums: {
       workgroup: Workgroup;
@@ -1130,6 +1275,7 @@ export interface Database {
       transaction_type: TransactionType;
       transaction_category: TransactionCategory;
       payment_type: PaymentType;
+      formation_type: FormationType;
     };
     CompositeTypes: Record<string, never>;
   };

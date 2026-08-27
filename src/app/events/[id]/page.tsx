@@ -37,6 +37,10 @@ import { ShiftManagementPanel } from "@/app/events/[id]/shift-management-panel";
 import { CalendarClock, MapPin } from "lucide-react";
 import type { EventTypeValue, EventWorkgroup } from "@/lib/events/schema";
 import { PaymentEligibility } from "@/app/events/[id]/payment-eligibility";
+import { getFormationByEventId } from "@/lib/formation/queries";
+import { DanceFormationGrid } from "@/components/formation/DanceFormationGrid";
+import { MusicianInstrumentList } from "@/components/formation/MusicianInstrumentList";
+import { getAvailableDancers, getAvailableMusicians, getAvailableInstruments, getMusicianInstruments } from "@/lib/formation/queries";
 
 export const metadata: Metadata = {
   title: "Evento",
@@ -209,6 +213,26 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
       getAllWorkgroupMembers(leadWorkgroup),
       getWorkgroupAttendanceByShift(firstShift.id),
     ]);
+  }
+
+  // Sprint 33: formación ligada a evento (embed readOnly) — todos pueden ver, solo management edita en /formation
+  let formationForEvent: Awaited<ReturnType<typeof getFormationByEventId>> = null;
+  let formationDancers: Awaited<ReturnType<typeof getAvailableDancers>> = [];
+  let formationMusicians: Awaited<ReturnType<typeof getAvailableMusicians>> = [];
+  let formationInstruments: Awaited<ReturnType<typeof getAvailableInstruments>> = [];
+  let formationAssignments: Awaited<ReturnType<typeof getMusicianInstruments>> = [];
+  try {
+    formationForEvent = await getFormationByEventId(event.id);
+    if (formationForEvent) {
+      [formationDancers, formationMusicians, formationInstruments, formationAssignments] = await Promise.all([
+        getAvailableDancers().catch(() => []),
+        getAvailableMusicians().catch(() => []),
+        getAvailableInstruments(formationForEvent.id).catch(() => []),
+        getMusicianInstruments(formationForEvent.id).catch(() => []),
+      ]);
+    }
+  } catch {
+    formationForEvent = null;
   }
 
   return (
@@ -501,6 +525,33 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
         )}
 
         {event.eventType === "material_distribution" && canManage && <PaymentEligibility eventId={event.id} />}
+
+        {formationForEvent && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Formación ligada — {formationForEvent.formationType === "dance" ? "Baile" : "Música"}</CardTitle>
+              <CardDescription>
+                {formationForEvent.formationType === "dance" ? "Plano de bailarinas (6 por fila, juntas)." : "Instrumentos asignados a músicos."}{" "}
+                <Link href={`/formation/${formationForEvent.id}`} className="text-primary hover:underline">
+                  Ver detalle completo
+                </Link>
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {formationForEvent.formationType === "dance" ? (
+                <DanceFormationGrid formation={formationForEvent} availableDancers={formationDancers} isReadOnly />
+              ) : (
+                <MusicianInstrumentList
+                  formationId={formationForEvent.id}
+                  musicians={formationMusicians.map((m) => ({ id: m.id, firstName: m.firstName, lastName: m.lastName }))}
+                  assignments={formationAssignments}
+                  availableInstruments={formationInstruments}
+                  isReadOnly
+                />
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {canHaveAbsences && (
           <Card>

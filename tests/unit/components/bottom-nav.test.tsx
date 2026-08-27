@@ -41,7 +41,7 @@ describe("BottomNav", () => {
     render(<BottomNav currentRole="super_admin" {...baseProps} />);
 
     const labels = getVisibleLinks(ctxFor("super_admin")).map((link) => link.label);
-    expect(labels).toHaveLength(19);
+    expect(labels).toHaveLength(20);
     expect(screen.getAllByRole("link")).toHaveLength(labels.length);
     for (const label of labels) {
       expect(screen.getByText(label)).toBeInTheDocument();
