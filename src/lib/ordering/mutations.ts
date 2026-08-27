@@ -56,7 +56,16 @@ export async function saveListOrdering(
     .maybeSingle();
 
   if (readError) {
-    return { success: false, error: readError.message };
+    const msg = readError.message ?? "";
+    const isMissingTable =
+      msg.includes("Could not find the table") ||
+      msg.includes("schema cache") ||
+      (readError as { code?: string }).code === "PGRST205";
+    if (isMissingTable) {
+      console.warn("saveListOrdering: tabla user_preferences no encontrada, usando documento vacío y continuando.");
+    } else {
+      return { success: false, error: readError.message };
+    }
   }
 
   const current = parseListOrdering(existingRow?.list_ordering);
@@ -76,6 +85,16 @@ export async function saveListOrdering(
     );
 
   if (error) {
+    const msg = error.message ?? "";
+    const isMissingTable =
+      msg.includes("Could not find the table") ||
+      msg.includes("schema cache") ||
+      (error as { code?: string }).code === "PGRST205";
+    if (isMissingTable) {
+      console.warn("saveListOrdering: tabla user_preferences no encontrada en upsert, orden no persistida, usando default.");
+      // No bloquea la UI: el orden se aplica en memoria para esta sesión
+      return { success: true, id: actor.id };
+    }
     return { success: false, error: error.message };
   }
 
