@@ -10,6 +10,18 @@ export function isValidSeat(seat: number): seat is SeatNumber {
   return Number.isInteger(seat) && seat >= 1 && seat <= MAX_SEATS_PER_ROW;
 }
 
+export const FORMATION_TYPES = ["dance", "music"] as const;
+export type FormationType = (typeof FORMATION_TYPES)[number];
+
+export const FORMATION_TYPE_LABELS: Record<FormationType, string> = {
+  dance: "Baile",
+  music: "Música",
+};
+
+export function isFormationType(v: string): v is FormationType {
+  return (FORMATION_TYPES as readonly string[]).includes(v);
+}
+
 // ── Helpers ───────────────────────────────────────────
 
 const uuidMessage = (field: string) => `${field} debe ser un UUID válido.`;
@@ -31,6 +43,9 @@ export const createFormationSchema = z.object({
     .nullable()
     .optional()
     .transform((v) => (v === "" ? null : v ?? null)),
+  formationType: z.enum(FORMATION_TYPES, {
+    errorMap: () => ({ message: "El tipo de formación es obligatorio (baile o música)." }),
+  }),
 });
 
 export type CreateFormationInput = z.infer<typeof createFormationSchema>;

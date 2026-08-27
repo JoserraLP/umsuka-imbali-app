@@ -32,29 +32,37 @@ describe("formation schema — Sprint 33", () => {
 
   describe("createFormationSchema", () => {
     it("accepts valid name", () => {
-      const res = createFormationSchema.safeParse({ name: " Desfile 2026 ", eventId: null });
+      const res = createFormationSchema.safeParse({ name: " Desfile 2026 ", eventId: null, formationType: "dance" });
       expect(res.success).toBe(true);
       if (res.success) expect(res.data.name).toBe("Desfile 2026");
     });
     it("rejects empty name", () => {
-      const res = createFormationSchema.safeParse({ name: "   " });
+      const res = createFormationSchema.safeParse({ name: "   ", formationType: "dance" });
       expect(res.success).toBe(false);
     });
     it("rejects name >200", () => {
-      const res = createFormationSchema.safeParse({ name: "a".repeat(201) });
+      const res = createFormationSchema.safeParse({ name: "a".repeat(201), formationType: "dance" });
       expect(res.success).toBe(false);
     });
     it("accepts valid eventId uuid", () => {
-      const res = createFormationSchema.safeParse({ name: "Test", eventId: UUID });
+      const res = createFormationSchema.safeParse({ name: "Test", eventId: UUID, formationType: "music" });
       expect(res.success).toBe(true);
     });
     it("rejects invalid eventId", () => {
-      const res = createFormationSchema.safeParse({ name: "Test", eventId: "not-uuid" });
+      const res = createFormationSchema.safeParse({ name: "Test", eventId: "not-uuid", formationType: "dance" });
       expect(res.success).toBe(false);
     });
     it("accepts null eventId (formación base)", () => {
-      const res = createFormationSchema.safeParse({ name: "Base", eventId: null });
+      const res = createFormationSchema.safeParse({ name: "Base", eventId: null, formationType: "music" });
       expect(res.success).toBe(true);
+    });
+    it("rejects missing formationType", () => {
+      const res = createFormationSchema.safeParse({ name: "Base", eventId: null } as unknown as Record<string, unknown>);
+      expect(res.success).toBe(false);
+    });
+    it("rejects invalid formationType", () => {
+      const res = createFormationSchema.safeParse({ name: "Base", eventId: null, formationType: "invalid" });
+      expect(res.success).toBe(false);
     });
     it("mensajes en español", () => {
       const res = createFormationSchema.safeParse({ name: "" });

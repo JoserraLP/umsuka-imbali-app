@@ -529,23 +529,26 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
         {formationForEvent && (
           <Card>
             <CardHeader>
-              <CardTitle>Formación ligada</CardTitle>
+              <CardTitle>Formación ligada — {formationForEvent.formationType === "dance" ? "Baile" : "Música"}</CardTitle>
               <CardDescription>
-                Plano de bailarinas e instrumentos asignados a este evento.{" "}
+                {formationForEvent.formationType === "dance" ? "Plano de bailarinas (6 por fila, juntas)." : "Instrumentos asignados a músicos."}{" "}
                 <Link href={`/formation/${formationForEvent.id}`} className="text-primary hover:underline">
                   Ver detalle completo
                 </Link>
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <DanceFormationGrid formation={formationForEvent} availableDancers={formationDancers} isReadOnly />
-              <MusicianInstrumentList
-                formationId={formationForEvent.id}
-                musicians={formationMusicians.map((m) => ({ id: m.id, firstName: m.firstName, lastName: m.lastName }))}
-                assignments={formationAssignments}
-                availableInstruments={formationInstruments}
-                isReadOnly
-              />
+              {formationForEvent.formationType === "dance" ? (
+                <DanceFormationGrid formation={formationForEvent} availableDancers={formationDancers} isReadOnly />
+              ) : (
+                <MusicianInstrumentList
+                  formationId={formationForEvent.id}
+                  musicians={formationMusicians.map((m) => ({ id: m.id, firstName: m.firstName, lastName: m.lastName }))}
+                  assignments={formationAssignments}
+                  availableInstruments={formationInstruments}
+                  isReadOnly
+                />
+              )}
             </CardContent>
           </Card>
         )}

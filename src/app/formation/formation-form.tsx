@@ -14,6 +14,7 @@ interface Props {
 export function FormationForm({ eventOptions = [] }: Props) {
   const [name, setName] = useState("");
   const [eventId, setEventId] = useState("");
+  const [formationType, setFormationType] = useState<"dance" | "music">("dance");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -25,6 +26,7 @@ export function FormationForm({ eventOptions = [] }: Props) {
       const res = await createFormationAction({
         name: name.trim(),
         eventId: eventId || null,
+        formationType,
       });
       if (!res.success) setError(res.error ?? "Error al crear formación.");
       else {
@@ -66,6 +68,20 @@ export function FormationForm({ eventOptions = [] }: Props) {
           </select>
         </div>
       )}
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="formation-type">Tipo de formación</Label>
+        <select
+          id="formation-type"
+          value={formationType}
+          onChange={(e) => setFormationType(e.target.value as "dance" | "music")}
+          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+          required
+        >
+          <option value="dance">Baile — plano de 6 por fila</option>
+          <option value="music">Música — instrumentos</option>
+        </select>
+        <p className="text-xs text-muted-foreground">Solo visible para el componente correspondiente + directiva.</p>
+      </div>
       {error && <p className="text-sm text-destructive">{error}</p>}
       <Button type="submit" disabled={isPending || !name.trim()} size="sm">
         {isPending ? "Creando…" : "Crear formación"}

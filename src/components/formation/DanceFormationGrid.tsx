@@ -24,6 +24,7 @@ export function DanceFormationGrid({ formation, availableDancers, isReadOnly = f
   const [selectedSource, setSelectedSource] = useState<{ row: number; seat: number } | null>(null);
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
+  const [extraRows, setExtraRows] = useState(0);
 
   // Build rows map: Map<row, Map<seat, PositionWithMember>>
   const rowsMap = new Map<number, Map<number, typeof formation.positions[number]>>();
@@ -33,8 +34,8 @@ export function DanceFormationGrid({ formation, availableDancers, isReadOnly = f
     if (!rowsMap.has(pos.rowNumber)) rowsMap.set(pos.rowNumber, new Map());
     rowsMap.get(pos.rowNumber)!.set(pos.seatNumber, pos);
   }
-  // Ensure at least 3 rows visible even if empty
-  const displayRows = Math.max(maxRow, 3);
+  // Ensure at least 3 rows visible + extra rows added by user
+  const displayRows = Math.max(maxRow, 3) + extraRows;
   const rowNumbers = Array.from({ length: displayRows }, (_, i) => i + 1);
 
   // Available dancers not yet assigned
@@ -124,7 +125,7 @@ export function DanceFormationGrid({ formation, availableDancers, isReadOnly = f
         <div>
           <h3 className="font-semibold">Plano — {formation.name}</h3>
           <p className="text-sm text-muted-foreground">
-            Filas de {MAX_SEATS_PER_ROW} asientos (3 + pasillo + 3). {isReadOnly ? "Solo lectura." : "Haz clic para asignar/mover."}
+            Filas de {MAX_SEATS_PER_ROW} juntas. {isReadOnly ? "Solo lectura." : "Haz clic para asignar/mover."}
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={handlePrint} className="print:hidden">
@@ -169,38 +170,13 @@ export function DanceFormationGrid({ formation, availableDancers, isReadOnly = f
         </Card>
       )}
 
-      {/* Grid */}
-      <div className="space-y-3 print:space-y-2" id="formation-grid">
+      {/* Grid - 6 juntas sin pasillo */}
+      <div className="space-y-2 print:space-y-2" id="formation-grid">
         {rowNumbers.map((row) => (
           <div key={row} className="flex items-center justify-center gap-1">
             <span className="w-8 text-center text-xs font-mono text-muted-foreground">F{row}</span>
-            {/* Seats 1-3 */}
             <div className="flex gap-1">
-              {[1, 2, 3].map((seat) => {
-                const pos = rowsMap.get(row)?.get(seat);
-                const isSelectedSource = selectedSource?.row === row && selectedSource?.seat === seat;
-                return (
-                  <SeatCard
-                    key={`${row}-${seat}`}
-                    row={row}
-                    seat={seat}
-                    occupant={pos ?? null}
-                    isSelected={isSelectedSource}
-                    isPending={isPending}
-                    isReadOnly={isReadOnly}
-                    onClick={() => handleSeatClick(row, seat)}
-                    onRemove={() => handleRemove(row, seat)}
-                  />
-                );
-              })}
-            </div>
-            {/* Central aisle */}
-            <div className="flex h-20 w-8 items-center justify-center">
-              <div className="h-full w-px bg-border" aria-hidden />
-            </div>
-            {/* Seats 4-6 */}
-            <div className="flex gap-1">
-              {[4, 5, 6].map((seat) => {
+              {[1, 2, 3, 4, 5, 6].map((seat) => {
                 const pos = rowsMap.get(row)?.get(seat);
                 const isSelectedSource = selectedSource?.row === row && selectedSource?.seat === seat;
                 return (
@@ -221,6 +197,13 @@ export function DanceFormationGrid({ formation, availableDancers, isReadOnly = f
           </div>
         ))}
       </div>
+      {!isReadOnly && (
+        <div className="flex justify-center">
+          <Button variant="outline" size="sm" onClick={() => setExtraRows((c) => c + 1)} disabled={isPending}>
+            + Añadir fila
+          </Button>
+        </div>
+      )}
 
       <style>{`@media print { .print\\:hidden { display: none !important; } #formation-grid { zoom: 0.9; } }`}</style>
 

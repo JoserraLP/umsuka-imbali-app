@@ -7,6 +7,7 @@
 export type Json = string | number | boolean | null | { [key: string]: Json } | Json[];
 
 export type ComponentType = "music" | "dance" | "member";
+export type FormationType = "dance" | "music";
 export type EventType = "general" | "meeting" | "carnival" | "work_shift" | "rehearsal" | "material_distribution";
 export type RehearsalSession = "morning" | "afternoon";
 export type RehearsalCategory = "music" | "dance";
@@ -1047,6 +1048,7 @@ export interface Database {
           event_id: string | null;
           created_by: string | null;
           created_at: string;
+          formation_type: FormationType;
         };
         Insert: {
           id?: string;
@@ -1054,6 +1056,7 @@ export interface Database {
           event_id?: string | null;
           created_by?: string | null;
           created_at?: string;
+          formation_type: FormationType;
         };
         Update: {
           id?: string;
@@ -1061,6 +1064,7 @@ export interface Database {
           event_id?: string | null;
           created_by?: string | null;
           created_at?: string;
+          formation_type?: FormationType;
         };
         Relationships: [
           {
@@ -1254,6 +1258,10 @@ export interface Database {
         Args: Record<string, never>;
         Returns: boolean;
       };
+      current_user_component_type: {
+        Args: Record<string, never>;
+        Returns: string;
+      };
     };
     Enums: {
       workgroup: Workgroup;
@@ -1267,6 +1275,7 @@ export interface Database {
       transaction_type: TransactionType;
       transaction_category: TransactionCategory;
       payment_type: PaymentType;
+      formation_type: FormationType;
     };
     CompositeTypes: Record<string, never>;
   };

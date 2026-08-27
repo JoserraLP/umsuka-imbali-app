@@ -10,6 +10,7 @@ export interface FormationListItem {
   eventId: string | null;
   createdBy: string | null;
   createdAt: string;
+  formationType: "dance" | "music";
 }
 
 export interface PositionWithMember {
@@ -108,7 +109,7 @@ export async function getFormations(): Promise<FormationListItem[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("dance_formations")
-    .select("id, name, event_id, created_by, created_at")
+    .select("id, name, event_id, created_by, created_at, formation_type")
     .order("created_at", { ascending: false });
 
   if (error) throw new Error(`Error al obtener formaciones: ${error.message}`);
@@ -119,6 +120,7 @@ export async function getFormations(): Promise<FormationListItem[]> {
     eventId: row.event_id,
     createdBy: row.created_by,
     createdAt: row.created_at,
+    formationType: row.formation_type as "dance" | "music",
   }));
 }
 
@@ -127,7 +129,7 @@ export async function getFormationById(id: string): Promise<FormationDetail | nu
 
   const { data: formation, error: formationError } = await supabase
     .from("dance_formations")
-    .select("id, name, event_id, created_by, created_at")
+    .select("id, name, event_id, created_by, created_at, formation_type")
     .eq("id", id)
     .maybeSingle();
 
@@ -151,6 +153,7 @@ export async function getFormationById(id: string): Promise<FormationDetail | nu
     eventId: formation.event_id,
     createdBy: formation.created_by,
     createdAt: formation.created_at,
+    formationType: formation.formation_type as "dance" | "music",
     positions: enriched,
   };
 }

@@ -26,11 +26,13 @@ export default async function FormationDetailPage({ params }: Props) {
   const canManage = isManagementRole(profile.role);
   const isReadOnly = !canManage;
 
+  // Fetch only needed data per type to avoid leaking other component data
+  const isDance = formation.formationType === "dance";
   const [dancers, musicians, instruments, assignments] = await Promise.all([
-    getAvailableDancers(),
-    getAvailableMusicians(),
-    getAvailableInstruments(formation.id),
-    getMusicianInstruments(formation.id),
+    isDance ? getAvailableDancers() : Promise.resolve([] as Awaited<ReturnType<typeof getAvailableDancers>>),
+    !isDance ? getAvailableMusicians() : Promise.resolve([] as Awaited<ReturnType<typeof getAvailableMusicians>>),
+    !isDance ? getAvailableInstruments(formation.id) : Promise.resolve([] as Awaited<ReturnType<typeof getAvailableInstruments>>),
+    !isDance ? getMusicianInstruments(formation.id) : Promise.resolve([] as Awaited<ReturnType<typeof getMusicianInstruments>>),
   ]);
 
   return (
@@ -40,30 +42,37 @@ export default async function FormationDetailPage({ params }: Props) {
           <Link href="/formation" className="text-sm text-muted-foreground hover:text-foreground">
             ← Volver a formaciones
           </Link>
-          <h1 className="mt-2 text-xl font-bold tracking-tight">{formation.name}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="mt-2 text-xl font-bold tracking-tight">{formation.name}</h1>
+            <span className={`mt-2 rounded-full px-2 py-0.5 text-xs font-medium ${formation.formationType === "dance" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
+              {formation.formationType === "dance" ? "Baile" : "Música"}
+            </span>
+          </div>
           <p className="text-sm text-muted-foreground">
             {formation.eventId ? `Ligada a evento ${formation.eventId.slice(0, 8)}…` : "Formación base (sin evento)"} ·{" "}
-            {new Date(formation.createdAt).toLocaleDateString("es-ES")}
+            {new Date(formation.createdAt).toLocaleDateString("es-ES")} · {formation.formationType === "dance" ? "6 por fila, juntas" : "Instrumentos por músico"}
           </p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Bailarinas</CardTitle>
-            <CardDescription>Filas de 6 asientos (3 + pasillo central + 3). {isReadOnly ? "Solo lectura." : "Arrastra o haz clic para asignar/mover."}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <DanceFormationGrid formation={formation} availableDancers={dancers} isReadOnly={isReadOnly} />
-          </CardContent>
-        </Card>
-
-        <MusicianInstrumentList
-          formationId={formation.id}
-          musicians={musicians.map((m) => ({ id: m.id, firstName: m.firstName, lastName: m.lastName }))}
-          assignments={assignments}
-          availableInstruments={instruments}
-          isReadOnly={isReadOnly}
-        />
+        {isDance ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">Bailarinas — 6 por fila</CardTitle>
+              <CardDescription>Todas juntas sin pasillo. {isReadOnly ? "Solo lectura." : "Haz clic para asignar/mover. Añade filas con el botón."}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DanceFormationGrid formation={formation} availableDancers={dancers} isReadOnly={isReadOnly} />
+            </CardContent>
+          </Card>
+        ) : (
+          <MusicianInstrumentList
+            formationId={formation.id}
+            musicians={musicians.map((m) => ({ id: m.id, firstName: m.firstName, lastName: m.lastName }))}
+            assignments={assignments}
+            availableInstruments={instruments}
+            isReadOnly={isReadOnly}
+          />
+        )}
       </div>
     </AppShell>
   );

@@ -26,8 +26,11 @@ export default async function FormationPage() {
         <div className="border-b border-border pb-4">
           <h1 className="text-xl font-bold tracking-tight">Formaciones</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Plano de bailarinas (6 por fila) e instrumentos de músicos. {canManage ? "Gestiona las formaciones." : "Consulta las formaciones."}
+            {canManage ? "Gestiona las formaciones por tipo (baile/música)." : "Consulta las formaciones de tu componente."} {profile.componentType === "dance" ? "Ves solo baile." : profile.componentType === "music" ? "Ves solo música." : ""}
           </p>
+          {!canManage && profile.componentType === "member" && (
+            <p className="mt-2 text-xs text-amber-600">Tu componente es “member”: no verás formaciones hasta que directiva te asigne a baile o música.</p>
+          )}
         </div>
 
         {canManage && (
@@ -58,6 +61,9 @@ export default async function FormationPage() {
                         </Link>
                       </CardTitle>
                       <div className="flex items-center gap-2">
+                        <Badge variant={f.formationType === "dance" ? "default" : "secondary"} className="text-xs">
+                          {f.formationType === "dance" ? "Baile" : "Música"}
+                        </Badge>
                         {f.eventId && <Badge variant="outline">Evento</Badge>}
                         <Badge variant="secondary">{new Date(f.createdAt).toLocaleDateString("es-ES")}</Badge>
                       </div>

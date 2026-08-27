@@ -66,6 +66,7 @@ export async function createFormation(input: CreateFormationInput): Promise<Muta
       name: parsed.data.name,
       event_id: parsed.data.eventId ?? null,
       created_by: authResult.id,
+      formation_type: parsed.data.formationType,
     })
     .select("id")
     .single();
@@ -91,6 +92,18 @@ export async function assignDancerToSeat(input: AssignDancerInput): Promise<Muta
   if (!("id" in authResult)) return authResult;
 
   const supabase = await createClient();
+
+  // Validate formation is dance type
+  const { data: formation, error: formationError } = await supabase
+    .from("dance_formations")
+    .select("formation_type")
+    .eq("id", parsed.data.formationId)
+    .maybeSingle();
+  if (formationError) return { success: false, error: formationError.message };
+  if (!formation) return { success: false, error: "Formación no encontrada." };
+  if ((formation.formation_type as string) !== "dance") {
+    return { success: false, error: "Esta formación es de música; no se pueden asignar bailarinas." };
+  }
 
   // Validate component_type = dance
   const { data: member, error: memberError } = await supabase
@@ -188,6 +201,18 @@ export async function removeDancerFromSeat(input: RemoveDancerInput): Promise<Mu
 
   const supabase = await createClient();
 
+  // Validate formation is dance
+  const { data: formation, error: formationError } = await supabase
+    .from("dance_formations")
+    .select("formation_type")
+    .eq("id", parsed.data.formationId)
+    .maybeSingle();
+  if (formationError) return { success: false, error: formationError.message };
+  if (!formation) return { success: false, error: "Formación no encontrada." };
+  if ((formation.formation_type as string) !== "dance") {
+    return { success: false, error: "Esta formación es de música; no contiene posiciones de baile." };
+  }
+
   const { data, error } = await supabase
     .from("dance_positions")
     .delete()
@@ -219,6 +244,18 @@ export async function moveDancer(input: MoveDancerInput): Promise<MutationResult
   }
 
   const supabase = await createClient();
+
+  // Validate formation is dance
+  const { data: formation, error: formationError } = await supabase
+    .from("dance_formations")
+    .select("formation_type")
+    .eq("id", parsed.data.formationId)
+    .maybeSingle();
+  if (formationError) return { success: false, error: formationError.message };
+  if (!formation) return { success: false, error: "Formación no encontrada." };
+  if ((formation.formation_type as string) !== "dance") {
+    return { success: false, error: "Esta formación es de música; no se pueden mover bailarinas." };
+  }
 
   // Fetch source seat (must exist with a member)
   const { data: source, error: sourceError } = await supabase
@@ -332,6 +369,21 @@ export async function assignInstrumentToMusician(input: AssignInstrumentInput): 
 
   const supabase = await createClient();
 
+  // If linked to formation, validate formation is music type
+  const _formationId = parsed.data.formationId ?? null;
+  if (_formationId) {
+    const { data: formation, error: formationError } = await supabase
+      .from("dance_formations")
+      .select("formation_type")
+      .eq("id", _formationId)
+      .maybeSingle();
+    if (formationError) return { success: false, error: formationError.message };
+    if (!formation) return { success: false, error: "Formación no encontrada." };
+    if ((formation.formation_type as string) !== "music") {
+      return { success: false, error: "Esta formación es de baile; no se pueden asignar instrumentos." };
+    }
+  }
+
   // Validate musician component_type = music
   const { data: musician, error: musicianError } = await supabase
     .from("profiles")
@@ -359,7 +411,7 @@ export async function assignInstrumentToMusician(input: AssignInstrumentInput): 
   if (!instrument) return { success: false, error: "Instrumento no encontrado." };
   if (!instrument.is_active) return { success: false, error: "No se puede asignar un instrumento inactivo." };
 
-  const formationId = parsed.data.formationId ?? null;
+  const formationId = _formationId;
 
   // Workaround: .is() with null handling — if formationId is null, use is, else eq
   let existingQuery = supabase.from("musician_instruments").select("id, instrument_id").eq("user_id", parsed.data.userId);
@@ -452,7 +504,7 @@ export async function duplicateFormation(formationId: string): Promise<MutationR
 
   const { data: original, error: originalError } = await supabase
     .from("dance_formations")
-    .select("id, name, event_id")
+    .select("id, name, event_id, formation_type")
     .eq("id", formationId)
     .maybeSingle();
 
@@ -467,6 +519,7 @@ export async function duplicateFormation(formationId: string): Promise<MutationR
       name: newName,
       event_id: null,
       created_by: authResult.id,
+      formation_type: original.formation_type,
     })
     .select("id")
     .single();
