@@ -8,6 +8,7 @@ import { isManagementRole } from "@/lib/auth/roles";
 import { getFormationById, getAvailableDancers, getAvailableMusicians, getAvailableInstruments, getMusicianInstruments } from "@/lib/formation/queries";
 import { DanceFormationGrid } from "@/components/formation/DanceFormationGrid";
 import { MusicianInstrumentList } from "@/components/formation/MusicianInstrumentList";
+import { DeleteFormationButton } from "@/app/formation/delete-formation-button";
 
 export const metadata: Metadata = { title: "Formación" };
 
@@ -42,11 +43,16 @@ export default async function FormationDetailPage({ params }: Props) {
           <Link href="/formation" className="text-sm text-muted-foreground hover:text-foreground">
             ← Volver a formaciones
           </Link>
-          <div className="flex items-center gap-2">
-            <h1 className="mt-2 text-xl font-bold tracking-tight">{formation.name}</h1>
-            <span className={`mt-2 rounded-full px-2 py-0.5 text-xs font-medium ${formation.formationType === "dance" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
-              {formation.formationType === "dance" ? "Baile" : "Música"}
-            </span>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <h1 className="mt-2 text-xl font-bold tracking-tight">{formation.name}</h1>
+              <span className={`mt-2 rounded-full px-2 py-0.5 text-xs font-medium ${formation.formationType === "dance" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
+                {formation.formationType === "dance" ? "Baile" : "Música"}
+              </span>
+            </div>
+            {!isReadOnly && (
+              <DeleteFormationButton formationId={formation.id} formationName={formation.name} variant="detail" />
+            )}
           </div>
           <p className="text-sm text-muted-foreground">
             {formation.eventId ? `Ligada a evento ${formation.eventId.slice(0, 8)}…` : "Formación base (sin evento)"} ·{" "}

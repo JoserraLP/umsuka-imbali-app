@@ -6,6 +6,7 @@ import { isManagementRole } from "@/lib/auth/roles";
 import type { AuthenticatedProfile } from "@/types/auth";
 import {
   createFormationSchema,
+  deleteFormationSchema,
   assignDancerSchema,
   removeDancerSchema,
   moveDancerSchema,
@@ -14,6 +15,7 @@ import {
 } from "@/lib/formation/schema";
 import type {
   CreateFormationInput,
+  DeleteFormationInput,
   AssignDancerInput,
   RemoveDancerInput,
   MoveDancerInput,
@@ -32,6 +34,7 @@ const FOREIGN_KEY_VIOLATION = "23503";
 
 // ── Authorization helpers ─────────────────────────────
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function requireManagementGuard(
   errorMessage = "Solo la directiva puede gestionar formaciones.",
 ): Promise<AuthenticatedProfile | MutationResult> {
@@ -607,4 +610,32 @@ export async function duplicateFormation(formationId: string): Promise<MutationR
   }
 
   return { success: true, id: newId };
+}
+
+export async function deleteFormation(input: DeleteFormationInput): Promise<MutationResult> {
+  const parsed = deleteFormationSchema.safeParse(input);
+  if (!parsed.success) return parseError(parsed.error);
+
+  const supabase = await createClient();
+
+  const { data: formation, error: fetchError } = await supabase
+    .from("dance_formations")
+    .select("formation_type")
+    .eq("id", parsed.data.formationId)
+    .maybeSingle();
+
+  if (fetchError) return { success: false, error: fetchError.message };
+  if (!formation) return { success: false, error: "Formación no encontrada." };
+
+  const authResult = await requireFormationManagerGuard(
+    formation.formation_type as string,
+    "Solo la directiva o el responsable del componente puede eliminar esta formación.",
+  );
+  if (!("id" in authResult)) return authResult;
+
+  const { error } = await supabase.from("dance_formations").delete().eq("id", parsed.data.formationId);
+
+  if (error) return { success: false, error: error.message };
+
+  return { success: true };
 }

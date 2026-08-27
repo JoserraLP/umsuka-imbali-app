@@ -50,6 +50,12 @@ export const createFormationSchema = z.object({
 
 export type CreateFormationInput = z.infer<typeof createFormationSchema>;
 
+export const deleteFormationSchema = z.object({
+  formationId: z.string().uuid(uuidMessage("La formación")),
+});
+
+export type DeleteFormationInput = z.infer<typeof deleteFormationSchema>;
+
 // ── Dancer assignment ─────────────────────────────────
 
 export const assignDancerSchema = z.object({

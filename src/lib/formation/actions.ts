@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import {
   createFormation,
+  deleteFormation,
   assignDancerToSeat,
   removeDancerFromSeat,
   moveDancer,
@@ -12,6 +13,7 @@ import {
 } from "@/lib/formation/mutations";
 import type {
   CreateFormationInput,
+  DeleteFormationInput,
   AssignDancerInput,
   RemoveDancerInput,
   MoveDancerInput,
@@ -85,6 +87,16 @@ export async function duplicateFormationAction(formationId: string): Promise<Mut
   if (result.success) {
     revalidatePath("/formation");
     revalidatePath("/events");
+  }
+  return result;
+}
+
+export async function deleteFormationAction(input: DeleteFormationInput): Promise<MutationResult> {
+  const result = await deleteFormation(input);
+  if (result.success) {
+    revalidatePath("/formation");
+    revalidatePath("/events");
+    revalidatePath(`/formation/${input.formationId}`);
   }
   return result;
 }

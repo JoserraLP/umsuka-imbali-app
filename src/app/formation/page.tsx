@@ -9,6 +9,7 @@ import { isManagementRole } from "@/lib/auth/roles";
 import { getFormations } from "@/lib/formation/queries";
 import { FormationForm } from "@/app/formation/formation-form";
 import { DuplicateButton } from "@/app/formation/duplicate-button";
+import { DeleteFormationButton } from "@/app/formation/delete-formation-button";
 
 export const metadata: Metadata = { title: "Formaciones" };
 
@@ -70,11 +71,12 @@ export default async function FormationPage() {
                     </div>
                     <CardDescription className="text-xs">ID: {f.id.slice(0, 8)}…</CardDescription>
                   </CardHeader>
-                  <CardContent className="flex items-center gap-2">
+                  <CardContent className="flex items-center gap-2 flex-wrap">
                     <Link href={`/formation/${f.id}`} className="text-sm text-primary hover:underline">
                       Ver detalle
                     </Link>
                     {canManage && <DuplicateButton formationId={f.id} />}
+                    {canManage && <DeleteFormationButton formationId={f.id} formationName={f.name} variant="list" />}
                   </CardContent>
                 </Card>
               ))}
