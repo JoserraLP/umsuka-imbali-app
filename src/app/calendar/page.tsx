@@ -28,6 +28,7 @@ const EVENT_TYPE_LABELS: Record<EventTypeValue, string> = {
   work_shift: "Turno de trabajo",
   rehearsal: "Ensayo",
   material_distribution: "Reparto de material",
+  reunion: "Reunión con acta",
 };
 
 const EVENT_TYPE_DOT_STYLES: Record<EventTypeValue, string> = {
@@ -37,6 +38,7 @@ const EVENT_TYPE_DOT_STYLES: Record<EventTypeValue, string> = {
   work_shift: "bg-emerald-500",
   rehearsal: "bg-violet-500",
   material_distribution: "bg-orange-500",
+  reunion: "bg-teal-500",
 };
 
 const EVENT_TYPE_CHIP_STYLES: Record<EventTypeValue, string> = {
@@ -46,6 +48,7 @@ const EVENT_TYPE_CHIP_STYLES: Record<EventTypeValue, string> = {
   work_shift: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
   rehearsal: "bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300",
   material_distribution: "bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300",
+  reunion: "bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300",
 };
 
 interface CalendarPageProps {

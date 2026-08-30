@@ -18,6 +18,7 @@ import {
   Shield,
   CreditCard,
   ClipboardList,
+  FileText,
   type LucideIcon,
 } from "lucide-react";
 import type { AppRole, ComponentType, Workgroup } from "@/types/database.types";
@@ -76,6 +77,7 @@ export const NAV_LINKS: NavLink[] = [
     icon: CreditCard,
     showFor: (ctx) => isManagementRole(ctx.role),
   },
+  { href: "/actas", label: "Actas", icon: FileText },
   { href: "/profile", label: "Mi perfil", icon: User },
   { href: "/profile/stats", label: "Mis estadísticas", icon: Clock },
   { href: "/notifications", label: "Notificaciones", icon: Bell },

@@ -13,6 +13,8 @@ import { ProfileForm } from "@/app/profile/profile-form";
 import { ChangePasswordForm } from "@/app/profile/change-password-form";
 import { WorkgroupSection } from "@/app/profile/workgroup-section";
 import { PaymentStatusCard } from "@/app/profile/payment-status-card";
+import { getMemberSummary } from "@/lib/summary/queries";
+import { MemberSummaryCards } from "@/components/summary/MemberSummaryCards";
 
 export const metadata: Metadata = {
   title: "Mi perfil",
@@ -66,9 +68,10 @@ export default async function ProfilePage() {
   const joinedAtLabel = formatDate(profile.joinedAt);
   const createdAtLabel = formatDate(profile.createdAt);
 
-  const [minorWithGuardian, minorsInCharge] = await Promise.all([
+  const [minorWithGuardian, minorsInCharge, memberSummary] = await Promise.all([
     getMinorWithGuardian(profile.id).catch(() => null),
     getMinorsByGuardian(profile.id).catch(() => []),
+    getMemberSummary(profile.id).catch(() => null),
   ]);
 
   const isMinor = minorWithGuardian?.profile.isMinor ?? false;
@@ -296,6 +299,18 @@ export default async function ProfilePage() {
         </Card>
 
         <PaymentStatusCard userId={profile.id} />
+
+        {memberSummary && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Resumen</CardTitle>
+              <CardDescription>Tu estado de pago, posición de baile e instrumento asignado.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <MemberSummaryCards summary={memberSummary} />
+            </CardContent>
+          </Card>
+        )}
 
         {profile.authMethod === "email_alias" && (
           <Card>

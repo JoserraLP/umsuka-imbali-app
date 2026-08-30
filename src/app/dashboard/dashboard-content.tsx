@@ -6,18 +6,21 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { NotificationsWidget } from "@/components/dashboard/notifications-widget";
 import { SectionHeader } from "@/components/dashboard/section-header";
-import { Instagram, CalendarDays, Newspaper, ExternalLink, Users, Image as ImageIcon, Heart } from "lucide-react";
+import { Instagram, CalendarDays, Newspaper, ExternalLink, Users, Image as ImageIcon, Heart, LayoutDashboard } from "lucide-react";
 import { getRoleLabel, getComponentTypeLabel } from "@/lib/auth/roles";
 import type { AuthenticatedProfile } from "@/types/auth";
 import type { InstagramProfile } from "@/lib/social/instagram";
 import type { EventListItem } from "@/lib/events/queries";
 import type { NewsItem } from "@/lib/news/queries";
+import { MemberSummaryCards } from "@/components/summary/MemberSummaryCards";
+import type { MemberSummary } from "@/lib/summary/queries";
 
 interface DashboardContentProps {
   profile: AuthenticatedProfile;
   instagramProfile: InstagramProfile;
   events: EventListItem[];
   latestNews: NewsItem[];
+  memberSummary: MemberSummary | null;
   signOutAction: () => void;
 }
 
@@ -28,6 +31,8 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   carnival: "Carnaval",
   work_shift: "Turno",
   rehearsal: "Ensayo",
+  material_distribution: "Reparto",
+  reunion: "Reunión con acta",
 };
 
 function formatEventDate(dateStr: string): string {
@@ -61,7 +66,7 @@ function compactNumber(n: number): string {
   return String(n);
 }
 
-export function DashboardContent({ profile, instagramProfile, events, latestNews, signOutAction }: DashboardContentProps) {
+export function DashboardContent({ profile, instagramProfile, events, latestNews, memberSummary, signOutAction }: DashboardContentProps) {
   return (
     <div className="animate-fade-in space-y-6">
       {/* ── Welcome Banner ──────────────────────────────── */}
@@ -77,6 +82,16 @@ export function DashboardContent({ profile, instagramProfile, events, latestNews
           <Badge variant="outline">{getComponentTypeLabel(profile.componentType)}</Badge>
         </div>
       </div>
+
+      {/* ── Mi Resumen (Sprint 34) ──────────────────────── */}
+      {memberSummary && (
+        <section className="rounded-xl border bg-card p-5">
+          <SectionHeader title="Mi resumen" icon={LayoutDashboard} />
+          <div className="mt-3">
+            <MemberSummaryCards summary={memberSummary} compact />
+          </div>
+        </section>
+      )}
 
       {/* 1 ── Notificaciones ────────────────────────────── */}
       <section className="rounded-xl border bg-card p-5">

@@ -8,7 +8,7 @@ export type Json = string | number | boolean | null | { [key: string]: Json } | 
 
 export type ComponentType = "music" | "dance" | "member";
 export type FormationType = "dance" | "music";
-export type EventType = "general" | "meeting" | "carnival" | "work_shift" | "rehearsal" | "material_distribution";
+export type EventType = "general" | "meeting" | "carnival" | "work_shift" | "rehearsal" | "material_distribution" | "reunion";
 export type RehearsalSession = "morning" | "afternoon";
 export type RehearsalCategory = "music" | "dance";
 export type PaymentType = "monthly" | "yearly";
@@ -1175,6 +1175,57 @@ export interface Database {
           {
             foreignKeyName: "musician_instruments_assigned_by_fkey";
             columns: ["assigned_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      meeting_minutes: {
+        Row: {
+          id: string;
+          event_id: string;
+          file_path: string;
+          file_name: string;
+          file_size: number;
+          mime_type: string;
+          uploaded_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          file_path: string;
+          file_name: string;
+          file_size: number;
+          mime_type: string;
+          uploaded_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          event_id?: string;
+          file_path?: string;
+          file_name?: string;
+          file_size?: number;
+          mime_type?: string;
+          uploaded_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "meeting_minutes_event_id_fkey";
+            columns: ["event_id"];
+            isOneToOne: true;
+            referencedRelation: "events";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "meeting_minutes_uploaded_by_fkey";
+            columns: ["uploaded_by"];
             isOneToOne: false;
             referencedRelation: "profiles";
             referencedColumns: ["id"];

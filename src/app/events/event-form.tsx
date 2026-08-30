@@ -27,6 +27,7 @@ const EVENT_TYPE_LABELS: Record<EventTypeValue, string> = {
   work_shift: "Asistencia a turno de trabajo",
   rehearsal: "Ensayo",
   material_distribution: "Reparto de material",
+  reunion: "Reunión con acta",
 };
 
 const EVENT_WORKGROUP_LABELS: Record<EventWorkgroup, string> = {

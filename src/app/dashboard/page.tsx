@@ -6,6 +6,7 @@ import { isManagementRole } from "@/lib/auth/roles";
 import { getInstagramProfile } from "@/lib/social/instagram";
 import { listEvents } from "@/lib/events/queries";
 import { getNewsFeed } from "@/lib/news/queries";
+import { getMemberSummary } from "@/lib/summary/queries";
 import { DashboardContent } from "@/app/dashboard/dashboard-content";
 import { signOutAction } from "@/app/dashboard/actions";
 
@@ -20,8 +21,8 @@ export default async function DashboardPage() {
     redirect("/auth/login");
   }
 
-  // Fetch Instagram profile, upcoming events, and latest news in parallel
-  const [igProfile, events, allNews] = await Promise.all([
+  // Fetch Instagram profile, upcoming events, latest news and member summary in parallel
+  const [igProfile, events, allNews, memberSummary] = await Promise.all([
     getInstagramProfile(),
     listEvents(
       { from: new Date().toISOString() },
@@ -32,6 +33,7 @@ export default async function DashboardPage() {
       },
     ),
     getNewsFeed(false), // only published news for the dashboard
+    getMemberSummary(profile.id).catch(() => null),
   ]);
 
   const latestNews = allNews.slice(0, 2);
@@ -43,6 +45,7 @@ export default async function DashboardPage() {
         instagramProfile={igProfile}
         events={events}
         latestNews={latestNews}
+        memberSummary={memberSummary}
         signOutAction={signOutAction}
       />
     </AppShell>

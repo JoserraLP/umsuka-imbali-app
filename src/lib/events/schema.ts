@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { AUDIENCE_FORM_FIELDS, audienceCrossFieldIssueFn } from "@/lib/events/audience-shared";
 
-export const EVENT_TYPES = ["general", "meeting", "carnival", "work_shift", "rehearsal", "material_distribution"] as const;
+export const EVENT_TYPES = ["general", "meeting", "carnival", "work_shift", "rehearsal", "material_distribution", "reunion"] as const;
 export type EventTypeValue = (typeof EVENT_TYPES)[number];
 
 export const REHEARSAL_CATEGORIES = ["music", "dance"] as const;
@@ -26,7 +26,7 @@ const EVENT_FORM_FIELDS = {
     .transform((value) => (value ? value : null)),
   eventType: z.enum(EVENT_TYPES, {
     errorMap: () => ({
-      message: "El tipo de evento debe ser general, reunión, carnaval, turno de trabajo, ensayo o reparto de material.",
+      message: "El tipo de evento debe ser general, reunión, carnaval, turno de trabajo, ensayo, reparto de material o reunión con acta.",
     }),
   }),
   eventDate: z

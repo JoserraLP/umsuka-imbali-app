@@ -1162,9 +1162,56 @@ Permitir ordenar a las **bailarinas por posición** en una vista gráfica tipo *
 
 ---
 
-## Sprint 34 — CI/CD y Despliegue Automático
+## Sprint 34 — Actas de Reuniones y Resumen en Dashboard/Perfil
 
-**Rama:** `feature/sprint-34-cicd`
+**Rama:** `feature/sprint-34-meeting-minutes-summary`
+
+### Descripción
+Dos bloques en un mismo sprint: **(A) Actas de reuniones** — cada acta **siempre está asociada a un evento de tipo `reunión`** y es un **fichero** (PDF/doc). La directiva y el super_admin suben el fichero del acta al evento; la descarga se deja fuera de alcance por ahora. **(B) Resumen visibles para todos** — mostrar en el **dashboard** y en el **perfil** de cada miembro un resumen compacto con su **estado de pago** (Sprint 31), **posición de baile** (Sprint 33) e **instrumento asignado** (Sprint 24/33) de un vistazo.
+
+### Pasos
+
+| # | Paso | Detalle |
+|---|---|---|
+| 1 | Migración de BD — event_type `reunion` | Añadir `'reunion'` como valor válido en `umsuka.events.event_type` (si no existe). Solo los eventos de tipo `reunion` pueden tener acta. |
+| 2 | Migración de BD — actas como fichero | Crear `umsuka.meeting_minutes` (id, event_id FK UNIQUE → `umsuka.events` con CHECK `event_type = 'reunion'`, file_path text — ruta en Storage, file_name text, file_size INT, mime_type text, uploaded_by FK, created_at, updated_at). Un evento de reunión solo tiene un acta (uno-a-uno). Alternativa: columna `acta_file_path` directa en `events` si se prefiere sin tabla separada. |
+| 3 | Supabase Storage | Crear bucket `meeting-minutes` (privado). Políticas Storage: solo directiva/super_admin pueden subir/reemplazar/eliminar; lectura para todos los miembros autenticados (sin descarga por ahora). Limitar a PDF/DOC/DOCX, máx. 10 MB. |
+| 4 | RLS — actas | Directiva y super_admin pueden insertar/actualizar/eliminar el acta de un evento de reunión. Lectura para todos los miembros autenticados. Validar en BD que el `event_id` apunte a un evento tipo `reunion`. |
+| 5 | Capa de negocio `lib/meetings/` | Schemas Zod (uploadMinutesSchema — valida event_id tipo reunion + fichero), queries (getMinutesByEvent, getAllMinutes — listado de reuniones con/sin acta), mutations (uploadMinutes, replaceMinutes, deleteMinutes). |
+| 6 | Server actions — actas | `uploadMeetingMinutesAction(eventId, file)`, `replaceMeetingMinutesAction`, `deleteMeetingMinutesAction` — validan rol directiva/super_admin, que el evento sea tipo `reunion`, suben al bucket y guardan `meeting_minutes`. Sin acción de descarga por ahora. |
+| 7 | UI — en el evento de reunión | En `/events/[id]` cuando `event_type = reunion`: sección "Acta" con estado (sin acta / acta disponible), uploader con drag & drop solo visible para directiva/super_admin y opción de reemplazar/eliminar. Mostrar nombre del fichero, tamaño y fecha de subida. Sin botón de descarga por ahora. |
+| 8 | UI — listado de actas | Página `/actas` que lista **todos los eventos de tipo `reunion`** cronológicamente, con indicador de si tienen acta. Filtros por fecha y búsqueda por título del evento. Paginación. Sin descarga por ahora. |
+| 9 | Capa de negocio `lib/summary/` | Función `getMemberSummary(userId)` que agrega en una sola query: estado de pago (`member_payments` — último mes pagado / al día o pendiente), posición de baile (`dance_positions` — fila/asiento o "sin asignar"), instrumento (`musician_instruments`/`instrument_assignments` — nombre del instrumento o "sin asignar"). |
+| 10 | UI — Dashboard | Añadir sección "Mi resumen" en el dashboard (`/dashboard`) visible para **todos los usuarios**: 3 tarjetas/badges compactos — 💰 Pago (ej. "Al día hasta 03/2026" en verde / "Pendiente febrero" en rojo), 💃 Posición (ej. "Fila 2 — Asiento 4" o "Sin asignar"), 🎸 Instrumento (ej. "Bombo" o "Sin asignar"). Cada tarjeta enlaza a su detalle (pagos, formación, instrumentos). |
+| 11 | UI — Perfil | En `/profile/[id]` y en el perfil propio, añadir bloque "Resumen" con la misma info pero ampliada (historial breve de pagos, mini-plano con posición resaltada, instrumento con foto). Visible para el propio usuario y para directiva/super_admin; opcional: visible para cualquier miembro autenticado. |
+| 12 | Permisos y privacidad | El resumen de pago solo muestra estado genérico (al día/pendiente) a otros miembros, no importes detallados — detalle completo solo para el propio usuario, directiva y super_admin. Posición e instrumento son públicos entre miembros. |
+| 13 | Pruebas | Tests de que solo eventos tipo `reunion` aceptan acta (rechazo si otro tipo). Tests de subida y de RLS: solo directiva sube. Tests unitarios de `getMemberSummary` con combinaciones (sin pago, con posición, sin instrumento, etc.). Tests de integración UI dashboard/perfil. Sin tests de descarga por ahora. |
+
+### Dependencias
+- Sprint 2/21 (Roles — directiva y super_admin)
+- Sprint 17 (Eventos — tipo `reunion`)
+- Sprint 16 (Storage — bucket y políticas)
+- Sprint 19 (Perfiles — dashboard y perfil)
+- Sprint 31 (Pagos — `member_payments`)
+- Sprint 33 (Formación — `dance_positions`)
+- Sprint 24 (Instrumentos — `musician_instruments`)
+
+### Criterios de Aceptación
+- Cada acta **siempre está asociada a un evento de tipo `reunion`** (no existe acta huérfana; FK con CHECK).
+- El acta es un **fichero** (PDF/DOC/DOCX) subido a Supabase Storage (`meeting-minutes`) — **sin descarga por ahora**.
+- Solo la directiva y el super_admin pueden subir, reemplazar o eliminar el acta de una reunión.
+- Todos los miembros autenticados pueden ver el listado de reuniones con indicación de si tienen acta (sin descarga en esta fase).
+- Un evento de reunión solo puede tener un acta a la vez (reemplazar implica sobrescribir).
+- En el **dashboard** cada usuario ve su resumen de pago, posición de baile e instrumento asignado de un vistazo.
+- En el **perfil** (propio y ajeno según permisos) se muestra el mismo resumen con algo más de detalle.
+- Si un miembro no tiene pago/posición/instrumento, se muestra "Sin asignar" / "Pendiente" en lugar de error.
+- Solo directiva/super_admin ven el detalle económico completo de otros miembros.
+
+---
+
+## Sprint 35 — CI/CD y Despliegue Automático
+
+**Rama:** `feature/sprint-35-cicd`
 
 ### Descripción
 Configurar GitHub Actions para linting, typecheck, tests, build y despliegue automático a Vercel desde la rama `main`.
@@ -1191,9 +1238,9 @@ Configurar GitHub Actions para linting, typecheck, tests, build y despliegue aut
 
 ---
 
-## Sprint 35 — Hardening Final
+## Sprint 36 — Hardening Final
 
-**Rama:** `feature/sprint-35-hardening`
+**Rama:** `feature/sprint-36-hardening`
 
 ### Descripción
 Auditorías finales de seguridad, rendimiento, accesibilidad y validación general para producción.
@@ -1260,8 +1307,9 @@ Auditorías finales de seguridad, rendimiento, accesibilidad y validación gener
 | Sprint 31 — Payment Tracking & Material Distribution | `feature/sprint-31-payment-tracking` | Sprint 2, Sprint 21, Sprint 17, Sprint 19 (pendiente) |
 | Sprint 32 — Rehearsal Auto-Enrollment | `feature/sprint-32-rehearsal-auto-enroll` | Sprint 2, Sprint 5, Sprint 17, Sprint 27 (pendiente) |
 | Sprint 33 — Dance Formation & Musician Instruments | `feature/sprint-33-dance-formation-instruments` | Sprint 2, Sprint 17, Sprint 24, Sprint 19 (pendiente) |
-| Sprint 34 — CI/CD | `feature/sprint-34-cicd` | — (pendiente) |
-| Sprint 35 — Hardening | `feature/sprint-35-hardening` | Todos los anteriores (pendiente) |
+| Sprint 34 — Meeting Minutes & Summary (Dashboard/Perfil) | `feature/sprint-34-meeting-minutes-summary` | Sprint 2, Sprint 21, Sprint 19, Sprint 31, Sprint 33, Sprint 24 (pendiente) |
+| Sprint 35 — CI/CD | `feature/sprint-35-cicd` | — (pendiente) |
+| Sprint 36 — Hardening | `feature/sprint-36-hardening` | Todos los anteriores (pendiente) |
 
 ---
 
