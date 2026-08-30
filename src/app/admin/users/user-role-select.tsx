@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Select } from "@/components/ui/select";
-import { APP_ROLES } from "@/lib/auth/roles";
+import { APP_ROLES, getRoleLabel } from "@/lib/auth/roles";
 import { updateMemberRoleAction } from "@/app/admin/users/actions";
 import type { AppRole } from "@/types/database.types";
 
@@ -59,7 +59,7 @@ export function UserRoleSelect({ userId, currentRole, actorRole, disableSelf }: 
       >
         {assignableRoles.map((candidate) => (
           <option key={candidate} value={candidate}>
-            {candidate}
+            {getRoleLabel(candidate)}
           </option>
         ))}
       </Select>
