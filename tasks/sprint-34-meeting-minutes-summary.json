@@ -1,0 +1,37 @@
+{
+  "title": "Sprint 34 — Actas de Reuniones y Resumen en Dashboard/Perfil",
+  "description": "Dos bloques: (A) Actas de reuniones — cada acta siempre asociada a un evento de tipo reunion y es un fichero (PDF/DOC/DOCX) subido a Supabase Storage bucket meeting-minutes. La directiva y el super_admin suben/reemplazan/eliminan el fichero del acta al evento; lectura visible para todos los miembros autenticados pero sin descarga en esta fase. (B) Resumen visible para todos — mostrar en el dashboard y en el perfil de cada miembro un resumen compacto con su estado de pago (Sprint 31), posición de baile (Sprint 33) e instrumento asignado (Sprint 24/33) de un vistazo, con privacidad: detalle económico completo solo propio/directiva/super_admin.",
+  "branch": "feature/sprint-34-meeting-minutes-summary",
+  "status": "created",
+  "adr": "docs/adr-sprint-34-meeting-minutes-summary.md",
+  "acceptance_criteria": [
+    "Cada acta siempre está asociada a un evento de tipo reunion (no existe acta huérfana; FK con CHECK event_type=reunion).",
+    "El acta es un fichero (PDF/DOC/DOCX, max 10 MB) subido a Supabase Storage bucket meeting-minutes — sin descarga por ahora.",
+    "Solo la directiva y el super_admin pueden subir, reemplazar o eliminar el acta de una reunión (RLS + guards).",
+    "Todos los miembros autenticados pueden ver el listado de reuniones con indicación de si tienen acta (sin descarga en esta fase).",
+    "Un evento de reunión solo puede tener un acta a la vez (UNIQUE event_id, reemplazar implica sobrescribir).",
+    "En el dashboard cada usuario ve su resumen de pago, posición de baile e instrumento asignado de un vistazo (3 tarjetas).",
+    "En el perfil (propio y ajeno según permisos) se muestra el mismo resumen con algo más de detalle.",
+    "Si un miembro no tiene pago/posición/instrumento, se muestra 'Sin asignar' / 'Pendiente' en lugar de error.",
+    "Solo directiva/super_admin ven el detalle económico completo de otros miembros (privacidad)."
+  ],
+  "definition_of_done": [
+    "Migración SQL 20260101007100_meeting_minutes.sql con: ALTER TYPE event_type ADD VALUE 'reunion' si no existe, CREATE TABLE umsuka.meeting_minutes (id uuid PK default gen_random_uuid(), event_id uuid UNIQUE FK events ON DELETE CASCADE CHECK event_type='reunion' via trigger/fk, file_path text not null, file_name text not null, file_size int not null CHECK 1..10MB, mime_type text not null CHECK PDF/DOC/DOCX, uploaded_by uuid FK profiles SET NULL, created_at timestamptz default now(), updated_at timestamptz) + índices, RLS ENABLE+FORCE (SELECT authenticated true, ALL/INSERT/UPDATE/DELETE is_management()) + comentarios + storage bucket meeting-minutes + checklist idempotente.",
+    "Tipos hand-edited en src/types/database.types.ts: EventType incluye 'reunion', nueva tabla meeting_minutes con Row/Insert/Update + Relationships.",
+    "Capa lib/meetings/schema.ts con Zod schemas (uploadMinutesSchema valida event_id tipo reunion + fichero mime/size, mensajes es-ES).",
+    "Capa lib/meetings/queries.ts con getMinutesByEvent, getAllMinutes, getReunionEvents (listado reunion con flag hasMinutes).",
+    "Capa lib/meetings/mutations.ts con uploadMinutes, replaceMinutes, deleteMinutes con validación directiva vía requireManagementGuard fail-closed, validación event_type=reunion, manejo Storage upload.",
+    "Server actions thin en src/lib/meetings/actions.ts con revalidatePath('/events','/actas').",
+    "UI: Sección Acta en /events/[id] cuando event_type=reunion: estado sin acta/acta disponible, uploader drag&drop solo visible para directiva/super_admin, opción reemplazar/eliminar, muestra nombre fichero, tamaño y fecha. Sin botón descarga.",
+    "UI: Página /actas que lista todos los eventos tipo reunion cronológicamente con indicador tiene acta, filtros por fecha y búsqueda por título, paginación. Sin descarga.",
+    "Capa lib/summary/queries.ts con getMemberSummary(userId) que agrega: estado pago (member_payments último mes pagado/al día o pendiente), posición baile (dance_positions fila/asiento o sin asignar), instrumento (musician_instruments/instrument_assignments nombre o sin asignar).",
+    "UI Dashboard: sección 'Mi resumen' en /dashboard visible para todos: 3 tarjetas compactas — Pago (Al día hasta MM/YYYY verde / Pendiente rojo), Posición (Fila X Asiento Y o Sin asignar), Instrumento (nombre o Sin asignar). Cada tarjeta enlaza a detalle.",
+    "UI Perfil: bloque Resumen en /profile con misma info ampliada (historial breve pagos, mini-plano posición resaltada, instrumento con detalle). Privacidad: detalle económico completo solo propio/directiva/super_admin.",
+    "Tests unitarios nuevos pasando (meetings schema, summary aggregation, isPaidForMonth reuse) + suite completa npx vitest run.",
+    "Typecheck (tsc --noEmit) y lint limpios; next build sin errores.",
+    "Security scan sin issues HIGH.",
+    "ADR documentado en docs/adr-sprint-34-meeting-minutes-summary.md.",
+    "PR creada contra master siguiendo docs/git-conventions.md."
+  ],
+  "dependencies": ["Sprint 2/21 (Roles directiva)", "Sprint 17 (Eventos reunion)", "Sprint 16 (Storage)", "Sprint 19 (Perfiles)", "Sprint 31 (Pagos)", "Sprint 33 (Formación)", "Sprint 24 (Instrumentos)"]
+}

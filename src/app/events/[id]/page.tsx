@@ -41,6 +41,8 @@ import { getFormationByEventId } from "@/lib/formation/queries";
 import { DanceFormationGrid } from "@/components/formation/DanceFormationGrid";
 import { MusicianInstrumentList } from "@/components/formation/MusicianInstrumentList";
 import { getAvailableDancers, getAvailableMusicians, getAvailableInstruments, getMusicianInstruments } from "@/lib/formation/queries";
+import { getMinutesByEvent } from "@/lib/meetings/queries";
+import { MeetingMinutesSection } from "@/components/meetings/MeetingMinutesSection";
 
 export const metadata: Metadata = {
   title: "Evento",
@@ -53,6 +55,7 @@ export const metadata: Metadata = {
   work_shift: "Turno de trabajo",
   rehearsal: "Ensayo",
   material_distribution: "Reparto de material",
+  reunion: "Reunión con acta",
 };
 
 const REHEARSAL_CATEGORY_LABELS: Record<string, string> = {
@@ -110,6 +113,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
 
   const isWorkShift = event.eventType === "work_shift";
   const isRehearsal = event.eventType === "rehearsal";
+  const isReunion = event.eventType === "reunion";
   // Management can manage any event; a workgroup lead can only manage the
   // work_shift events they created for their own group (Sprint 12).
   const canManage =
@@ -233,6 +237,16 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     }
   } catch {
     formationForEvent = null;
+  }
+
+  // Sprint 34: acta para eventos reunion (todos ven, solo directiva gestiona)
+  let reunionMinutes: Awaited<ReturnType<typeof getMinutesByEvent>> = null;
+  if (isReunion) {
+    try {
+      reunionMinutes = await getMinutesByEvent(event.id);
+    } catch {
+      reunionMinutes = null;
+    }
   }
 
   return (
@@ -525,6 +539,26 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
         )}
 
         {event.eventType === "material_distribution" && canManage && <PaymentEligibility eventId={event.id} />}
+
+        {isReunion && (
+          <MeetingMinutesSection
+            eventId={event.id}
+            eventTitle={event.title}
+            minutes={
+              reunionMinutes
+                ? {
+                    id: reunionMinutes.id,
+                    fileName: reunionMinutes.fileName,
+                    fileSize: reunionMinutes.fileSize,
+                    mimeType: reunionMinutes.mimeType,
+                    createdAt: reunionMinutes.createdAt,
+                    updatedAt: reunionMinutes.updatedAt,
+                  }
+                : null
+            }
+            canManage={isManagementRole(profile.role)}
+          />
+        )}
 
         {formationForEvent && (
           <Card>
