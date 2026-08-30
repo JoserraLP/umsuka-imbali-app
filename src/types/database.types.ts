@@ -12,6 +12,7 @@ export type EventType = "general" | "meeting" | "carnival" | "work_shift" | "reh
 export type RehearsalSession = "morning" | "afternoon";
 export type RehearsalCategory = "music" | "dance";
 export type PaymentType = "monthly" | "yearly";
+export type CarnivalYearStatus = "active" | "archived";
 export type Workgroup = "telas" | "barra" | "estandarte" | "limpieza" | "ninguno";
 export type UserStatus = "pending" | "active" | "suspended";
 export type AuthMethod = "google" | "email_alias" | "phone";
@@ -151,6 +152,7 @@ export interface Database {
           audience_member_type: ComponentType | null;
           created_by: string | null;
           created_at: string;
+          carnival_year_id: string | null;
         };
         Insert: {
           id?: string;
@@ -172,6 +174,7 @@ export interface Database {
           audience_member_type?: ComponentType | null;
           created_by?: string | null;
           created_at?: string;
+          carnival_year_id?: string | null;
         };
         Update: {
           id?: string;
@@ -193,8 +196,17 @@ export interface Database {
           audience_member_type?: ComponentType | null;
           created_by?: string | null;
           created_at?: string;
+          carnival_year_id?: string | null;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "events_carnival_year_id_fkey";
+            columns: ["carnival_year_id"];
+            isOneToOne: false;
+            referencedRelation: "carnival_years";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       event_audience_users: {
         Row: {
@@ -905,6 +917,7 @@ export interface Database {
           created_by: string | null;
           created_at: string;
           updated_at: string;
+          carnival_year_id: string | null;
         };
         Insert: {
           id?: string;
@@ -916,6 +929,7 @@ export interface Database {
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;
+          carnival_year_id?: string | null;
         };
         Update: {
           id?: string;
@@ -927,8 +941,17 @@ export interface Database {
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;
+          carnival_year_id?: string | null;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "transactions_carnival_year_id_fkey";
+            columns: ["carnival_year_id"];
+            isOneToOne: false;
+            referencedRelation: "carnival_years";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       legal_guardians: {
         Row: {
@@ -999,6 +1022,7 @@ export interface Database {
           registered_by: string | null;
           notes: string | null;
           created_at: string;
+          carnival_year_id: string | null;
         };
         Insert: {
           id?: string;
@@ -1011,6 +1035,7 @@ export interface Database {
           registered_by?: string | null;
           notes?: string | null;
           created_at?: string;
+          carnival_year_id?: string | null;
         };
         Update: {
           id?: string;
@@ -1023,6 +1048,7 @@ export interface Database {
           registered_by?: string | null;
           notes?: string | null;
           created_at?: string;
+          carnival_year_id?: string | null;
         };
         Relationships: [
           {
@@ -1039,6 +1065,13 @@ export interface Database {
             referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "member_payments_carnival_year_id_fkey";
+            columns: ["carnival_year_id"];
+            isOneToOne: false;
+            referencedRelation: "carnival_years";
+            referencedColumns: ["id"];
+          },
         ];
       };
       dance_formations: {
@@ -1049,6 +1082,7 @@ export interface Database {
           created_by: string | null;
           created_at: string;
           formation_type: FormationType;
+          carnival_year_id: string | null;
         };
         Insert: {
           id?: string;
@@ -1057,6 +1091,7 @@ export interface Database {
           created_by?: string | null;
           created_at?: string;
           formation_type: FormationType;
+          carnival_year_id?: string | null;
         };
         Update: {
           id?: string;
@@ -1065,6 +1100,7 @@ export interface Database {
           created_by?: string | null;
           created_at?: string;
           formation_type?: FormationType;
+          carnival_year_id?: string | null;
         };
         Relationships: [
           {
@@ -1079,6 +1115,13 @@ export interface Database {
             columns: ["created_by"];
             isOneToOne: false;
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "dance_formations_carnival_year_id_fkey";
+            columns: ["carnival_year_id"];
+            isOneToOne: false;
+            referencedRelation: "carnival_years";
             referencedColumns: ["id"];
           },
         ];
@@ -1232,6 +1275,79 @@ export interface Database {
           },
         ];
       };
+      carnival_years: {
+        Row: {
+          id: string;
+          year: number;
+          label: string;
+          start_date: string;
+          end_date: string | null;
+          status: CarnivalYearStatus;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          year: number;
+          label: string;
+          start_date: string;
+          end_date?: string | null;
+          status?: CarnivalYearStatus;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          year?: number;
+          label?: string;
+          start_date?: string;
+          end_date?: string | null;
+          status?: CarnivalYearStatus;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "carnival_years_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      carnival_year_snapshots: {
+        Row: {
+          id: string;
+          carnival_year_id: string;
+          snapshot_type: string;
+          data: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          carnival_year_id: string;
+          snapshot_type: string;
+          data: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          carnival_year_id?: string;
+          snapshot_type?: string;
+          data?: Json;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "carnival_year_snapshots_carnival_year_id_fkey";
+            columns: ["carnival_year_id"];
+            isOneToOne: false;
+            referencedRelation: "carnival_years";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -1327,6 +1443,7 @@ export interface Database {
       transaction_category: TransactionCategory;
       payment_type: PaymentType;
       formation_type: FormationType;
+      carnival_year_status: CarnivalYearStatus;
     };
     CompositeTypes: Record<string, never>;
   };

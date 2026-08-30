@@ -1,0 +1,32 @@
+{
+  "title": "Sprint 38 — Nuevo Año de Carnaval (Reset + Copia de Seguridad)",
+  "description": "Permitir a la directiva y al super_admin iniciar un nuevo año de carnaval: el sistema archiva el año anterior (status=archived) y guarda TODO el año como copia de seguridad histórica completa — estadísticas, formaciones, preguntas, miembros, pagos, asistencias, turnos, votaciones, eventos, instrumentos y dinero de la comparsa — que la directiva puede consultar en cualquier momento. Los contadores del nuevo año empiezan a 0 sin borrar el histórico ni los perfiles base. Requiere doble confirmación y rollback si falla la copia.",
+  "branch": "feature/sprint-38-new-carnival-year",
+  "status": "created",
+  "adr": "docs/adr-sprint-38-new-carnival-year.md",
+  "acceptance_criteria": [
+    "La directiva y el super_admin pueden iniciar un nuevo año de carnaval desde /admin/carnival con doble confirmación (escribir AÑO).",
+    "Al iniciar el nuevo año se archiva el año anterior (status=archived, end_date=now()) y se crea una copia de seguridad completa (tabla carnival_year_snapshots + fichero carnival-backups/<year>.json en Storage) que incluye todas las estadísticas, formaciones, preguntas, miembros, pagos, asistencias, turnos, votaciones, eventos, instrumentos y dinero de la comparsa del año.",
+    "Los contadores y valores del nuevo año empiezan a 0 (asistencias, pagos, posiciones vacías, instrumentos desasignados, estadísticas reiniciadas, preguntas/votaciones archivadas) sin borrar el histórico ni los perfiles base.",
+    "El histórico de copias es consultable por la directiva en /admin/carnival/history por secciones (estadísticas, formaciones, preguntas, miembros, etc.) con vista de solo lectura y descarga del backup.",
+    "Un miembro normal solo ve datos del año activo; no puede iniciar un nuevo año ni ver snapshots.",
+    "Si falla la creación de la copia, el reset no se ejecuta (rollback transaccional)."
+  ],
+  "definition_of_done": [
+    "Migración SQL 20260101007200_carnival_year.sql con: CREATE TYPE carnival_year_status ENUM active/archived si no existe, CREATE TABLE umsuka.carnival_years (id uuid PK default gen_random_uuid(), year int UNIQUE, label text not null 1-200, start_date date not null, end_date date nullable, status carnival_year_status not null default active, created_by uuid FK profiles SET NULL, created_at timestamptz default now()) + CHECK year 2000-2100 + CHECK end_date coherencia, CREATE TABLE umsuka.carnival_year_snapshots (id uuid PK, carnival_year_id uuid FK carnival_years CASCADE, snapshot_type text not null, data jsonb not null, created_at) + índices, ADD COLUMN carnival_year_id FK nullable a tablas anuales (events, member_payments, dance_formations si aplica) o season_year INT si se usa, storage bucket carnival-backups privado 10MB json + RLS ENABLE+FORCE (carnival_years SELECT authenticated true, ALL is_management(); snapshots SELECT is_management(), ALL is_management()) + comentarios + checklist idempotente.",
+    "Tipos hand-edited en src/types/database.types.ts: CarnivalYearStatus, carnival_years + carnival_year_snapshots Row/Insert/Update + carnival_year_id en events/member_payments donde aplique.",
+    "Capa lib/carnival/schema.ts con Zod schemas (createCarnivalYearSchema label 1-200 startDate valid, startNewYearSchema confirmación text AÑO, mensajes es-ES).",
+    "Capa lib/carnival/queries.ts con getActiveYear, getCarnivalYears, getYearById, getSnapshotByYearId, getSnapshotSection.",
+    "Capa lib/carnival/year.ts con createSnapshot(yearId): serializa TODO el año (profiles miembros completos, events, questions, votings/votes, payments, rehearsal/workgroup attendance, shifts/assignments, formations/positions, instruments assignments, transactions, stats) a snapshots + upload a Storage carnival-backups/<year>.json, y startNewYear(label,startDate): transacción archiva año activo, crea snapshot, crea nuevo año activo, resetea contadores año nuevo (vacía posiciones, desasigna instrumentos no opcional, archiva preguntas/votaciones por year_id), rollback si falla snapshot.",
+    "Server actions thin en src/lib/carnival/actions.ts con revalidatePath('/admin/carnival','/admin/carnival/history','/dashboard'). Guards is_management fail-closed, doble confirmación validada en schema.",
+    "UI: Página /admin/carnival (solo directiva/super_admin) con card año activo, botón Iniciar nuevo año con diálogo confirmación (escribir AÑO) y resumen qué se archivará/reiniciará, formulario etiqueta y fecha inicio, toast éxito con link snapshot.",
+    "UI: Página /admin/carnival/history listado años archivados con fecha cierre, botón Ver copia que muestra snapshot por secciones (estadísticas, formaciones, preguntas, miembros, pagos, asistencias, votaciones, eventos, instrumentos, dinero) solo lectura y descarga JSON desde Storage.",
+    "Filtro año activo: dashboard y perfil filtran por carnival_year_id activo por defecto; selector año solo directiva en histórico (si aplica).",
+    "Tests unitarios nuevos pasando (carnival schema, year snapshot incluye todas secciones, reset a 0, solo directiva) + suite completa npx vitest run.",
+    "Typecheck (tsc --noEmit) y lint limpios; next build sin errores.",
+    "Security scan sin issues HIGH.",
+    "ADR documentado en docs/adr-sprint-38-new-carnival-year.md.",
+    "PR creada contra master siguiendo docs/git-conventions.md."
+  ],
+  "dependencies": ["Sprint 5 (Asistencia)", "Sprint 11 (Preguntas)", "Sprint 13/28 (Estadísticas)", "Sprint 14/19 (Miembros)", "Sprint 15 (Votaciones)", "Sprint 17 (Eventos)", "Sprint 24/33 (Instrumentos/formación)", "Sprint 29/31 (Dinero/pagos)", "Sprint 21/2 (Roles)", "Sprint 16 (Storage)"]
+}

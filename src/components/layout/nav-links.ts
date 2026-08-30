@@ -19,6 +19,7 @@ import {
   CreditCard,
   ClipboardList,
   FileText,
+  PartyPopper,
   type LucideIcon,
 } from "lucide-react";
 import type { AppRole, ComponentType, Workgroup } from "@/types/database.types";
@@ -78,6 +79,12 @@ export const NAV_LINKS: NavLink[] = [
     showFor: (ctx) => isManagementRole(ctx.role),
   },
   { href: "/actas", label: "Actas", icon: FileText },
+  {
+    href: "/admin/carnival",
+    label: "Año Carnaval",
+    icon: PartyPopper,
+    showFor: (ctx) => isManagementRole(ctx.role),
+  },
   { href: "/profile", label: "Mi perfil", icon: User },
   { href: "/profile/stats", label: "Mis estadísticas", icon: Clock },
   { href: "/notifications", label: "Notificaciones", icon: Bell },
