@@ -3,6 +3,7 @@ import type {
   AppRole,
   AuthMethod,
   ComponentType,
+  LinkStatus,
   UserStatus,
   Workgroup,
 } from "@/types/database.types";
@@ -12,6 +13,7 @@ import type {
 export const WORKGROUP_OPTIONS = ["telas", "barra", "estandarte", "limpieza", "ninguno"] as const;
 export const COMPONENT_TYPE_OPTIONS = ["music", "dance", "member"] as const;
 export const STATUS_OPTIONS = ["pending", "active", "suspended"] as const;
+export const LINK_STATUS_OPTIONS = ["pending_gmail", "linked"] as const;
 
 /**
  * Parses the optional /members query filters. Every field is optional so
@@ -27,6 +29,9 @@ export const memberFiltersSchema = z.object({
     .optional(),
   status: z
     .enum(STATUS_OPTIONS, { errorMap: () => ({ message: "Estado no válido." }) })
+    .optional(),
+  linkStatus: z
+    .enum(LINK_STATUS_OPTIONS, { errorMap: () => ({ message: "Estado de vinculación no válido." }) })
     .optional(),
   q: z
     .string()
@@ -51,7 +56,23 @@ export interface MemberListItem {
   username: string | null;
   authMethod: AuthMethod;
   componentLeadFor: ComponentType | null;
+  linkStatus?: LinkStatus;
+  inviteToken?: string | null;
+  pendingEmail?: string | null;
   createdAt: string;
+}
+
+// Helper to create test fixtures without link fields (backward compat)
+export function withLinkDefaults<T extends Partial<MemberListItem>>(item: T & Pick<MemberListItem, "id" | "firstName" | "lastName" | "componentType" | "workgroup" | "role" | "isActive" | "status" | "createdAt">): MemberListItem {
+  return {
+    username: null,
+    authMethod: "google",
+    componentLeadFor: null,
+    linkStatus: "linked",
+    inviteToken: null,
+    pendingEmail: null,
+    ...item,
+  } as MemberListItem;
 }
 
 export interface MemberDetail extends MemberListItem {

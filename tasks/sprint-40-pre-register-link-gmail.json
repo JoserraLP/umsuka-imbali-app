@@ -1,0 +1,37 @@
+{
+    "title": "Sprint 40 â€” Alta de Miembros sin Gmail y VinculaciÃ³n Posterior",
+    "description": "Permitir que solo el super_admin dÃ© de alta perfiles de miembros sin necesidad de que ellos se registren con Gmail, para ir poblando la comparsa por adelantado. El super_admin crea el perfil completo (datos personales, tipo de miembro, workgroup, rol inicial) sin cuenta de Gmail asociada; el perfil queda en estado pendiente de vinculaciÃ³n. Posteriormente, cuando la persona facilite su Gmail (o se registre), el super_admin vincula ese correo Gmail al perfil pre-creado, convirtiÃ©ndolo en una cuenta activa sin duplicar datos ni perder el histÃ³rico ya asociado (pagos, formaciÃ³n, asistencia, etc.). Incluye invite_token opcional para auto-vinculaciÃ³n por enlace.",
+    "branch": "feature/sprint-40-pre-register-link-gmail",
+    "status": "published",
+    "adr": "docs/adr-sprint-40-pre-register-link-gmail.md",
+    "acceptance_criteria": [
+        "Solo el super_admin puede crear perfiles sin Gmail (pre-registro) con estado pending_gmail, visible en listados con badge y sin acceso hasta vincular.",
+        "El super_admin puede vincular posteriormente un correo Gmail a un perfil pendiente, sin duplicar el perfil y conservando todo el histÃ³rico asociado (pagos, formaciÃ³n, asistencia, etc.).",
+        "Si el Gmail ya pertenece a otro perfil, la vinculaciÃ³n falla con error claro.",
+        "Los perfiles pendientes se pueden filtrar en el listado de miembros (Pendientes de Gmail / Vinculados).",
+        "Un miembro pendiente no puede iniciar sesiÃ³n hasta estar vinculado (bloqueo por link_status).",
+        "Flujo de auto-vinculaciÃ³n opcional por invite_token (/invite/<token>) cuando la persona se registra con Gmail usando el enlace."
+    ],
+    "definition_of_done": [
+        "MigraciÃ³n SQL 20260101007300_pre_register_link.sql con: CREATE TYPE link_status ENUM pending_gmail/linked si no existe, ALTER TABLE umsuka.profiles ADD COLUMN link_status link_status NOT NULL DEFAULT 'linked', ADD COLUMN pre_registered_by uuid FK profiles SET NULL, ADD COLUMN invite_token text UNIQUE nullable, ADD COLUMN pending_email text nullable, CHECK link_status coherencia + Ã­ndices parciales UNIQUE invite_token WHERE NOT NULL y pending_email WHERE NOT NULL, backfill existentes -> 'linked', RLS ENABLE+FORCE actualizado (SELECT authenticated true para lista pero pending_gmail filtrable; INSERT/UPDATE/DELETE solo is_super_admin() para pending/link, UPDATE link solo super_admin), comentarios + checklist idempotente 10 puntos.",
+        "Tipos hand-edited en src/types/database.types.ts: LinkStatus type, profiles Row/Insert/Update con link_status, pre_registered_by, invite_token, pending_email, Enums actualizados.",
+        "Capa lib/members/pre-register-schema.ts con Zod schemas: preRegisterMemberSchema valida first_name 1-100, last_name 1-100, birth_date nullable, component_type enum music/dance/member, workgroup enum, role string, is_minor boolean, document_id opcional; linkGmailSchema valida profileId uuid + gmail formato email + invite_token opcional; mensajes es-ES.",
+        "Capa lib/members/pre-register.ts con funciones preRegisterMember(data) y linkGmailToProfile(profileId,gmail): (1) verifica super_admin via requireSuperAdminGuard fail-closed, (2) valida colisiÃ³n gmail ya vinculado en profiles.email/username, (3) si existe auth.users con gmail vincula por id, si no crea invitaciÃ³n pendiente con invite_token crypto.randomUUID(), (4) actualiza profiles a linked y limpia token, conserva histÃ³rico.",
+        "Server actions thin en src/lib/members/pre-register-actions.ts con revalidatePath('/admin/members','/members','/profile') y guards super_admin, generaciÃ³n invite_token.",
+        "UI: En /admin/members (solo super_admin) botÃ³n Alta sin Gmail que abre formulario pre-registro sin email obligatorio, al guardar muestra card miembro pendiente con badge Pendiente de Gmail y opciÃ³n copiar enlace invitaciÃ³n /invite/<token>.",
+        "UI: Para cada perfil pending_gmail botÃ³n Vincular Gmail que abre diÃ¡logo para introducir Gmail (o seleccionar de usuarios registrados sueltos), ejecuta linkGmailAction, asocia profiles.id/email y muestra Ã©xito/error colisiÃ³n.",
+        "Flujo auto-vinculaciÃ³n: pÃ¡gina /invite/[token] que al registrarse con Gmail vincula automÃ¡ticamente sin intervenciÃ³n manual si token vÃ¡lido.",
+        "Listado y filtros: en /admin/members y /members filtros Pendientes de Gmail / Vinculados y en perfil pendiente muestra datos asociados aunque sin acceso.",
+        "Tests unitarios nuevos pasando (pre-register schema, linkGmail colisiÃ³n/token invÃ¡lido/solo super_admin, histÃ³rico conservado) + suite completa npx vitest run.",
+        "Typecheck (tsc --noEmit) y lint limpios; next build sin errores.",
+        "Security scan sin issues HIGH.",
+        "ADR documentado en docs/adr-sprint-40-pre-register-link-gmail.md.",
+        "PR creada contra master siguiendo docs/git-conventions.md."
+    ],
+    "dependencies": [
+        "Sprint 6 (Registration Approval)",
+        "Sprint 7 (Emailless Accounts)",
+        "Sprint 19 (Perfiles)",
+        "Sprint 2/21 (Roles super_admin)"
+    ]
+}

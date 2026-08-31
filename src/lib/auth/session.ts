@@ -84,7 +84,7 @@ async function fetchProfileRow(userId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, first_name, last_name, birth_date, component_type, role, workgroup, is_workgroup_lead, component_lead_for, is_active, status, username, auth_method, avatar_url, bio, phone, skills, joined_at, created_at, deleted_at")
+    .select("id, first_name, last_name, birth_date, component_type, role, workgroup, is_workgroup_lead, component_lead_for, is_active, status, username, auth_method, avatar_url, bio, phone, skills, joined_at, created_at, deleted_at, link_status")
     .eq("id", userId)
     .is("deleted_at", null)
     .maybeSingle();
@@ -104,6 +104,15 @@ async function fetchProfileRow(userId: string) {
   if (data?.deleted_at) {
     console.error(
       `getCurrentProfile: el perfil ${userId} está marcado como eliminado (deleted_at) — ` +
+        "tratado como no autenticado.",
+    );
+    return null;
+  }
+
+  // Sprint 40: pending_gmail profiles cannot authenticate until linked
+  if ((data as unknown as { link_status?: string })?.link_status === "pending_gmail") {
+    console.error(
+      `getCurrentProfile: el perfil ${userId} está pendiente de Gmail (link_status=pending_gmail) — ` +
         "tratado como no autenticado.",
     );
     return null;

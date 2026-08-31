@@ -8,3 +8,7 @@
 export function requiresWorkgroupOnboarding(workgroup: string | null): boolean {
   return workgroup === null || workgroup === "ninguno";
 }
+
+export function isPendingGmail(linkStatus: string | null): boolean {
+  return linkStatus === "pending_gmail";
+}

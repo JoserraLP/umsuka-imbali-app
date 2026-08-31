@@ -78,6 +78,7 @@ function filterMembers(members: MemberListItem[], filters: MemberFilters): Membe
     if (filters.workgroup && member.workgroup !== filters.workgroup) return false;
     if (filters.componentType && member.componentType !== filters.componentType) return false;
     if (filters.status && member.status !== filters.status) return false;
+    if (filters.linkStatus && member.linkStatus !== filters.linkStatus) return false;
     if (filters.q) {
       const needle = normalize(filters.q);
       const fullName = normalize(`${member.firstName} ${member.lastName}`);
@@ -110,6 +111,7 @@ export default async function MembersPage({ searchParams }: PageProps) {
     componentType:
       typeof rawParams.componentType === "string" ? rawParams.componentType : undefined,
     status: typeof rawParams.status === "string" ? rawParams.status : undefined,
+    linkStatus: typeof rawParams.linkStatus === "string" ? rawParams.linkStatus : undefined,
     q: typeof rawParams.q === "string" ? rawParams.q : undefined,
   });
   const filters: MemberFilters = parsed.success ? parsed.data : {};
@@ -175,6 +177,7 @@ export default async function MembersPage({ searchParams }: PageProps) {
                 workgroup={parsed.success ? (filters.workgroup ?? "all") : "all"}
                 componentType={parsed.success ? (filters.componentType ?? "all") : "all"}
                 status={parsed.success ? (filters.status ?? "all") : "all"}
+                linkStatus={parsed.success ? (filters.linkStatus ?? "all") : "all"}
                 q={filters.q ?? ""}
                 lockedWorkgroup={lockedWorkgroup}
                 lockedComponent={lockedComponent}
@@ -199,6 +202,7 @@ export default async function MembersPage({ searchParams }: PageProps) {
                     <TableHead>Grupo de trabajo</TableHead>
                     <TableHead>Rol</TableHead>
                     <TableHead>Estado</TableHead>
+                    <TableHead>Vinculación</TableHead>
                     <TableHead>Fecha de alta</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -239,6 +243,11 @@ export default async function MembersPage({ searchParams }: PageProps) {
                           }
                         >
                           {STATUS_LABELS[member.status] ?? member.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={member.linkStatus === "pending_gmail" ? "secondary" : "outline"}>
+                          {member.linkStatus === "pending_gmail" ? "Pendiente de Gmail" : "Vinculado"}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground">

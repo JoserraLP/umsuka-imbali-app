@@ -16,6 +16,7 @@ export type CarnivalYearStatus = "active" | "archived";
 export type Workgroup = "telas" | "barra" | "estandarte" | "limpieza" | "ninguno";
 export type UserStatus = "pending" | "active" | "suspended";
 export type AuthMethod = "google" | "email_alias" | "phone";
+export type LinkStatus = "pending_gmail" | "linked";
 export type AppRole =
   | "super_admin"
   | "admin"
@@ -72,6 +73,10 @@ export interface Database {
           deleted_at: string | null;
           is_minor: boolean;
           legal_guardian_id: string | null;
+          link_status: LinkStatus;
+          pre_registered_by: string | null;
+          invite_token: string | null;
+          pending_email: string | null;
         };
         Insert: {
           id: string;
@@ -96,6 +101,10 @@ export interface Database {
           deleted_at?: string | null;
           is_minor?: boolean; // default false in DB
           legal_guardian_id?: string | null;
+          link_status?: LinkStatus; // default 'linked' in DB
+          pre_registered_by?: string | null;
+          invite_token?: string | null;
+          pending_email?: string | null;
         };
         Update: {
           id?: string;
@@ -120,6 +129,10 @@ export interface Database {
           deleted_at?: string | null;
           is_minor?: boolean;
           legal_guardian_id?: string | null;
+          link_status?: LinkStatus;
+          pre_registered_by?: string | null;
+          invite_token?: string | null;
+          pending_email?: string | null;
         };
         Relationships: [
           {
@@ -1429,6 +1442,10 @@ export interface Database {
         Args: Record<string, never>;
         Returns: string;
       };
+      current_user_link_status: {
+        Args: Record<string, never>;
+        Returns: string | null;
+      };
     };
     Enums: {
       workgroup: Workgroup;
@@ -1444,6 +1461,7 @@ export interface Database {
       payment_type: PaymentType;
       formation_type: FormationType;
       carnival_year_status: CarnivalYearStatus;
+      link_status: LinkStatus;
     };
     CompositeTypes: Record<string, never>;
   };
