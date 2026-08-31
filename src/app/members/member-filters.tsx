@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { COMPONENT_TYPE_OPTIONS, STATUS_OPTIONS, WORKGROUP_OPTIONS } from "@/lib/members/schema";
+import { COMPONENT_TYPE_OPTIONS, LINK_STATUS_OPTIONS, STATUS_OPTIONS, WORKGROUP_OPTIONS } from "@/lib/members/schema";
 import type { ComponentType, Workgroup } from "@/types/database.types";
 
 const WORKGROUP_LABELS: Record<string, string> = {
@@ -28,10 +28,16 @@ const STATUS_LABELS: Record<string, string> = {
   suspended: "Suspendido",
 };
 
+const LINK_STATUS_LABELS: Record<string, string> = {
+  pending_gmail: "Pendiente de Gmail",
+  linked: "Vinculado",
+};
+
 interface MemberFiltersProps {
   workgroup: string;
   componentType: string;
   status: string;
+  linkStatus: string;
   q: string;
   /** When set (workgroup leads), the group select is hidden and the list
    *  is locked to that group. */
@@ -39,15 +45,19 @@ interface MemberFiltersProps {
   /** When set (component leads), the component select is hidden and the
    *  list is locked to that component. */
   lockedComponent?: ComponentType | null;
+  /** Base path for navigation (reuse in /admin/members). Defaults to /members */
+  basePath?: string;
 }
 
 export function MemberFilters({
   workgroup,
   componentType,
   status,
+  linkStatus,
   q,
   lockedWorkgroup,
   lockedComponent,
+  basePath = "/members",
 }: MemberFiltersProps) {
   const router = useRouter();
   const [qInput, setQInput] = useState(q);
@@ -57,20 +67,22 @@ export function MemberFilters({
     const effectiveWorkgroup = lockedWorkgroup ?? params.workgroup ?? workgroup;
     const effectiveComponentType = lockedComponent ?? params.componentType ?? componentType;
     const effectiveStatus = params.status ?? status;
+    const effectiveLinkStatus = params.linkStatus ?? linkStatus;
     const effectiveQ = params.q ?? q;
     if (effectiveWorkgroup && effectiveWorkgroup !== "all") sp.set("workgroup", effectiveWorkgroup);
     if (effectiveComponentType && effectiveComponentType !== "all") {
       sp.set("componentType", effectiveComponentType);
     }
     if (effectiveStatus && effectiveStatus !== "all") sp.set("status", effectiveStatus);
+    if (effectiveLinkStatus && effectiveLinkStatus !== "all") sp.set("linkStatus", effectiveLinkStatus);
     if (effectiveQ) sp.set("q", effectiveQ);
     const qs = sp.toString();
-    return `/members${qs ? `?${qs}` : ""}`;
+    return `${basePath}${qs ? `?${qs}` : ""}`;
   }
 
   function clearAll(): void {
     setQInput("");
-    router.push("/members");
+    router.push(basePath);
   }
 
   return (
@@ -121,6 +133,20 @@ export function MemberFilters({
         ))}
       </Select>
 
+      <Select
+        aria-label="Filtrar por vinculación"
+        className="h-8 w-auto text-xs"
+        value={linkStatus}
+        onChange={(e) => router.push(filterUrl({ linkStatus: e.target.value }))}
+      >
+        <option value="all">Todos (vinculación)</option>
+        {LINK_STATUS_OPTIONS.map((option) => (
+          <option key={option} value={option}>
+            {LINK_STATUS_LABELS[option]}
+          </option>
+        ))}
+      </Select>
+
       <form
         className="flex items-center gap-2"
         onSubmit={(e) => {
@@ -140,7 +166,7 @@ export function MemberFilters({
         </Button>
       </form>
 
-      {(workgroup !== "all" || componentType !== "all" || status !== "all" || q) && (
+      {(workgroup !== "all" || componentType !== "all" || status !== "all" || linkStatus !== "all" || q) && (
         <Button type="button" variant="ghost" size="sm" onClick={clearAll}>
           Limpiar filtros
         </Button>

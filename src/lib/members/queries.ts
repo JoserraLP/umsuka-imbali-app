@@ -13,6 +13,7 @@ import type {
   AppRole,
   AuthMethod,
   ComponentType,
+  LinkStatus,
   UserStatus,
   Workgroup,
 } from "@/types/database.types";
@@ -30,11 +31,14 @@ interface MemberRow {
   username: string | null;
   auth_method: AuthMethod;
   component_lead_for: string | null;
+  link_status: LinkStatus;
+  invite_token: string | null;
+  pending_email: string | null;
   created_at: string;
 }
 
 const MEMBER_LIST_COLUMNS =
-  "id, first_name, last_name, component_type, workgroup, role, is_active, status, username, auth_method, component_lead_for, created_at";
+  "id, first_name, last_name, component_type, workgroup, role, is_active, status, username, auth_method, component_lead_for, link_status, invite_token, pending_email, created_at";
 
 function mapMemberRow(row: MemberRow): MemberListItem {
   return {
@@ -49,6 +53,9 @@ function mapMemberRow(row: MemberRow): MemberListItem {
     username: row.username,
     authMethod: row.auth_method,
     componentLeadFor: (row.component_lead_for as ComponentType | null) ?? null,
+    linkStatus: (row.link_status as LinkStatus) ?? "linked",
+    inviteToken: row.invite_token ?? null,
+    pendingEmail: row.pending_email ?? null,
     createdAt: row.created_at,
   };
 }
@@ -145,7 +152,7 @@ export async function getMemberDetail(userId: string): Promise<MemberDetail | nu
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, first_name, last_name, birth_date, component_type, workgroup, role, is_active, status, username, auth_method, component_lead_for, created_at")
+    .select("id, first_name, last_name, birth_date, component_type, workgroup, role, is_active, status, username, auth_method, component_lead_for, link_status, invite_token, pending_email, created_at")
     .eq("id", userId)
     .maybeSingle();
 

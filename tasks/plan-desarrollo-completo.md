@@ -1270,6 +1270,161 @@ Auditorías finales de seguridad, rendimiento, accesibilidad y validación gener
 
 ---
 
+## Sprint 37 — Pruebas de Carga
+
+**Rama:** `feature/sprint-37-load-testing`
+
+### Descripción
+Validar que la aplicación soporta la carga esperada en producción (picos de acceso concurrente en eventos, votaciones, reparto de material, consultas de turnos y notificaciones). Ejecutar pruebas de carga y estrés sobre API, Supabase y frontend desplegado para detectar cuellos de botella antes del go-live.
+
+### Pasos
+
+| # | Paso | Detalle |
+|---|---|---|
+| 1 | Definir escenarios | Identificar flujos críticos a probar: login, dashboard, listado de miembros, eventos (reunión/reparto), votaciones, turnos, PWA offline, actas y resumen. Definir SLOs (p50/p95, error rate <1%, RPS objetivo). |
+| 2 | Herramienta y entorno | Elegir k6 (o Artillery) + entorno staging espejo de producción (Vercel preview + Supabase staging). Configurar `tests/load/` con scripts versionados. |
+| 3 | Datasets y seeding | Generar dataset sintético (500-1000 usuarios, eventos, pagos, formaciones) con script de seeding aislado. |
+| 4 | Pruebas de carga | Ejecutar carga sostenida (ej. 200 VUs durante 10 min) sobre endpoints críticos y medir p95, throughput y uso de recursos. |
+| 5 | Pruebas de estrés y pico | Prueba de pico (spike) y estrés hasta degradación para encontrar límite de ruptura y validar autoscaling/throttling de Supabase y Vercel. |
+| 6 | Análisis de Supabase/RLS | Revisar slow queries, índices faltantes, políticas RLS costosas y límites de conexiones durante la carga. Ajustar índices o queries si es necesario. |
+| 7 | Informe y umbrales | Generar informe con gráficas (p95, errores, RPS), tabla de resultados vs SLO y lista de hallazgos con severidad. Guardar artefactos en `tests/load/report-*.html/json`. |
+| 8 | Correcciones y re-test | Corregir cuellos de botella detectados (cache, paginación, índices, rate limiting) y re-ejecutar escenarios afectados hasta pasar SLOs. |
+| 9 | Automatización CI | Añadir job manual `load-test` en GitHub Actions (workflow_dispatch) que ejecute k6 contra staging y publique el reporte como artefacto. No bloquear CI normal. |
+| 10 | Documentación | Actualizar `docs/adr-sprint-37-load-testing.md` y `docs/PERFORMANCE.md` con escenarios, SLOs, resultados y recomendaciones de capacidad. |
+
+### Dependencias
+- Sprint 35 (CI/CD — para entorno staging y workflow)
+- Sprint 36 (Hardening — auditorías previas completadas)
+- Todos los sprints funcionales (1-34) deben estar completos para probar flujos reales
+
+### Criterios de Aceptación
+- Escenarios críticos definidos con SLOs documentados.
+- Pruebas de carga sostenida y de pico ejecutadas en staging con dataset sintético.
+- p95 por debajo del SLO, error rate <1% y sin time-outs en carga sostenida.
+- Informe de carga generado con gráficas, hallazgos y recomendaciones.
+- Cuellos de botella críticos corregidos y re-testeados.
+- Job de load testing disponible en CI como workflow manual.
+
+---
+
+## Sprint 38 — Nuevo Año de Carnaval (Reset + Copia de Seguridad)
+
+**Rama:** `feature/sprint-38-new-carnival-year`
+
+### Descripción
+Permitir a la directiva y al super_admin **iniciar un nuevo año de carnaval**: el sistema **reinicia los contadores y valores del año anterior** para empezar de cero y **guarda TODO el año anterior como una copia de seguridad histórica completa** — estadísticas, formaciones, preguntas, miembros, pagos, asistencias, votaciones, eventos, etc. — que la directiva puede consultar en cualquier momento. Evita pérdida de histórico y deja la app lista para el nuevo ciclo sin borrar datos.
+
+### Pasos
+
+| # | Paso | Detalle |
+|---|---|---|
+| 1 | Migración de BD — año/ciclo | Crear `umsuka.carnival_years` (id, year INT UNIQUE, label text, start_date date, end_date date nullable, status ENUM `active`/`archived`, created_by FK, created_at) y `umsuka.carnival_year_snapshots` (id, carnival_year_id FK, snapshot_type text, data jsonb, created_at). Índice por year. |
+| 2 | Marcar datos por año | Añadir columna `carnival_year_id` FK nullable (o `season_year` INT) a tablas anuales: `member_payments`, `dance_formations`, `dance_positions`, `musician_instruments`, `events`, `questions`, `voting_votes`/`votings`, `member_stats`/`rehearsal_attendance`, `workgroup_attendance`, `member_stats`, `personal_stats`, `transactions` (Sprint 29), `profiles` (foto de miembros del año). Backfill: asignar año actual a datos existentes. Para tablas sin año (p. ej. `profiles`), guardar snapshot del listado completo de miembros del año. |
+| 3 | RLS | Directiva y super_admin pueden crear/archivar años y disparar el reset. Todos los miembros leen el año activo; solo directiva/super_admin leen snapshots históricos. |
+| 4 | Servicio `lib/carnival/year.ts` | Funciones `getActiveYear()`, `createSnapshot(yearId)` — serializa **TODO el año**: estadísticas (Sprint 13/28), formaciones y posiciones (Sprint 33), preguntas (Sprint 11), listado de miembros (Sprint 14 — perfiles completos del año), pagos y reparto (Sprint 31), asistencias y rehearsals (Sprint 5/27), turnos y asignaciones (Sprint 8/12), votaciones (Sprint 15), eventos (Sprint 17), instrumentos (Sprint 24), dinero de comparsa (Sprint 29) a `carnival_year_snapshots` + export a Storage `carnival-backups/<year>.json` como respaldo, `startNewYear(label, startDate)` — (1) archiva año activo (`status=archived`, `end_date=now()`), (2) crea snapshot completo, (3) crea nuevo `carnival_years` activo, (4) resetea contadores del nuevo año (ver paso 5). Todo en transacción con rollback si falla. |
+| 5 | Qué se reinicia | Al iniciar nuevo año: contadores de asistencia/rehearsal a 0, posiciones de baile vacías (o copiadas como plantilla), instrumentos desasignados (o mantenidos según opción), pagos del nuevo año vacíos, estadísticas anuales a 0, contadores de turnos/eventos reiniciados, preguntas/votaciones archivadas (no visibles en el nuevo año). Los perfiles, usuarios y roles **no** se borran (se conservan para el nuevo año). El histórico queda en snapshots + datos con `carnival_year_id` del año archivado. |
+| 6 | Server actions | `startNewCarnivalYearAction(label, startDate)` — solo directiva/super_admin, con doble confirmación ("Escribe AÑO para confirmar") y validación de que no hay snapshot pendiente. `getCarnivalYearsAction`, `getSnapshotAction(yearId)`. |
+| 7 | UI — Iniciar nuevo año | Página `/admin/carnival` (solo directiva/super_admin): card del año activo, botón "Iniciar nuevo año de carnaval" con diálogo de confirmación y resumen de lo que se archivará/reiniciará (listado explícito: estadísticas, formaciones, preguntas, miembros, etc.), formulario de etiqueta y fecha de inicio. Toast de éxito con link al snapshot. |
+| 8 | UI — Histórico de copias | En `/admin/carnival/history` listado de años archivados con fecha de cierre, botón "Ver copia" que muestra el snapshot completo por secciones (estadísticas, formaciones, preguntas, miembros, pagos, asistencias, votaciones, eventos, instrumentos, dinero) en vista de solo lectura y opción de descargar JSON/PDF del backup desde Storage. |
+| 9 | Dashboard/Perfil — año activo | Filtrar dashboard y perfil por `carnival_year_id` activo por defecto; selector de año solo visible para directiva en el histórico (no cambia el flujo normal). El histórico no contamina los contadores del año activo. |
+| 10 | Pruebas | Tests unitarios de `createSnapshot` y `startNewYear` con mocks de BD/Storage. Tests de integración: snapshot contiene **todas** las secciones (estadísticas, formaciones, preguntas, miembros, pagos, asistencias, votaciones, eventos, instrumentos, dinero), reset deja nuevo año a 0, datos antiguos intactos con year_id anterior, solo directiva puede ejecutar. Test de rollback si falla la creación del snapshot. |
+
+### Dependencias
+- Sprint 5 (Asistencia — contadores a reiniciar)
+- Sprint 11 (Preguntas)
+- Sprint 13/28 (Estadísticas)
+- Sprint 14/19 (Miembros y perfiles)
+- Sprint 15 (Votaciones)
+- Sprint 17 (Eventos)
+- Sprint 24/33 (Instrumentos y formación)
+- Sprint 29/31 (Dinero y pagos)
+- Sprint 21/2 (Roles directiva/super_admin)
+- Sprint 16 (Storage para backups)
+
+### Criterios de Aceptación
+- La directiva y el super_admin pueden iniciar un nuevo año de carnaval desde `/admin/carnival` con doble confirmación.
+- Al iniciar el nuevo año se archiva el año anterior (`status=archived`) y se crea una copia de seguridad **completa** (tabla `carnival_year_snapshots` + fichero `carnival-backups/<year>.json` en Storage) que incluye **todas las estadísticas, formaciones, preguntas, miembros, pagos, asistencias, turnos, votaciones, eventos, instrumentos y dinero de la comparsa** del año.
+- Los contadores y valores del nuevo año empiezan a 0 (asistencias, pagos, posiciones vacías, instrumentos desasignados, estadísticas reiniciadas, preguntas/votaciones archivadas) sin borrar el histórico ni los perfiles base.
+- El histórico de copias es consultable por la directiva en `/admin/carnival/history` por secciones (estadísticas, formaciones, preguntas, miembros, etc.) con vista de solo lectura y descarga del backup.
+- Un miembro normal solo ve datos del año activo; no puede iniciar un nuevo año ni ver snapshots.
+- Si falla la creación de la copia, el reset no se ejecuta (rollback transaccional).
+
+---
+
+## Sprint 39 — Manual de Usuario por Roles y Tipos de Miembro
+
+**Rama:** `feature/sprint-39-user-manual`
+
+### Descripción
+Documentar **todos los procesos posibles paso a paso como manual de usuario** para **todos los roles** (super_admin, directiva, responsable de grupo, miembro base), **para cada tipo de miembro** (música, baile, menor con representante legal, responsable de barra/estandarte/telas/limpieza) y **para la directiva**. El manual debe servir como guía completa para onboarding y consulta diaria, con capturas, diagramas y flujos por rol.
+
+### Pasos
+
+| # | Paso | Detalle |
+|---|---|---|
+| 1 | Inventario de roles y tipos | Mapear matriz completa: roles (super_admin, directiva, workgroup_lead, member) x tipos (música, baile, barra, estandarte, telas, limpieza, menor, representante legal) y listar qué puede hacer cada uno según RLS y sprints 2, 6, 14, 30. |
+| 2 | Inventario de procesos | Listar todos los procesos de la app: registro/aprobación, login/PWA, workgroups, turnos y asignación, asistencia/ausencias, ensayos y auto-inscripción, barra/precios, noticias, preguntas, votaciones, eventos (reunión/carnaval/reparto), listados y ordenación, instrumento y formación (plano avión 6 por fila), pagos y reparto de material, dinero de comparsa, actas, resumen dashboard/perfil, inicio de nuevo año de carnaval, etc. |
+| 3 | Estructura del manual | Diseñar `docs/manual/` con índice por rol y por proceso: `00-introduccion.md`, `10-roles-y-permisos.md`, `20-miembro-base.md`, `21-musica.md`, `22-baile.md`, `23-menor-y-representante.md`, `30-directiva.md`, `31-super-admin.md`, `40-procesos-paso-a-paso.md`, `50-faq.md`, `60-glosario.md`. |
+| 4 | Redacción paso a paso | Para cada proceso, guía con: objetivo, quién puede hacerlo, requisitos previos, pasos numerados con capturas de pantalla, errores comunes y consejos. Incluir diagramas de flujo (Mermaid) para procesos críticos (pago→reparto, creación de ensayo→auto-inscripción, formación de baile). |
+| 5 | Capturas y assets | Generar capturas reales de la app en staging para cada paso, almacenar en `docs/manual/assets/`. Optimizar y versionar. |
+| 6 | Integración en la app | Añadir página `/manual` (o `/ayuda`) con navegación por rol/proceso, búsqueda y acceso desde el menú inferior y el perfil. Versión imprimible/PDF generable desde la app. |
+| 7 | Revisión por rol | Validar cada sección con un usuario real de cada rol (directiva, música, baile, menor) y recoger feedback; iterar. |
+| 8 | Mantenimiento | Definir proceso para mantener el manual sincronizado con nuevos sprints: checklist en la plantilla de PR y ADR que obligue a actualizar `docs/manual/` si el cambio afecta a un proceso de usuario. |
+| 9 | Pruebas | Tests de que `/manual` renderiza, búsqueda funciona y enlaces no rotos. Verificación manual de que cada rol ve solo sus secciones relevantes y que el PDF se genera correctamente. |
+
+### Dependencias
+- Todos los sprints funcionales 1-38 (el manual cubre todos los procesos)
+- Sprint 19 (Perfiles — para tipos de miembro)
+- Sprint 2/21 (Roles)
+
+### Criterios de Aceptación
+- Existe un manual completo en `docs/manual/` y accesible en la app en `/manual` con navegación por rol y proceso.
+- Cada rol (super_admin, directiva, responsable de grupo, miembro) tiene su sección específica con los procesos que puede ejecutar.
+- Cada tipo de miembro (música, baile, menor con representante, barra/estandarte/telas/limpieza) tiene guía paso a paso adaptada.
+- Todos los procesos principales están documentados paso a paso con capturas y diagramas, sin pasos omitidos.
+- La directiva tiene una sección dedicada que cubre pagos, dinero, actas, formaciones, reparto de material y nuevo año de carnaval.
+- El manual es buscable, imprimible/PDF y se mantiene actualizado vía checklist de PR.
+
+---
+
+## Sprint 40 — Alta de Miembros sin Gmail y Vinculación Posterior
+
+**Rama:** `feature/sprint-40-pre-register-link-gmail`
+
+### Descripción
+Permitir que **solo el super_admin** dé de alta **perfiles de miembros sin necesidad de que ellos se registren con Gmail**, para ir poblando la comparsa por adelantado. El super_admin crea el perfil completo (datos personales, tipo de miembro, workgroup, rol inicial) sin cuenta de Gmail asociada; el perfil queda en estado **pendiente de vinculación**. Posteriormente, cuando la persona facilite su Gmail (o se registre), el super_admin vincula ese correo Gmail al perfil pre-creado, convirtiéndolo en una cuenta activa sin duplicar datos ni perder el histórico ya asociado (pagos, formación, asistencia, etc.).
+
+### Pasos
+
+| # | Paso | Detalle |
+|---|---|---|
+| 1 | Migración de BD — estado de vinculación | Añadir a `umsuka.profiles`: `link_status` ENUM `pending_gmail`/`linked`/`active` (default `linked` para los ya existentes), `pre_registered_by` UUID FK nullable, `invite_token` text nullable UNIQUE, `pending_email` text nullable. Backfill: todos los perfiles existentes → `linked`. Alternativa: tabla `umsuka.pending_members` si se prefiere separar, con FK opcional a `profiles`. |
+| 2 | Migración de BD — índice | Índice único parcial sobre `invite_token` y sobre `pending_email` cuando no es nulo. |
+| 3 | RLS | Solo super_admin puede insertar perfiles con `link_status = pending_gmail` y ejecutar la vinculación. Lectura de perfiles pendientes: super_admin y directiva. El miembro pendiente no tiene acceso hasta vincularse. |
+| 4 | Capa de negocio `lib/members/pre-register.ts` | Schemas Zod (`preRegisterMemberSchema` — valida nombre, apellidos, DNI, fecha nacimiento, workgroup, tipo música/baile, etc. sin email; `linkGmailSchema` — valida `profileId` + `gmail` formato + `invite_token` si aplica). Funciones `preRegisterMember(data)`, `linkGmailToProfile(profileId, gmail)` — (1) verifica super_admin, (2) si existe `auth.users` con ese gmail lo vincula por `user_id`, si no crea invitación pendiente, (3) actualiza `profiles` a `linked` y limpia token. Manejo de colisión: si el gmail ya está vinculado a otro perfil, error. |
+| 5 | Server actions | `preRegisterMemberAction`, `linkGmailAction` — solo super_admin, con validación de rol fail-closed y `revalidatePath('/admin/members','/profile')`. Generación de `invite_token` con `crypto.randomUUID()` para futura auto-vinculación por enlace. |
+| 6 | UI — Alta sin Gmail | En `/admin/members` (solo super_admin) botón "Alta sin Gmail" que abre formulario de pre-registro (sin campo email obligatorio, con todos los datos del perfil). Al guardar, muestra card del miembro pendiente con badge "Pendiente de Gmail" y opción de copiar enlace de invitación. |
+| 7 | UI — Vinculación | En la misma vista, para cada perfil `pending_gmail` botón "Vincular Gmail" que abre diálogo para introducir el Gmail de la persona (o seleccionar de usuarios que se han registrado sueltos). Al confirmar, ejecuta `linkGmailAction`, crea/actualiza `auth.users` y asocia `profiles.user_id`/`email`. Si la persona ya se registró con Gmail antes, permite buscarla y fusionar. |
+| 8 | Flujo de auto-vinculación (opcional) | Si se generó `invite_token`, enviar enlace ` /invite/<token>`; cuando la persona se registra con Gmail usando ese enlace, el sistema vincula automáticamente sin intervención manual. |
+| 9 | Listado y filtros | En `/admin/members` y `/members` filtros "Pendientes de Gmail" / "Vinculados" y en el perfil del miembro pendiente mostrar todos los datos ya asociados (pagos, formación, etc.) aunque aún no tenga acceso. |
+| 10 | Pruebas | Tests unitarios de schemas y de `linkGmailToProfile` (colisión, token inválido, super_admin requerido). Tests de integración RLS: solo super_admin puede pre-registrar/vincular. Tests de que el histórico asociado al perfil (pagos, asistencia) se conserva tras la vinculación. |
+
+### Dependencias
+- Sprint 6 (Registration Approval — flujo de aprobación)
+- Sprint 7 (Emailless Accounts — base de cuentas sin email, reutilizar `auth_method`/`email_alias` si aplica)
+- Sprint 19 (Perfiles — estructura de `profiles`)
+- Sprint 2/21 (Roles — solo super_admin)
+
+### Criterios de Aceptación
+- Solo el super_admin puede crear perfiles sin Gmail (pre-registro).
+- El perfil pre-registrado queda con estado `pending_gmail`, visible en listados con badge y sin acceso hasta vincular.
+- El super_admin puede vincular posteriormente un correo Gmail a un perfil pendiente, sin duplicar el perfil y conservando todo el histórico asociado.
+- Si el Gmail ya pertenece a otro perfil, la vinculación falla con error claro.
+- Los perfiles pendientes se pueden filtrar en el listado de miembros.
+- Un miembro pendiente no puede iniciar sesión hasta estar vinculado.
+
+---
+
 ## Resumen de Ramas y Orden de Ejecución
 
 | Sprint | Rama | Dependencias |
@@ -1296,20 +1451,24 @@ Auditorías finales de seguridad, rendimiento, accesibilidad y validación gener
 | Sprint 20 — Notifications | `feature/sprint-20-notifications` | ✅ Ejecutado |
 | Sprint 21 — Admin Panel | `feature/sprint-21-admin-panel` | ✅ Ejecutado |
 | **Sprint 22 — Account Deletion** | `feature/sprint-22-account-deletion` | ✅ Ejecutado (PR #24, 2026-08-20) |
-| Sprint 23 — PWA | `feature/sprint-23-pwa` | Sprint 1 (pendiente) |
-| Sprint 24 — Instrument Management | `feature/sprint-24-instrument-management` | Sprint 2, Sprint 19 (pendiente) |
-| Sprint 25 — List Ordering | `feature/sprint-25-list-ordering` | Sprint 14, Sprint 19 (pendiente) |
-| Sprint 26 — Shift Member Search | `feature/sprint-26-shift-member-search` | Sprint 8, Sprint 12 (pendiente) |
-| Sprint 27 — Rehearsal Attendance | `feature/sprint-27-rehearsal-attendance` | Sprint 5, Sprint 17 (pendiente) |
-| Sprint 28 — Personal Stats | `feature/sprint-28-personal-stats` | Sprint 5, Sprint 12, Sprint 27, Sprint 17 (pendiente) |
-| Sprint 29 — Money Management | `feature/sprint-29-money-management` | Sprint 2, Sprint 21, Sprint 3 (pendiente) |
-| Sprint 30 — Legal Guardian (Menores) | `feature/sprint-30-legal-guardian` | Sprint 6, Sprint 19, Sprint 14 (pendiente) |
-| Sprint 31 — Payment Tracking & Material Distribution | `feature/sprint-31-payment-tracking` | Sprint 2, Sprint 21, Sprint 17, Sprint 19 (pendiente) |
-| Sprint 32 — Rehearsal Auto-Enrollment | `feature/sprint-32-rehearsal-auto-enroll` | Sprint 2, Sprint 5, Sprint 17, Sprint 27 (pendiente) |
-| Sprint 33 — Dance Formation & Musician Instruments | `feature/sprint-33-dance-formation-instruments` | Sprint 2, Sprint 17, Sprint 24, Sprint 19 (pendiente) |
-| Sprint 34 — Meeting Minutes & Summary (Dashboard/Perfil) | `feature/sprint-34-meeting-minutes-summary` | Sprint 2, Sprint 21, Sprint 19, Sprint 31, Sprint 33, Sprint 24 (pendiente) |
+| Sprint 23 — PWA | `feature/sprint-23-pwa` | ✅ Ejecutado |
+| Sprint 24 — Instrument Management | `feature/sprint-24-instrument-management` | ✅ Ejecutado |
+| Sprint 25 — List Ordering | `feature/sprint-25-list-ordering` | ✅ Ejecutado |
+| Sprint 26 — Shift Member Search | `feature/sprint-26-shift-member-search` | ✅ Ejecutado |
+| Sprint 27 — Rehearsal Attendance | `feature/sprint-27-rehearsal-attendance` | ✅ Ejecutado |
+| Sprint 28 — Personal Stats | `feature/sprint-28-personal-stats` | ✅ Ejecutado |
+| Sprint 29 — Money Management | `feature/sprint-29-money-management` | ✅ Ejecutado |
+| Sprint 30 — Legal Guardian (Menores) | `feature/sprint-30-legal-guardian` | ✅ Ejecutado |
+| Sprint 31 — Payment Tracking & Material Distribution | `feature/sprint-31-payment-tracking` | ✅ Ejecutado |
+| Sprint 32 — Rehearsal Auto-Enrollment | `feature/sprint-32-rehearsal-auto-enroll` | ✅ Ejecutado |
+| Sprint 33 — Dance Formation & Musician Instruments | `feature/sprint-33-dance-formation-instruments` | ✅ Ejecutado |
+| Sprint 34 — Meeting Minutes & Summary (Dashboard/Perfil) | `feature/sprint-34-meeting-minutes-summary` | ✅ Ejecutado |
 | Sprint 35 — CI/CD | `feature/sprint-35-cicd` | — (pendiente) |
 | Sprint 36 — Hardening | `feature/sprint-36-hardening` | Todos los anteriores (pendiente) |
+| Sprint 37 — Load Testing | `feature/sprint-37-load-testing` | Sprint 35, Sprint 36 (pendiente) |
+| Sprint 38 — Nuevo Año de Carnaval (Reset + Copia de Seguridad) | `feature/sprint-38-new-carnival-year` | Sprint 5, Sprint 11, Sprint 13/28, Sprint 14/19, Sprint 15, Sprint 17, Sprint 24/33, Sprint 29/31 (pendiente) |
+| Sprint 39 — Manual de Usuario por Roles y Tipos de Miembro | `feature/sprint-39-user-manual` | Todos los sprints 1-38 (pendiente) |
+| Sprint 40 — Alta sin Gmail y Vinculación Posterior | `feature/sprint-40-pre-register-link-gmail` | Sprint 6, Sprint 7, Sprint 19, Sprint 2/21 (pendiente) |
 
 ---
 
