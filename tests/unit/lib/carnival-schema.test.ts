@@ -3,16 +3,16 @@ import { createCarnivalYearSchema, startNewYearSchema, SNAPSHOT_TYPES, isCarniva
 
 describe("carnival/schema", () => {
   it("acepta año válido", () => {
-    const res = createCarnivalYearSchema.safeParse({ year: 2027, label: "Carnaval 2027", start_date: "2027-01-01" });
+    const res = createCarnivalYearSchema.safeParse({ year: 2027, label: "Carnaval 2027", start_date: "2027-03-01" });
     expect(res.success).toBe(true);
   });
   it("rechaza año fuera de rango", () => {
-    expect(createCarnivalYearSchema.safeParse({ year: 1999, label: "X", start_date: "2027-01-01" }).success).toBe(false);
-    expect(createCarnivalYearSchema.safeParse({ year: 2101, label: "X", start_date: "2027-01-01" }).success).toBe(false);
+    expect(createCarnivalYearSchema.safeParse({ year: 1999, label: "X", start_date: "2027-03-01" }).success).toBe(false);
+    expect(createCarnivalYearSchema.safeParse({ year: 2101, label: "X", start_date: "2027-03-01" }).success).toBe(false);
   });
   it("valida startNewYear confirmación AÑO", () => {
-    expect(startNewYearSchema.safeParse({ label: "Carnaval 2027", start_date: "2027-01-01", confirmText: "AÑO" }).success).toBe(true);
-    expect(startNewYearSchema.safeParse({ label: "Carnaval 2027", start_date: "2027-01-01", confirmText: "NO" }).success).toBe(true); // schema solo valida presencia, lógica de comparación en mutation
+    expect(startNewYearSchema.safeParse({ label: "Carnaval 2027", start_date: "2027-03-01", confirmText: "AÑO" }).success).toBe(true);
+    expect(startNewYearSchema.safeParse({ label: "Carnaval 2027", start_date: "2027-03-01", confirmText: "NO" }).success).toBe(true); // schema solo valida presencia, lógica de comparación en mutation
   });
   it("SNAPSHOT_TYPES incluye todas las secciones", () => {
     expect(SNAPSHOT_TYPES).toContain("members");

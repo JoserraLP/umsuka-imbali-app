@@ -5,9 +5,12 @@ describe("payments queries pure helpers", () => {
   describe("isPaidForMonth", () => {
     it("yearly payment covers any month of that year", () => {
       const payments = [{ payment_type: "yearly" as const, period_month: null, period_year: 2026 }];
-      expect(isPaidForMonth(payments, 2026, 1)).toBe(true);
+      // carnival year marzo→febrero: Jan/Feb belong to previous carnival year
+      expect(isPaidForMonth(payments, 2026, 3)).toBe(true);
       expect(isPaidForMonth(payments, 2026, 12)).toBe(true);
       expect(isPaidForMonth(payments, 2026, 6)).toBe(true);
+      expect(isPaidForMonth(payments, 2027, 1)).toBe(true);
+      expect(isPaidForMonth(payments, 2026, 1)).toBe(false);
     });
 
     it("yearly does not cover other years", () => {
