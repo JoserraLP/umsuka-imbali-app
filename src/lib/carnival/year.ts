@@ -132,9 +132,29 @@ export async function createSnapshot(yearId: string): Promise<MutationResult> {
   return { success: true, data: null };
 }
 
+/** Año carnavalero marzo→febrero: helper para mapear fecha a año carnavalero. */
+export function getCarnivalYearForDate(date: Date | string): number {
+  const d = typeof date === "string" ? new Date(date) : date;
+  const y = d.getUTCFullYear();
+  const m = d.getUTCMonth() + 1;
+  return m >= 3 ? y : y - 1;
+}
+
+/** Último día de febrero de un año dado (28 o 29). */
+export function getLastDayOfFebruary(year: number): string {
+  const lastDay = new Date(Date.UTC(year, 2, 0)).getUTCDate();
+  return `${year}-02-${String(lastDay).padStart(2, "0")}`;
+}
+
+/** 1 de marzo de un año dado. */
+export function getMarchFirst(year: number): string {
+  return `${year}-03-01`;
+}
+
 /**
  * Inicia nuevo año: archiva activo, crea snapshot, crea nuevo año.
- * Transacción best-effort con rollback si falla snapshot.
+ * Año carnavalero marzo→febrero: archiva con end_date = último día de febrero de year+1,
+ * nuevo año empieza el 1 de marzo de nextYear. Transacción best-effort con rollback si falla snapshot.
  */
 export async function startNewYear(input: { label: string; startDate: string; confirmText: string }): Promise<MutationResult<{ newYearId: string }>> {
   const profile = await getCurrentProfile();
@@ -161,23 +181,32 @@ export async function startNewYear(input: { label: string; startDate: string; co
   const snap = await createSnapshot(active.id as string);
   if (!snap.success) return { success: false, error: `Fallo al crear copia de seguridad: ${snap.error}. El año no se ha archivado.` };
 
-  // 2. Archive active year
+  // 2. Archive active year con fin en febrero (marzo→febrero)
+  const activeYearNum = (active as { year: number }).year;
+  const archiveEndDate = getLastDayOfFebruary(activeYearNum + 1);
   const { error: archiveError } = await admin
     .from("carnival_years")
-    .update({ status: "archived" as never, end_date: new Date().toISOString().slice(0, 10) as never })
+    .update({ status: "archived" as never, end_date: archiveEndDate as never })
     .eq("id", active.id as string);
   if (archiveError) return { success: false, error: `Error al archivar año: ${archiveError.message}` };
 
-  // 3. Create new year (year = max+1 or current+1)
+  // 3. Create new year (year = max+1 or current+1) empezando el 1 de marzo
   const { data: maxYearRow } = await supabase.from("carnival_years").select("year").order("year", { ascending: false }).limit(1).maybeSingle();
-  const nextYear = Math.max(((maxYearRow as { year: number } | null)?.year ?? (active as { year: number }).year), new Date().getFullYear()) + 1;
-  // If label contains year, keep label as provided; otherwise use nextYear
+  const nextYear = Math.max(((maxYearRow as { year: number } | null)?.year ?? activeYearNum), new Date().getFullYear()) + 1;
+  const computedStartDate = getMarchFirst(nextYear);
+  // Si el usuario mandó una fecha distinta pero válida (marzo), la respetamos; si no, usamos el 1 de marzo calculado
+  const startDateToUse = input.startDate && isMarchFirst(input.startDate) ? input.startDate : computedStartDate;
+  // Helper local para validar marzo
+  function isMarchFirst(d: string): boolean {
+    const dt = new Date(d);
+    return !Number.isNaN(dt.getTime()) && dt.getUTCMonth() + 1 === 3 && dt.getUTCDate() === 1;
+  }
   const { data: newYear, error: newYearError } = await admin
     .from("carnival_years")
     .insert({
       year: nextYear,
       label: input.label,
-      start_date: input.startDate as never,
+      start_date: startDateToUse as never,
       status: "active" as never,
       created_by: profile!.id as never,
     } as never)

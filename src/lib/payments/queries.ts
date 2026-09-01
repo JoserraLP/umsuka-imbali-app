@@ -53,10 +53,20 @@ function mapRow(row: {
   };
 }
 
+// ── Carnival year helper (marzo→febrero) ─────────────────
+/**
+ * Año carnavalero marzo→febrero: marzo del año N a febrero de N+1 pertenece a N.
+ * Ej: 2027-01-15 (enero 2027) → 2026; 2026-03-10 → 2026.
+ */
+export function getCarnivalYear(year: number, month: number): number {
+  return month >= 3 ? year : year - 1;
+}
+
 // ── Pure eligibility helper (testeable sin DB) ────
 /**
  * Returns true if the given payment list covers the month/year of the event.
- * Yearly for the event's year covers any month. Monthly must match exact month+year.
+ * Yearly: cubre si period_year === año carnavalero del evento (marzo→febrero).
+ * Monthly: debe coincidir mes+año exactos (calendario).
  * Accepts both snake_case (DB) and camelCase (PaymentRow) shapes.
  */
 export function isPaidForMonth(
@@ -67,11 +77,12 @@ export function isPaidForMonth(
   eventYear: number,
   eventMonth: number,
 ): boolean {
+  const carnivalYear = getCarnivalYear(eventYear, eventMonth);
   for (const p of payments) {
     const type = (p as { payment_type?: PaymentType; paymentType?: PaymentType }).payment_type ?? (p as { paymentType?: PaymentType }).paymentType;
     const year = (p as { period_year?: number; periodYear?: number }).period_year ?? (p as { periodYear?: number }).periodYear;
     const month = (p as { period_month?: number | null; periodMonth?: number | null }).period_month ?? (p as { periodMonth?: number | null }).periodMonth ?? null;
-    if (type === "yearly" && year === eventYear) return true;
+    if (type === "yearly" && year === carnivalYear) return true;
     if (type === "monthly" && year === eventYear && month === eventMonth) return true;
   }
   return false;

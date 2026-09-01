@@ -92,9 +92,10 @@ export async function getMemberSummary(userId: string): Promise<MemberSummary> {
     const isUpToDate = isPaidForMonth(payments as never, currentYear, currentMonth);
 
     if (isUpToDate) {
+      // Anual carnavalero marzo→febrero: 02 del año siguiente
       const label =
         last.payment_type === "yearly"
-          ? `Al día hasta 12/${last.period_year}`
+          ? `Al día hasta 02/${last.period_year + 1}`
           : `Al día hasta ${String(last.period_month).padStart(2, "0")}/${last.period_year}`;
       paymentStatus = {
         status: "al_dia",
@@ -104,9 +105,10 @@ export async function getMemberSummary(userId: string): Promise<MemberSummary> {
       };
     } else {
       // Pendiente: muestra último mes pagado o "Pendiente desde..."
+      // Anual ahora vence en febrero (02) no diciembre (12)
       const label =
         last.payment_type === "yearly"
-          ? `Al día hasta 12/${last.period_year} · Pendiente ${String(currentMonth).padStart(2, "0")}/${currentYear}`
+          ? `Al día hasta 02/${last.period_year + 1} · Pendiente ${String(currentMonth).padStart(2, "0")}/${currentYear}`
           : `Pagado hasta ${String(last.period_month).padStart(2, "0")}/${last.period_year} · Pendiente`;
       paymentStatus = {
         status: "pendiente",

@@ -35,8 +35,16 @@ export function CarnivalYearForm() {
         <Input id="label" name="label" placeholder="Carnaval 2027" required maxLength={200} disabled={isPending} />
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="start_date">Fecha de inicio</Label>
-        <Input id="start_date" name="start_date" type="date" required disabled={isPending} />
+        <Label htmlFor="start_date">Fecha de inicio (1 de marzo)</Label>
+        <Input
+          id="start_date"
+          name="start_date"
+          type="date"
+          required
+          disabled={isPending}
+          defaultValue={`${new Date().getUTCMonth() + 1 >= 3 ? new Date().getUTCFullYear() + 1 : new Date().getUTCFullYear()}-03-01`}
+        />
+        <p className="text-xs text-muted-foreground">El año carnavalero es marzo → febrero (ej. 2026-03-01 → 2027-02-28).</p>
       </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="confirmText">Escribe AÑO para confirmar</Label>
