@@ -246,9 +246,13 @@ export default async function MembersPage({ searchParams }: PageProps) {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={member.linkStatus === "pending_gmail" ? "secondary" : "outline"}>
-                          {member.linkStatus === "pending_gmail" ? "Pendiente de Gmail" : "Vinculado"}
-                        </Badge>
+                        {member.authMethod === "email_alias" ? (
+                          <Badge variant="outline">Cuenta local</Badge>
+                        ) : (
+                          <Badge variant={member.linkStatus === "pending_gmail" ? "secondary" : "outline"}>
+                            {member.linkStatus === "pending_gmail" ? "Pendiente de Gmail" : "Vinculado a Gmail"}
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {DATE_FORMATTER.format(new Date(member.createdAt))}

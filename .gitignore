@@ -40,6 +40,13 @@ next-env.d.ts
 supabase/.branches
 supabase/.temp
 
+# bulk import credentials (contain plain passwords — never commit)
+scripts/data/credenciales-*.csv
+scripts/data/preview-*.csv
+scripts/data/*.csv
+scripts/data/*.xlsx
+!scripts/data/.gitkeep
+
 # PWA generated files
 public/sw.js
 public/workbox-*.js

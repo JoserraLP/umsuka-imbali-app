@@ -161,6 +161,13 @@ export default async function MemberDetailPage({ params }: PageProps) {
               {member.isActive ? "Alta" : "Baja"}
             </Badge>
             {isMinor && <Badge variant="secondary">Menor</Badge>}
+            {member.authMethod === "email_alias" ? (
+              <Badge variant="outline">Cuenta local</Badge>
+            ) : member.linkStatus === "pending_gmail" ? (
+              <Badge variant="secondary">Pendiente de Gmail</Badge>
+            ) : (
+              <Badge variant="outline">Vinculado a Gmail</Badge>
+            )}
           </CardContent>
           <CardContent className="border-t pt-4 text-sm text-muted-foreground">
             <p>Fecha de alta: {DATE_FORMATTER.format(new Date(member.createdAt))}</p>

@@ -7,6 +7,7 @@ import { getCurrentProfile } from "@/lib/auth/session";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { PreRegisterForm } from "@/app/admin/members/pre-register-form";
 import { LinkGmailDialog } from "@/app/admin/members/link-gmail-dialog";
+import { ConvertToLocalDialog } from "@/app/admin/members/convert-to-local-dialog";
 import { MemberFilters as MemberFiltersControl } from "@/app/members/member-filters";
 import { memberFiltersSchema } from "@/lib/members/schema";
 
@@ -40,7 +41,7 @@ export default async function AdminMembersPage({ searchParams }: PageProps) {
   const admin = createAdminClient();
   const { data: members } = await admin
     .from("profiles")
-    .select("id, first_name, last_name, component_type, workgroup, link_status, invite_token, pending_email, created_at")
+    .select("id, first_name, last_name, component_type, workgroup, auth_method, link_status, invite_token, pending_email, created_at")
     .order("created_at", { ascending: false })
     .limit(100);
 
@@ -65,7 +66,7 @@ export default async function AdminMembersPage({ searchParams }: PageProps) {
         <Card>
           <CardHeader>
             <CardTitle>Listado ({filtered.length} / {members?.length ?? 0})</CardTitle>
-            <CardDescription>Filtros: Pendientes de Gmail / Vinculados via link_status — usa ?linkStatus=pending_gmail|linked</CardDescription>
+            <CardDescription>Filtros: Pendientes de Gmail / Vinculados a Gmail via link_status — usa ?linkStatus=pending_gmail|linked. Cuentas locales (sin Gmail) aparecen como &quot;Cuenta local&quot;.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <MemberFiltersControl
@@ -79,13 +80,16 @@ export default async function AdminMembersPage({ searchParams }: PageProps) {
             {filtered.map((m) => (
               <div key={m.id} className="flex flex-wrap items-center justify-between gap-2 rounded border p-3">
                 <div>
-                  <p className="font-medium">{m.first_name} {m.last_name} <Badge variant={m.link_status === "pending_gmail" ? "secondary" : "default"}>{m.link_status === "pending_gmail" ? "Pendiente de Gmail" : "Vinculado"}</Badge></p>
+                  <p className="font-medium">{m.first_name} {m.last_name} {(m as { auth_method?: string }).auth_method === "email_alias" ? <Badge variant="outline">Cuenta local</Badge> : <Badge variant={m.link_status === "pending_gmail" ? "secondary" : "default"}>{m.link_status === "pending_gmail" ? "Pendiente de Gmail" : "Vinculado a Gmail"}</Badge>}</p>
                   <p className="text-xs text-muted-foreground">{m.component_type} — {m.workgroup} — {m.pending_email ?? "sin email"}</p>
                   {m.invite_token && <p className="text-xs">Invite: /invite/{m.invite_token}</p>}
                 </div>
                 <div className="flex gap-2">
-                  {m.link_status === "pending_gmail" && m.invite_token && (
-                    <LinkGmailDialog profileId={m.id} inviteToken={m.invite_token} />
+                  {m.link_status === "pending_gmail" && (
+                    <>
+                      {m.invite_token && <LinkGmailDialog profileId={m.id} inviteToken={m.invite_token} />}
+                      <ConvertToLocalDialog profileId={m.id} defaultName={`${m.first_name} ${m.last_name}`} />
+                    </>
                   )}
                 </div>
               </div>
