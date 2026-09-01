@@ -78,6 +78,7 @@ export const NAV_LINKS: NavLink[] = [
     icon: CreditCard,
     showFor: (ctx) => isManagementRole(ctx.role),
   },
+  { href: "/documents", label: "Documentos", icon: FileText },
   { href: "/actas", label: "Actas", icon: FileText },
   {
     href: "/admin/carnival",

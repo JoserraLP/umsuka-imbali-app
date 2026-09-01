@@ -1,0 +1,35 @@
+{
+  "title": "Sprint 41 — Gestión Documental con Supabase Storage",
+  "description": "Implementar gestión documental con categorías, permisos por rol y almacenamiento en Supabase Storage. Permitir a directiva y super_admin subir, organizar y eliminar documentos por categorías; todos los miembros autenticados pueden listar y descargar. Incluye bucket privado, políticas RLS, versionado básico por updated_at, auditoría y UI completa en /documents con subida drag & drop, filtros y visor.",
+  "branch": "feature/sprint-41-document-management",
+  "status": "documented",
+  "adr": "docs/adr-sprint-41-document-management.md",
+  "acceptance_criteria": [
+    "Los documentos se organizan por categorías (categorías jerárquicas opcionales) y se listan con nombre, tamaño, mime_type, categoría y fecha de subida.",
+    "Solo directiva (is_management) y super_admin pueden subir, reemplazar y eliminar documentos; todos los miembros autenticados pueden listar, filtrar y descargar.",
+    "Los archivos se almacenan en Supabase Storage bucket `documents` con políticas RLS por rol y validación de tipo/tamaño (máx 20 MB, tipos comunes: pdf, doc, docx, xls, xlsx, png, jpg, etc.).",
+    "Existe página /documents con vista de categorías, tabla/listado filtrable y buscable, drag & drop o selector de archivos con indicador de progreso, y detalle/descarga.",
+    "Cada subida/actualización registra created_by y updated_at; la eliminación es física en Storage + BD y queda trazable.",
+    "RLS y server actions validan rol fail-closed; un miembro base no puede subir ni eliminar."
+  ],
+  "definition_of_done": [
+    "Migración SQL 20260101007600_document_management.sql con: CREATE TABLE umsuka.document_categories (id uuid PK, name text 1-100 UNIQUE, description text nullable, parent_id uuid FK nullable, created_by uuid FK, created_at/updated_at timestamptz) y CREATE TABLE umsuka.documents (id uuid PK, category_id uuid FK SET NULL, name text 1-200, file_path text UNIQUE NOT NULL, file_size int >0 <=20MB, mime_type text, uploaded_by uuid FK, created_at/updated_at timestamptz), índices (category_id, uploaded_by, mime_type), trigger updated_at, comentarios + checklist idempotente 10 puntos, GRANTs y RLS ENABLE+FORCE (SELECT authenticated true, INSERT/UPDATE/DELETE is_management() via helper).",
+    "Storage bucket `documents` creado vía migración (insert storage.buckets) privado, con políticas Storage: SELECT authenticated true, INSERT/UPDATE/DELETE solo is_management(). Límite 20MB y mime whitelist validada en Zod + BD CHECK.",
+    "Tipos hand-edited en src/types/database.types.ts: DocumentCategory y Document Row/Insert/Update + storage extension si aplica.",
+    "Capa lib/documents/schema.ts con Zod schemas: createCategorySchema (name 1-100), createDocumentSchema (name 1-200, category_id uuid nullable, file requerido), updateDocumentSchema, deleteDocumentSchema; mensajes es-ES y validación mime/tamaño.",
+    "Capa lib/documents/queries.ts con getCategories, getDocuments (filtros por categoría, búsqueda por nombre, orden por fecha), getDocumentById; lib/documents/mutations.ts con createCategory, createDocument (upload a Storage + insert BD), updateDocument, deleteDocument (delete Storage + delete BD) con guards is_management fail-closed.",
+    "Server actions thin en src/lib/documents/actions.ts con revalidatePath('/documents') y guards is_management para mutaciones.",
+    "UI: Página /documents (AppShell) con listado de categorías, tabla de documentos, filtros por categoría/búsqueda, subida drag & drop + input file, barra de progreso, acciones descargar/eliminar (eliminar solo directiva), y visor/estado vacío. Componentes reutilizables si aplica.",
+    "Integración navegación: enlace Documentos en nav del AppShell visible para todos los autenticados; badge/contador opcional.",
+    "Tests unitarios nuevos pasando (schemas valid/invalid, queries con mocks, mutations con guards management/base, RLS lógica) + suite completa npx vitest run sin regresiones.",
+    "Typecheck (tsc --noEmit) y lint (eslint --max-warnings=0) limpios; next build sin errores.",
+    "Security scan sin issues HIGH (sin secretos, sin bypass RLS, sin exposición de service_role en cliente).",
+    "ADR documentado en docs/adr-sprint-41-document-management.md.",
+    "PR creada contra master siguiendo docs/git-conventions.md (rama feature/sprint-41-document-management, commits convencionales, body con Summary/Related Task/Changes/Testing/ADR/Breaking Changes)."
+  ],
+  "dependencies": [
+    "Sprint 21 (Admin Panel — is_management helper)",
+    "Sprint 2 (Roles — directiva/super_admin)",
+    "Sprint 16 spec (Storage base)"
+  ]
+}
