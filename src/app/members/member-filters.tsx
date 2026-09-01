@@ -30,7 +30,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 const LINK_STATUS_LABELS: Record<string, string> = {
   pending_gmail: "Pendiente de Gmail",
-  linked: "Vinculado",
+  linked: "Vinculado a Gmail",
 };
 
 interface MemberFiltersProps {
