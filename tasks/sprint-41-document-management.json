@@ -2,7 +2,7 @@
   "title": "Sprint 41 — Gestión Documental con Supabase Storage",
   "description": "Implementar gestión documental con categorías, permisos por rol y almacenamiento en Supabase Storage. Permitir a directiva y super_admin subir, organizar y eliminar documentos por categorías; todos los miembros autenticados pueden listar y descargar. Incluye bucket privado, políticas RLS, versionado básico por updated_at, auditoría y UI completa en /documents con subida drag & drop, filtros y visor.",
   "branch": "feature/sprint-41-document-management",
-  "status": "documented",
+  "status": "published",
   "adr": "docs/adr-sprint-41-document-management.md",
   "acceptance_criteria": [
     "Los documentos se organizan por categorías (categorías jerárquicas opcionales) y se listan con nombre, tamaño, mime_type, categoría y fecha de subida.",
