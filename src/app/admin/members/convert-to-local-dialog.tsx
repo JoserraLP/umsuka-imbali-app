@@ -4,15 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { convertPendingToLocal } from "@/app/admin/members/convert-actions";
 
 interface Props {
@@ -53,27 +45,27 @@ export function ConvertToLocalDialog({ profileId, defaultName }: Props) {
       return;
     }
     setSuccess(`Convertido: ${res.data?.username}. Ya puede entrar con usuario/contraseña.`);
-    setTimeout(() => {
-      setOpen(false);
-      router.refresh();
-    }, 1200);
+    setTimeout(() => router.refresh(), 800);
+  }
+
+  if (!open) {
+    return (
+      <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+        Pasar a cuenta local
+      </Button>
+    );
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          Pasar a cuenta local
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Convertir pendiente a cuenta local</DialogTitle>
-          <DialogDescription>
-            El perfil pasará de <b>pendiente de Gmail</b> a <b>cuenta local</b> (usuario/contraseña). El super_admin gestiona el cambio. El histórico se conserva.
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={onSubmit} className="space-y-3">
+    <Card className="mt-2">
+      <CardHeader>
+        <CardTitle className="text-sm">Convertir a cuenta local</CardTitle>
+        <p className="text-xs text-muted-foreground">
+          El perfil pasará de pendiente de Gmail a cuenta local (usuario/contraseña). El histórico se conserva.
+        </p>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={onSubmit} className="flex flex-col gap-2">
           <div>
             <label className="text-xs font-medium">Username (3-30, solo letras/números/_)</label>
             <Input value={username} onChange={(e) => setUsername(e.target.value)} required minLength={3} maxLength={30} pattern="^[a-zA-Z0-9_]+$" />
@@ -83,18 +75,18 @@ export function ConvertToLocalDialog({ profileId, defaultName }: Props) {
             <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
             <p className="mt-1 text-xs text-muted-foreground">Ej: Umsuka2026!</p>
           </div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          {success && <p className="text-sm text-green-600">{success}</p>}
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={loading}>
-              Cancelar
+          {error && <p className="text-xs text-destructive">{error}</p>}
+          {success && <p className="text-xs text-green-600">{success}</p>}
+          <div className="flex gap-2">
+            <Button type="submit" size="sm" disabled={loading}>
+              {loading ? "..." : "Convertir"}
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Convirtiendo..." : "Convertir"}
+            <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)} disabled={loading}>
+              Cerrar
             </Button>
-          </DialogFooter>
+          </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </CardContent>
+    </Card>
   );
 }
