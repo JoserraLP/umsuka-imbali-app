@@ -97,6 +97,8 @@ create index if not exists idx_documents_category_id on umsuka.documents (catego
 create index if not exists idx_documents_uploaded_by on umsuka.documents (uploaded_by);
 create index if not exists idx_documents_mime_type on umsuka.documents (mime_type);
 create index if not exists idx_documents_created_at on umsuka.documents (created_at desc);
+-- pg_trgm for trigram search (gin_trgm_ops) — requires extension
+create extension if not exists pg_trgm;
 create index if not exists idx_documents_name_trgm on umsuka.documents using gin (name gin_trgm_ops);
 
 drop trigger if exists trg_documents_updated_at on umsuka.documents;
