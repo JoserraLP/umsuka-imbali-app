@@ -3,6 +3,18 @@ import { z } from "zod";
 export const CARNIVAL_YEAR_STATUSES = ["active", "archived"] as const;
 export type CarnivalYearStatus = (typeof CARNIVAL_YEAR_STATUSES)[number];
 
+function isMarchFirst(dateStr: string): boolean {
+  const d = new Date(dateStr);
+  return !Number.isNaN(d.getTime()) && d.getUTCMonth() + 1 === 3 && d.getUTCDate() === 1;
+}
+function isLastDayOfFebruary(dateStr: string): boolean {
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return false;
+  if (d.getUTCMonth() + 1 !== 2) return false;
+  const lastDay = new Date(Date.UTC(d.getUTCFullYear(), 2, 0)).getUTCDate(); // 28 o 29
+  return d.getUTCDate() === lastDay;
+}
+
 export const createCarnivalYearSchema = z.object({
   year: z.coerce
     .number({ message: "El año debe ser un número." })
@@ -14,14 +26,16 @@ export const createCarnivalYearSchema = z.object({
     .string()
     .trim()
     .min(1, "La fecha de inicio es obligatoria.")
-    .refine((v) => !Number.isNaN(Date.parse(v)), "Fecha de inicio inválida."),
+    .refine((v) => !Number.isNaN(Date.parse(v)), "Fecha de inicio inválida.")
+    .refine(isMarchFirst, "El año carnavalero debe empezar el 1 de marzo (marzo→febrero)."),
   end_date: z
     .string()
     .trim()
     .nullable()
     .optional()
     .transform((v) => (v ? v : null))
-    .refine((v) => v === null || !Number.isNaN(Date.parse(v as string)), "Fecha de fin inválida."),
+    .refine((v) => v === null || !Number.isNaN(Date.parse(v as string)), "Fecha de fin inválida.")
+    .refine((v) => v === null || isLastDayOfFebruary(v as string), "El año carnavalero debe terminar el último día de febrero."),
 });
 
 export type CreateCarnivalYearInput = z.infer<typeof createCarnivalYearSchema>;
@@ -32,7 +46,8 @@ export const startNewYearSchema = z.object({
     .string()
     .trim()
     .min(1, "La fecha de inicio es obligatoria.")
-    .refine((v) => !Number.isNaN(Date.parse(v)), "Fecha de inicio inválida."),
+    .refine((v) => !Number.isNaN(Date.parse(v)), "Fecha de inicio inválida.")
+    .refine(isMarchFirst, "El nuevo año debe empezar el 1 de marzo."),
   confirmText: z.string().trim().min(1, "Debes escribir la confirmación."),
 });
 
