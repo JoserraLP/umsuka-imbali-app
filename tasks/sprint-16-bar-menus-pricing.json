@@ -1,0 +1,77 @@
+{
+  "title": "Sprint 16 — Precios de Menus, Comidas y Bebidas (Responsable de Barra)",
+  "description": "Permitir introducir y gestionar los precios de los menus, comidas y bebidas de la barra de la comparsa y, solo para responsable de barra y super_admin, llevar un listado de cosas que comprar (checklist de compra) con numero de unidades en funcion del inventario actual. Solo el responsable de barra (workgroup barra con is_workgroup_lead=true) y el super_admin pueden crear, editar y anadir nuevos objetos/precios, decidir que productos se muestran a los usuarios normales y gestionar la checklist; los usuarios normales solo ven los productos marcados como visibles. Incluye: migraciones bar_items/bar_price_history/bar_shopping_lists/bar_shopping_items, RLS estricto, trigger de historico, capas lib/bar/menus.ts y lib/bar/shopping.ts, server actions, paginas /bar (vista publica) y /bar/admin (gestion + checklist), y tests.",
+  "branch": "feature/sprint-16-bar-menus-pricing",
+  "status": "implemented",
+  "steps": [
+    {
+      "id": 1,
+      "name": "Migracion de BD — bar_items y bar_price_history",
+      "detail": "Crear/extender umsuka.bar_items (id uuid PK, name text, description text nullable, category ENUM menu/food/drink, price numeric(10,2) CHECK >0, is_available boolean default true, is_visible_to_members boolean default true, stock_quantity INT default 0 CHECK >=0, created_by uuid FK, created_at, updated_at) y umsuka.bar_price_history (id, bar_item_id FK, old_price, new_price, changed_by FK, changed_at) si no existen. Si ya existen del sprint 3, anadir columnas category, stock_quantity, is_visible_to_members y migrar datos. Crear ENUM bar_category si no existe."
+    },
+    {
+      "id": 2,
+      "name": "Migracion de BD — checklist de compra",
+      "detail": "Crear umsuka.bar_shopping_lists (id uuid PK, title text, status ENUM open/closed default open, created_by FK, created_at) y umsuka.bar_shopping_items (id uuid PK, shopping_list_id FK CASCADE, bar_item_id FK nullable, name text, quantity_needed INT CHECK >0, quantity_purchased INT default 0, is_checked boolean default false, notes text, created_at). Indices por shopping_list_id y bar_item_id."
+    },
+    {
+      "id": 3,
+      "name": "RLS y trigger de historico",
+      "detail": "RLS: bar_items SELECT para todos los autenticados (filtro por is_visible_to_members en capa de negocio para vista publica); INSERT/UPDATE/DELETE y toggle visibilidad solo para is_workgroup_lead con workgroup='barra' + is_super_admin(). bar_price_history solo lectura para autenticados, escritura via trigger. bar_shopping_lists y bar_shopping_items SELECT/INSERT/UPDATE/DELETE solo responsable de barra y super_admin. Trigger BEFORE UPDATE OF price ON bar_items que inserte en bar_price_history con changed_by=auth.uid(). Grants a authenticated/service_role."
+    },
+    {
+      "id": 4,
+      "name": "Capa de negocio lib/bar/menus.ts",
+      "detail": "Schemas Zod (createBarItemSchema con category, updateBarPriceSchema, updateStockSchema, updateVisibilitySchema), queries (getBarItems con filtros por categoria/disponibilidad/stock/visibilidad — getVisibleBarItems solo visibles para usuarios normales, getAllBarItems para gestion, getBarPriceHistory), mutations (createBarItem, updateBarItem, updateBarPrice, updateStock, toggleAvailability, toggleVisibility, deleteBarItem logico). Patron lib/shifts y lib/votings (requireAuthenticatedProfile, isBarLead)."
+    },
+    {
+      "id": 5,
+      "name": "Capa de negocio lib/bar/shopping.ts",
+      "detail": "Schemas Zod (createShoppingListSchema, addShoppingItemSchema con bar_item_id opcional + quantity_needed), queries (getShoppingLists, getShoppingListWithItems), mutations (createShoppingList, addItem, updateQuantity, toggleChecked, closeList). Logica suggestQuantity(bar_item_id) que propone quantity_needed en funcion de stock_quantity del inventario (stock bajo -> sugerir reposicion)."
+    },
+    {
+      "id": 6,
+      "name": "Server actions",
+      "detail": "Crear src/app/bar/actions.ts con createBarItemAction, updateBarPriceAction, toggleBarItemAction, toggleVisibilityAction, updateStockAction, createShoppingListAction, addShoppingItemAction, toggleShoppingItemAction. Validan rol responsable de barra o super_admin, revalidan /bar y /bar/admin."
+    },
+    {
+      "id": 7,
+      "name": "UI — Gestion (responsable barra) /bar/admin",
+      "detail": "Pagina /bar/admin solo para responsable de barra/super_admin: tabla por categorias (Menus/Foods/Drinks) con columnas de stock y visibilidad, formulario de alta con categoria, edicion inline de precio/stock, toggles disponible/no disponible y visible/oculto a usuarios normales, boton anadir nuevo objeto y visor de historico por item. Seccion Lista de la compra con checklist: crear nueva lista, anadir items desde el inventario (autocomplete con bar_items y muestra stock actual) o libres, indicar numero de cosas a comprar, marcar check al comprar, contador de progreso y boton cerrar lista."
+    },
+    {
+      "id": 8,
+      "name": "UI — Vista publica /bar",
+      "detail": "Pagina /bar (o /bar/precios) para todos los autenticados: listado de precios por categorias solo con productos donde is_visible_to_members=true, buscador y filtro por categoria/disponibilidad, sin botones de edicion ni acceso a la checklist. Estado No disponible atenuado; productos ocultos no aparecen."
+    },
+    {
+      "id": 9,
+      "name": "Pruebas",
+      "detail": "Tests unitarios de schemas y de updateBarPrice (historico) y toggleVisibility. Tests de integracion RLS: solo responsable de barra/super_admin modifica precios/visibilidad y checklist, todos leen solo visibles. Tests de UI de filtros por categoria y de checklist (sugerencia segun stock, toggle, cierre) y de visibilidad (oculto no se muestra a normal, si al responsable). Suite completa verde, typecheck y lint limpios."
+    }
+  ],
+  "acceptance_criteria": [
+    "Solo el responsable de barra y el super_admin pueden introducir, modificar y anadir nuevos menus/comidas/bebidas y sus precios, decidir que productos se muestran y gestionar la checklist de compra.",
+    "Los usuarios normales solo ven los productos con is_visible_to_members = true; el responsable/super_admin ve todos y puede alternar visibilidad por producto.",
+    "La checklist de compra es privada y solo la ve el responsable de barra/super_admin.",
+    "Los precios se organizan por categorias en ingles menu, food y drink con filtro por categoria y stock visible para el responsable.",
+    "Cada cambio de precio queda registrado en el historico con autor y fecha.",
+    "Se puede marcar un objeto como no disponible o como oculto sin borrarlo.",
+    "Existe checklist de compra donde el responsable puede crear listas, anadir cosas desde el inventario (mostrando stock actual) o libres, indicar numero de unidades a comprar y marcarlas como compradas; la cantidad sugerida se basa en el inventario."
+  ],
+  "definition_of_done": [
+    "Migraciones SQL aplicables: bar_items/bar_price_history/bar_shopping_lists/bar_shopping_items con RLS y trigger de historico.",
+    "Capa lib/bar/menus.ts completa (schemas, queries, mutations).",
+    "Capa lib/bar/shopping.ts completa (schemas, queries, mutations, suggestQuantity).",
+    "Server actions con validacion de rol responsable barra/super_admin y revalidacion.",
+    "Paginas /bar (vista publica filtrada) y /bar/admin (gestion completa + checklist) funcionales con AppShell y guardas.",
+    "Nav link Barra visible para todos los autenticados; gestion solo para responsable/super_admin.",
+    "Tests unitarios nuevos verdes + suite completa pasando (vitest run).",
+    "Typecheck (tsc --noEmit) y lint (eslint . --max-warnings=0) limpios.",
+    "Security scan sin issues HIGH.",
+    "ADR creado en docs/adr-sprint-16-bar-menus-pricing.md.",
+    "Task file actualizado en cada etapa del flujo.",
+    "PR creado segun docs/git-conventions.md (branch feature/sprint-16-bar-menus-pricing, commits convencionales, body con Summary/Related Task/Changes/Testing/ADR/Breaking Changes)."
+  ],
+  "dependencies": ["Sprint 2 (Workgroup Roles — responsable de barra)", "Sprint 3 (Bar Pricing — base de bar_items, se extiende aqui)", "Sprint 19 (Perfiles — para identificar responsable)"]
+}
