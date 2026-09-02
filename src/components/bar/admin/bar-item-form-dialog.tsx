@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createBarItemAction } from "@/app/bar/actions";
 
 export function BarItemFormDialog() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,10 +21,10 @@ export function BarItemFormDialog() {
       price: Number(formData.get("price")),
       stock_quantity: Number(formData.get("stock_quantity") ?? 0),
       is_available: formData.get("is_available") === "on",
-      is_visible_to_members: formData.get("is_visible_to_members") !== "off",
+      is_visible_to_members: formData.get("is_visible_to_members") === "on",
     });
     if (!result.success) setError(result.error ?? "Error");
-    else { setOpen(false); window.location.reload(); }
+    else { setOpen(false); router.refresh(); }
   }
 
   if (!open) return <Button onClick={() => setOpen(true)}>Añadir producto</Button>;

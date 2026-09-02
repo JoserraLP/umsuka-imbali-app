@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { BarPriceHistoryEntry } from "@/lib/bar/menus";
 
 export function PriceHistoryDrawer({ history }: { history: BarPriceHistoryEntry[] }) {
   const [open, setOpen] = useState(false);
-  if (!open) return <Button variant="outline" size="sm" onClick={() => setOpen(true)}>Histórico</Button>;
+  if (!open) return <Button variant="outline" size="sm" onClick={() => setOpen(true)} aria-label="Ver histórico"><Eye className="h-4 w-4" /></Button>;
   return (
     <div className="rounded-md border p-3">
       <div className="mb-2 flex items-center justify-between">

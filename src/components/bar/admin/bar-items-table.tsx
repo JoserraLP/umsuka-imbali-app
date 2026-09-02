@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { BarItem } from "@/lib/bar/menus";
 import { toggleBarItemAvailabilityAction, toggleBarItemVisibilityAction, updateBarPriceAction, updateStockAction } from "@/app/bar/actions";
+import { PriceHistoryDrawer } from "./price-history-drawer";
 
 export function BarItemsTable({ items }: { items: BarItem[] }) {
   const [editingPrice, setEditingPrice] = useState<string | null>(null);
@@ -24,6 +25,7 @@ export function BarItemsTable({ items }: { items: BarItem[] }) {
             <th className="p-2">Stock</th>
             <th className="p-2">Disp.</th>
             <th className="p-2">Visible</th>
+            <th className="p-2">Hist</th>
           </tr>
         </thead>
         <tbody>
@@ -67,6 +69,9 @@ export function BarItemsTable({ items }: { items: BarItem[] }) {
                 <Button size="sm" variant={item.isVisibleToMembers ? "default" : "outline"} onClick={() => toggleBarItemVisibilityAction({ id: item.id, is_visible_to_members: !item.isVisibleToMembers })}>
                   {item.isVisibleToMembers ? "Visible" : "Oculto"}
                 </Button>
+              </td>
+              <td className="p-2">
+                <PriceHistoryDrawer history={[]} />
               </td>
             </tr>
           ))}

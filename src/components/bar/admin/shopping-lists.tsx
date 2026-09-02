@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +10,7 @@ import { createShoppingListAction, addShoppingItemAction, toggleShoppingItemActi
 import { suggestQuantity } from "@/lib/bar/shopping";
 
 export function ShoppingLists({ lists, detail, barItems }: { lists: ShoppingListSummary[]; detail?: ShoppingList | null; barItems?: { id: string; name: string; stock_quantity: number }[] }) {
+  const router = useRouter();
   const [title, setTitle] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(detail?.id ?? null);
   const [itemName, setItemName] = useState("");
@@ -19,7 +21,7 @@ export function ShoppingLists({ lists, detail, barItems }: { lists: ShoppingList
     <div className="space-y-4">
       <div className="flex gap-2">
         <Input placeholder="Título nueva lista" value={title} onChange={(e) => setTitle(e.target.value)} className="max-w-xs" />
-        <Button onClick={async () => { if (!title.trim()) return; await createShoppingListAction({ title: title.trim() }); window.location.reload(); }}>Crear lista</Button>
+        <Button onClick={async () => { if (!title.trim()) return; await createShoppingListAction({ title: title.trim() }); router.refresh(); }}>Crear lista</Button>
       </div>
 
       {lists.length === 0 ? <p className="text-sm text-muted-foreground">No hay listas de la compra. Crea una para empezar.</p> : (
@@ -33,7 +35,7 @@ export function ShoppingLists({ lists, detail, barItems }: { lists: ShoppingList
               </div>
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" onClick={() => setSelectedId(l.id)}>{l.status === "open" ? "Abrir" : "Ver"}</Button>
-                {l.status === "open" && <Button size="sm" onClick={async () => { await closeShoppingListAction({ id: l.id }); window.location.reload(); }}>Cerrar lista</Button>}
+                {l.status === "open" && <Button size="sm" onClick={async () => { await closeShoppingListAction({ id: l.id }); router.refresh(); }}>Cerrar lista</Button>}
               </div>
             </li>
           ))}
@@ -70,14 +72,14 @@ export function ShoppingLists({ lists, detail, barItems }: { lists: ShoppingList
             <Button onClick={async () => {
               if (!itemName.trim()) return;
               await addShoppingItemAction({ shopping_list_id: selectedId, bar_item_id: barItemId || null, name: itemName.trim(), quantity_needed: qty, notes: null });
-              window.location.reload();
+              router.refresh();
             }}>Añadir</Button>
           </div>
 
           <ul className="space-y-1">
             {detail.items.map((it) => (
               <li key={it.id} className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={it.isChecked} onChange={async (e) => { await toggleShoppingItemAction({ id: it.id, is_checked: e.target.checked }); window.location.reload(); }} />
+                <input type="checkbox" checked={it.isChecked} onChange={async (e) => { await toggleShoppingItemAction({ id: it.id, is_checked: e.target.checked }); router.refresh(); }} />
                 <span className={it.isChecked ? "line-through text-muted-foreground" : ""}>{it.name} x {it.quantityNeeded} {it.stockQuantity !== undefined && `(stock: ${it.stockQuantity})`}</span>
                 {it.notes && <span className="text-xs text-muted-foreground">— {it.notes}</span>}
               </li>
@@ -87,7 +89,7 @@ export function ShoppingLists({ lists, detail, barItems }: { lists: ShoppingList
             <div className="h-2 flex-1 rounded bg-muted"><div className="h-2 rounded bg-primary" style={{ width: `${detail.progress.percent}%` }} /></div>
             <span className="text-sm">{detail.progress.checked}/{detail.progress.total}</span>
           </div>
-          {detail.status === "open" && <Button onClick={async () => { await closeShoppingListAction({ id: detail.id }); window.location.reload(); }}>Cerrar lista</Button>}
+          {detail.status === "open" && <Button onClick={async () => { await closeShoppingListAction({ id: detail.id }); router.refresh(); }}>Cerrar lista</Button>}
         </div>
       )}
     </div>

@@ -187,10 +187,8 @@ export async function getAllBarItems(filters?: BarFilters): Promise<BarItem[]> {
     .order("category", { ascending: true })
     .order("name", { ascending: true });
 
-  // For admin view we respect category/q but not visibility filter unless explicitly requested
-  if (filters && !filters.includeHidden) {
-    // if includeHidden is false, filter visible only — rare case for admin preview
-    // Do nothing by default (admin sees all), only apply if includeHidden === false
+  if (filters?.includeHidden === false) {
+    query = query.eq("is_visible_to_members", true) as typeof query;
   }
   query = applyBarFilters(query, filters) as typeof query;
 
