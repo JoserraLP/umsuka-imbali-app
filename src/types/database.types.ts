@@ -46,6 +46,9 @@ export type Permission =
   | "settings.write"
   | "audit.read";
 
+export type BarCategory = "menu" | "food" | "drink";
+export type BarShoppingStatus = "open" | "closed";
+
 export interface Database {
   umsuka: {
     Tables: {
@@ -1456,6 +1459,138 @@ export interface Database {
             referencedColumns: ["id"];
           },
         ];
+      };
+      bar_items: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          category: BarCategory;
+          price: number;
+          is_available: boolean;
+          is_visible_to_members: boolean;
+          stock_quantity: number;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          description?: string | null;
+          category: BarCategory;
+          price: number;
+          is_available?: boolean;
+          is_visible_to_members?: boolean;
+          stock_quantity?: number;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          description?: string | null;
+          category?: BarCategory;
+          price?: number;
+          is_available?: boolean;
+          is_visible_to_members?: boolean;
+          stock_quantity?: number;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      bar_price_history: {
+        Row: {
+          id: string;
+          bar_item_id: string;
+          old_price: number | null;
+          new_price: number;
+          changed_by: string | null;
+          changed_at: string;
+        };
+        Insert: {
+          id?: string;
+          bar_item_id: string;
+          old_price?: number | null;
+          new_price: number;
+          changed_by?: string | null;
+          changed_at?: string;
+        };
+        Update: {
+          id?: string;
+          bar_item_id?: string;
+          old_price?: number | null;
+          new_price?: number;
+          changed_by?: string | null;
+          changed_at?: string;
+        };
+        Relationships: [];
+      };
+      bar_shopping_lists: {
+        Row: {
+          id: string;
+          title: string;
+          status: BarShoppingStatus;
+          created_by: string | null;
+          created_at: string;
+          closed_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          status?: BarShoppingStatus;
+          created_by?: string | null;
+          created_at?: string;
+          closed_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          status?: BarShoppingStatus;
+          created_by?: string | null;
+          created_at?: string;
+          closed_at?: string | null;
+        };
+        Relationships: [];
+      };
+      bar_shopping_items: {
+        Row: {
+          id: string;
+          shopping_list_id: string;
+          bar_item_id: string | null;
+          name: string;
+          quantity_needed: number;
+          quantity_purchased: number;
+          is_checked: boolean;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          shopping_list_id: string;
+          bar_item_id?: string | null;
+          name: string;
+          quantity_needed: number;
+          quantity_purchased?: number;
+          is_checked?: boolean;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          shopping_list_id?: string;
+          bar_item_id?: string | null;
+          name?: string;
+          quantity_needed?: number;
+          quantity_purchased?: number;
+          is_checked?: boolean;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
       };
     };
     Views: Record<string, never>;

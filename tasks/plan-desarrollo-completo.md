@@ -550,32 +550,41 @@ Sistema de votación con opciones múltiples, control de voto único por usuario
 
 ---
 
-## Sprint 16 — Gestión Documental (Supabase Storage)
+## Sprint 16 — Precios de Menús, Comidas y Bebidas (Responsable de Barra)
 
-**Rama:** `feature/sprint-16-document-management`
+**Rama:** `feature/sprint-16-bar-menus-pricing`
 
 ### Descripción
-Gestionar documentos usando Supabase Storage con categorías, permisos por rol y control de versiones.
+Permitir introducir y gestionar los **precios de los menús, comidas y bebidas** de la barra de la comparsa y, solo para **responsable de barra y super_admin**, llevar un **listado de cosas que comprar (checklist de compra)** con número de unidades en función del inventario actual. **Solo el responsable de barra** (workgroup `barra` con `is_workgroup_lead = true`) y el super_admin pueden crear, editar, decidir qué productos se muestran a los usuarios normales y gestionar la checklist; los usuarios normales solo ven los productos marcados como visibles.
 
 ### Pasos
 
 | # | Paso | Detalle |
 |---|---|---|
-| 1 | Migración de BD | Crear `umsuka.document_categories` (id, name, description, parent_id opcional para jerarquía). Crear `umsuka.documents` (id, category_id, name, file_path, file_size, mime_type, uploaded_by, created_at, updated_at). |
-| 2 | Configurar Storage | Crear bucket `documentos` en Supabase con políticas RLS. |
-| 3 | Políticas de Storage | Solo management puede subir/eliminar. Todos los auth users pueden leer. |
-| 4 | Capa `lib/documents/` | Schemas Zod, queries, mutations con integración a Supabase Storage (upload, download, delete). |
-| 5 | Server actions | Acciones para subir, listar, descargar, eliminar documentos. |
-| 6 | UI: Gestor de documentos | Página `/documents` con vista de carpetas/categorías, tabla de archivos, indicador de tamaño. |
-| 7 | UI: Subida de documentos | Drag & drop o selector de archivos con barra de progreso. |
-| 8 | Pruebas | Tests de integración con Storage. |
+| 1 | Migración de BD | Crear/extender `umsuka.bar_items` (id, name, description, category ENUM `menu`/`food`/`drink`, price numeric(10,2) CHECK >0, is_available boolean default true, is_visible_to_members boolean default true — controla si se muestra a usuarios normales, stock_quantity INT default 0 CHECK >=0, created_by FK, created_at, updated_at) y `umsuka.bar_price_history` (id, bar_item_id FK, old_price, new_price, changed_by FK, changed_at) si no existen del Sprint 3. Si ya existen, añadir columnas `category`, `stock_quantity`, `is_visible_to_members` y migrar datos. |
+| 2 | Migración de BD — checklist de compra | Crear `umsuka.bar_shopping_lists` (id, title text, status ENUM `open`/`closed`, created_by FK, created_at) y `umsuka.bar_shopping_items` (id, shopping_list_id FK CASCADE, bar_item_id FK nullable — referencia a `bar_items` del inventario, name text — nombre libre si no está en inventario, quantity_needed INT CHECK >0, quantity_purchased INT default 0, is_checked boolean default false, notes text, created_at). |
+| 3 | RLS | `bar_items` SELECT para todos los autenticados pero filtrado por `is_visible_to_members` en la capa de negocio para usuarios normales (vista pública solo muestra visibles); INSERT/UPDATE/DELETE y toggle de visibilidad solo para `is_workgroup_lead` con `workgroup = 'barra'` + super_admin (`is_super_admin()`). `bar_price_history` solo lectura para autenticados, escritura vía trigger. `bar_shopping_lists` y `bar_shopping_items` SELECT/INSERT/UPDATE/DELETE solo responsable de barra y super_admin. |
+| 4 | Trigger de histórico | Trigger `BEFORE UPDATE OF price ON bar_items` que inserte en `bar_price_history` el cambio con `changed_by = auth.uid()`. |
+| 5 | Capa de negocio `lib/bar/menus.ts` | Schemas Zod (`createBarItemSchema` con category, `updateBarPriceSchema`, `updateStockSchema`, `updateVisibilitySchema`), queries (`getBarItems` con filtros por categoría/disponibilidad/stock/visibilidad — `getVisibleBarItems()` solo visibles para usuarios normales, `getAllBarItems()` para gestión, `getBarPriceHistory`), mutations (`createBarItem`, `updateBarItem`, `updateBarPrice`, `updateStock`, `toggleAvailability`, `toggleVisibility`, `deleteBarItem` lógico). |
+| 6 | Capa de negocio `lib/bar/shopping.ts` | Schemas Zod (`createShoppingListSchema`, `addShoppingItemSchema` con `bar_item_id` opcional + `quantity_needed`), queries (`getShoppingLists`, `getShoppingListWithItems`), mutations (`createShoppingList`, `addItem`, `updateQuantity`, `toggleChecked`, `closeList`). Lógica `suggestQuantity(bar_item_id)` que propone `quantity_needed` en función de `stock_quantity` del inventario (ej. stock bajo → sugerir reposición). |
+| 7 | Server actions | `createBarItemAction`, `updateBarPriceAction`, `toggleBarItemAction`, `toggleVisibilityAction`, `updateStockAction`, `createShoppingListAction`, `addShoppingItemAction`, `toggleShoppingItemAction` — validan rol responsable de barra o super_admin, revalidan `/bar` y `/bar/admin`. |
+| 8 | UI — Gestión (responsable barra) | Página `/bar/admin` solo para responsable de barra/super_admin: tabla por categorías (Menus / Foods / Drinks) con columnas de stock y visibilidad, formulario de alta con categoría, edición inline de precio/stock, toggles disponible/no disponible y **visible/oculto a usuarios normales**, botón añadir nuevo objeto y visor de histórico por item. Sección "Lista de la compra" con checklist: crear nueva lista, añadir items desde el inventario (autocompleta con `bar_items` y muestra stock actual) o libres, indicar número de cosas a comprar, marcar check al comprar, contador de progreso y botón cerrar lista. |
+| 9 | UI — Vista pública | Página `/bar` (o `/bar/precios`) para todos los autenticados: listado de precios por categorías **solo con productos donde `is_visible_to_members = true`**, buscador y filtro por categoría/disponibilidad, sin botones de edición ni acceso a la checklist. Estado "No disponible" atenuado; productos ocultos no aparecen. |
+| 10 | Pruebas | Tests unitarios de schemas y de `updateBarPrice` (histórico) y `toggleVisibility`. Tests de integración RLS: solo responsable de barra/super_admin modifica precios/visibilidad y checklist, todos leen solo visibles. Tests de UI de filtros por categoría y de checklist (sugerencia según stock, toggle, cierre) y de visibilidad (oculto no se muestra a normal, sí al responsable). |
+
+### Dependencias
+- Sprint 2 (Workgroup Roles — responsable de barra)
+- Sprint 3 (Bar Pricing — base de `bar_items`, se extiende aquí)
+- Sprint 19 (Perfiles — para identificar responsable)
 
 ### Criterios de Aceptación
-- Los documentos se organizan por categorías.
-- Management puede subir, descargar y eliminar documentos.
-- Todos los miembros autenticados pueden ver y descargar documentos.
-- Los archivos se almacenan en Supabase Storage con control de acceso por RLS.
-- El sistema muestra nombre, tamaño, tipo MIME y fecha de subida.
+- Solo el responsable de barra y el super_admin pueden introducir, modificar y añadir nuevos menús/comidas/bebidas y sus precios, decidir qué productos se muestran y gestionar la checklist de compra.
+- Los usuarios normales solo ven los productos con `is_visible_to_members = true`; el responsable/super_admin ve todos y puede alternar visibilidad por producto.
+- La checklist de compra es privada y solo la ve el responsable de barra/super_admin.
+- Los precios se organizan por categorías en inglés `menu`, `food` y `drink` con filtro por categoría y stock visible para el responsable.
+- Cada cambio de precio queda registrado en el histórico con autor y fecha.
+- Se puede marcar un objeto como no disponible o como oculto sin borrarlo.
+- Existe checklist de compra donde el responsable puede crear listas, añadir cosas desde el inventario (mostrando stock actual) o libres, indicar número de unidades a comprar y marcarlas como compradas; la cantidad sugerida se basa en el inventario.
 
 ---
 
@@ -1425,6 +1434,174 @@ Permitir que **solo el super_admin** dé de alta **perfiles de miembros sin nece
 
 ---
 
+## Sprint 41 — Gestión Documental con Supabase Storage
+
+**Rama:** `feature/sprint-41-document-management`
+
+### Descripción
+Implementar gestión documental con categorías, permisos por rol y almacenamiento en Supabase Storage. Permitir a directiva y super_admin subir, organizar y eliminar documentos por categorías; todos los miembros autenticados pueden listar y descargar. Incluye bucket privado, políticas RLS, versionado básico por updated_at, auditoría y UI completa en /documents con subida drag & drop, filtros y visor. (Movido desde antiguo Sprint 16 — mismo contenido, renumerado a 41).
+
+### Pasos
+
+| # | Paso | Detalle |
+|---|---|---|
+| 1 | Migración de BD | Crear `umsuka.document_categories` (id, name, description, parent_id opcional para jerarquía). Crear `umsuka.documents` (id, category_id, name, file_path, file_size, mime_type, uploaded_by, created_at, updated_at). |
+| 2 | Configurar Storage | Crear bucket `documents` en Supabase con políticas RLS. Bucket privado, límite 20 MB y whitelist de tipos (pdf, doc, docx, xls, xlsx, png, jpg, etc.). |
+| 3 | Políticas de Storage | SELECT para todos los autenticados; INSERT/UPDATE/DELETE solo directiva/super_admin (`is_management()`). |
+| 4 | Capa `lib/documents/` | Schemas Zod (`createCategorySchema`, `createDocumentSchema`), queries (`getCategories`, `getDocuments` con filtros por categoría/búsqueda), mutations (`createDocument` con upload a Storage + insert BD, `updateDocument`, `deleteDocument` con delete Storage + BD) con guards fail-closed. |
+| 5 | Server actions | `createDocumentAction`, `updateDocumentAction`, `deleteDocumentAction` con `revalidatePath('/documents')` y guards `is_management`. |
+| 6 | UI: Gestor de documentos | Página `/documents` con categorías, tabla de documentos filtrable/buscable, drag & drop + input file con progreso, acciones descargar/eliminar (eliminar solo directiva). |
+| 7 | UI: Subida de documentos | Drag & drop o selector de archivos con barra de progreso. |
+| 8 | Pruebas | Tests unitarios (schemas, mutations con guards), tests de integración con Storage y RLS. |
+
+### Dependencias
+- Sprint 21 (Admin Panel — `is_management` helper)
+- Sprint 2 (Roles — directiva/super_admin)
+- Sprint 16 (ahora Bar Menus Pricing — base de Storage)
+
+### Criterios de Aceptación
+- Los documentos se organizan por categorías y se listan con nombre, tamaño, mime_type, categoría y fecha.
+- Solo directiva y super_admin pueden subir, reemplazar y eliminar documentos; todos pueden listar, filtrar y descargar.
+- Archivos en bucket `documents` privado con RLS por rol y validación de tipo/tamaño (máx 20 MB).
+- Página `/documents` con categorías, listado filtrable, drag & drop y visor/descarga.
+- Cada subida actualiza `created_by`/`updated_at`; eliminación es física en Storage + BD y trazable.
+
+---
+
+## Sprint 42 — Gestión de Menores y Categoría Infantil
+
+**Rama:** `feature/sprint-42-minors-management`
+
+### Descripción
+Permitir gestionar los **menores**: cualquier miembro ya creado puede pasarse a categoría **infantil** y viceversa. Los menores **no tienen que pertenecer obligatoriamente a grupos de trabajo** (barra, telas, etc.), pero **sí pueden ser de música o baile** (workgroup `music`/`dance` opcional). Se integra con el Sprint 30 (representante legal) y con el flujo de pre-registro sin Gmail.
+
+### Pasos
+
+| # | Paso | Detalle |
+|---|---|---|
+| 1 | Migración de BD | Añadir a `umsuka.profiles`: `is_minor` boolean default false, `category` ENUM `infantil`/`juvenil`/`adulto` (o `member_category`), `workgroup` nullable para menores (permitir null aunque `is_minor=true`). Crear índice parcial sobre `is_minor`. Backfill: marcar existentes según fecha de nacimiento <18 años si se dispone. |
+| 2 | RLS y validación | Actualizar políticas: si `is_minor=true`, permitir `workgroup = null` o `music`/`dance`; bloquear `workgroup` de barra/telas/estandarte/limpieza para menores salvo super_admin. Solo super_admin y directiva pueden cambiar `is_minor`/`category`. |
+| 3 | Capa de negocio `lib/members/minors.ts` | Schemas Zod (`updateMinorStatusSchema` con `is_minor`, `category`), queries (`getMinors`, `getInfantiles`), mutations (`setMinorStatus`, `toggleInfantil`). Función `canAssignWorkgroup(profile, workgroup)` que valida la regla menor→solo music/dance/null. |
+| 4 | Server actions | `setMinorStatusAction(profileId, is_minor, category, workgroup)` — solo super_admin/directiva, con validación de representante legal si `is_minor=true` (debe tener `legal_guardian_id` del Sprint 30 o crearlo). |
+| 5 | UI — Conversión | En `/admin/members` y en el perfil, botón/switch "Pasar a infantil" / "Quitar infantil" (solo super_admin/directiva) con confirmación y selector de categoría infantil/juvenil/adulto y de workgroup music/dance opcional. |
+| 6 | UI — Listados | En `/members` filtro "Infantiles" y en formación/turnos excluir/incluir menores según corresponda (no aparecen en listados de grupos de trabajo salvo music/dance). |
+| 7 | Integración | Al pasar a infantil, mantener pagos, formación, instrumentos y asistencia ya asociados; no se pierden datos. Si es menor sin representante, mostrar aviso para asignar representante (Sprint 30). |
+| 8 | Pruebas | Tests unitarios de `canAssignWorkgroup` (menor no puede barra, sí music). Tests de RLS: solo super_admin/directiva cambia estado. Tests de conversión y de listados filtrados. |
+
+### Dependencias
+- Sprint 19 (Perfiles)
+- Sprint 30 (Representante Legal)
+- Sprint 2 (Workgroup Roles)
+- Sprint 14 (Listado de Miembros)
+
+### Criterios de Aceptación
+- Cualquier miembro existente puede pasarse a infantil (y viceversa) por super_admin/directiva.
+- Los menores pueden tener `workgroup` null o `music`/`dance`, pero no barra/telas/estandarte/limpieza (salvo super_admin).
+- Al convertir, se conserva todo el histórico asociado.
+- Si el menor no tiene representante legal, el sistema avisa para asignarlo.
+- Los listados permiten filtrar infantiles.
+
+---
+
+## Sprint 43 — Gestión de Excedencias
+
+**Rama:** `feature/sprint-43-leave-management`
+
+### Descripción
+Permitir apuntar qué personas están **de excedencia** y durante cuánto tiempo, para excluirlas de convocatorias, turnos, ensayos y reparto de material mientras dure la excedencia, manteniendo su histórico.
+
+### Pasos
+
+| # | Paso | Detalle |
+|---|---|---|
+| 1 | Migración de BD | Crear `umsuka.member_leaves` (id, user_id FK CASCADE, reason text, start_date date NOT NULL, end_date date nullable — null = indefinida, status ENUM `active`/`finished`/`cancelled` generado, created_by FK, created_at, updated_at). Índice por user_id y rango de fechas. Trigger para calcular `status` según fechas. |
+| 2 | RLS | Solo super_admin y directiva pueden crear/editar/finalizar excedencias. El propio miembro puede ver su propia excedencia. Directiva/super_admin ven todas. |
+| 3 | Capa de negocio `lib/members/leaves.ts` | Schemas Zod (`createLeaveSchema` con `user_id`, `start_date`, `end_date` nullable y validación `end_date >= start_date`), queries (`getActiveLeaves`, `getLeavesByUser`, `isOnLeave(userId, date)`), mutations (`createLeave`, `updateLeave`, `finishLeave`, `cancelLeave`). Función `isOnLeave` usada en filtros de turnos/eventos. |
+| 4 | Server actions | `createLeaveAction`, `updateLeaveAction`, `finishLeaveAction` — solo super_admin/directiva, con `revalidatePath('/members','/events')`. |
+| 5 | UI — Gestión | Página `/admin/excedencias` (o sección en `/admin/members`): listado de excedencias activas con usuario, motivo, desde/hasta y duración (ej. "3 meses"), formulario de alta con selector de persona, motivo, fecha inicio y fin (o indefinida), botones finalizar/cancelar. |
+| 6 | UI — Indicadores | Badge "De excedencia hasta DD/MM/YYYY" (o "Indefinida") en perfil, listado de miembros, detalle de evento/turno y formación. Miembros de excedencia aparecen atenuados y excluidos por defecto de la auto-inscripción a ensayos (Sprint 32) y de listas de reparto. |
+| 7 | Integración | En turnos, ensayos, reparto de material y votaciones, filtrar por `isOnLeave(userId, eventDate)` para no convocar a excedentes. En estadísticas, distinguir excedencia vs ausencia. |
+| 8 | Pruebas | Tests unitarios de `isOnLeave` con rangos (activa, finalizada, indefinida). Tests de RLS: solo directiva crea. Tests de integración: miembro de excedencia no es auto-inscrito a ensayo. |
+
+### Dependencias
+- Sprint 19 (Perfiles)
+- Sprint 14 (Listado de Miembros)
+- Sprint 32 (Auto-inscripción a ensayos)
+- Sprint 31 (Reparto de material)
+
+### Criterios de Aceptación
+- La directiva/super_admin puede marcar a una persona de excedencia indicando motivo, fecha de inicio y fin (o indefinida).
+- Se ve claramente quién está de excedencia y hasta cuándo en perfil y listados.
+- Los miembros de excedencia quedan excluidos automáticamente de convocatorias/turnos/ensayos/reparto mientras dure la excedencia.
+- Se puede finalizar o cancelar una excedencia anticipadamente.
+- El histórico de excedencias se conserva aunque finalice.
+
+---
+
+## Sprint 44 — Conteos en Filtros y Suma de Usuarios
+
+**Rama:** `feature/sprint-44-filter-counts`
+
+### Descripción
+En todos los listados con filtros (miembros, turnos, eventos, pagos, formación, excedencias), mostrar **cuántos son de cada valor del filtro y la suma total de usuarios** filtrados, para tener una visión rápida de la distribución.
+
+### Pasos
+
+| # | Paso | Detalle |
+|---|---|---|
+| 1 | Auditoría de filtros | Inventariar filtros existentes en `/members`, `/bar/admin`, `/events`, `/payments`, `/formation`, etc. (por workgroup, categoría, estado de pago, excedencia, infantil, etc.). |
+| 2 | Capa de negocio `lib/filters/counts.ts` | Funciones genéricas `getFilterCounts(filterKey, currentFilters)` que devuelven `{ value, count }[]` y `getTotalCount(filters)`. Implementar con agregaciones SQL (`COUNT(*) GROUP BY`) o con queries optimizadas, reutilizando RLS. |
+| 3 | Server actions / queries | Extender queries existentes (`getMembers`, `getBarItems`, etc.) para devolver también `counts` y `total` junto a los datos paginados. |
+| 4 | UI — Badges de conteo | En cada filtro (select, checkbox, tabs), mostrar badge con el número (ej. "Baile (23)", "Música (18)", "Infantil (12)", "De excedencia (5)"). Actualizar dinámicamente al cambiar otros filtros. |
+| 5 | UI — Suma total | Encabezado del listado con "Mostrando 45 de 120 miembros" o "Total: 120 usuarios" y, cuando hay filtros activos, "Filtrados: 23". Para filtros de pago/turno, mostrar también sumas numéricas si aplica (ej. total a pagar). |
+| 6 | Pruebas | Tests unitarios de `getFilterCounts` con datasets de ejemplo. Tests de integración: conteos coinciden con el número real de filas devueltas. Verificación manual de que los badges se actualizan al filtrar. |
+
+### Dependencias
+- Sprint 14 (Listado de Miembros)
+- Sprint 25 (Ordenación de Listados)
+- Sprint 26 (Buscador de Personas en Turnos)
+
+### Criterios de Aceptación
+- Cada filtro muestra entre paréntesis cuántos usuarios/items corresponden a cada valor.
+- Se muestra la suma total de usuarios/items y la suma de filtrados de forma visible en el encabezado.
+- Los conteos se actualizan en tiempo real al aplicar/quitar filtros y respetan RLS.
+- No hay degradación perceptible de rendimiento (queries con índices).
+
+---
+
+## Sprint 45 — Fix: Solo Marcar Gente del Turno en Eventos
+
+**Rama:** `fix/sprint-45-event-attendance-scope`
+
+### Descripción
+Corregir que en los eventos (sea del tipo que sea) **solo se pueda marcar la asistencia de la gente que pertenece a ese turno/evento**, no de todos los miembros. Actualmente aparecen todos y puede marcarse a cualquiera, lo que genera errores y confusión.
+
+### Pasos
+
+| # | Paso | Detalle |
+|---|---|---|
+| 1 | Auditoría | Revisar `lib/events/`, `lib/shifts/`, `lib/rehearsals/` y componentes de asistencia (`AttendancePanel`, `ShiftAttendance`, `RehearsalAttendance`) para identificar dónde se lista a todos los miembros en lugar de filtrar por turno/evento. |
+| 2 | Corrección de queries | Modificar `getShiftMembers(shiftId)`, `getEventAttendees(eventId)`, `getRehearsalAttendees(eventId)` para que hagan JOIN con `shift_assignments`/`event_attendees`/`rehearsal_attendance` y solo devuelvan los miembros asignados/inscritos a ese turno/evento. Eliminar fallback que cargaba `getAllMembers`. |
+| 3 | RLS y validación | Añadir validación en server actions `markAttendanceAction` que verifique que `user_id` está asignado al `shift_id`/`event_id` antes de permitir el `upsert`; si no pertenece, error `403 Not in this shift`. |
+| 4 | UI — Filtrado | En la página de detalle del evento/turno, la lista de asistencia solo muestra a los miembros del turno. Si no hay nadie asignado, mostrar estado vacío "Nadie asignado a este turno" con enlace a "Asignar personas" (Sprint 12). |
+| 5 | Migración de datos | No se borran datos, pero añadir índice en `shift_assignments(shift_id, user_id)` y `rehearsal_attendance(event_id, user_id)` si falta, para acelerar el filtrado. |
+| 6 | Pruebas | Tests de regresión: marcar asistencia de miembro no asignado falla. Tests de integración: evento con 3 asignados solo muestra 3, no 100. Verificación manual en todos los tipos de evento (reunión, ensayo, reparto, trabajo). |
+
+### Dependencias
+- Sprint 8 (Shifts)
+- Sprint 12 (Asociación de Personas a Turnos)
+- Sprint 27/32 (Asistencia a Ensayos)
+- Sprint 5 (Asistencia)
+
+### Criterios de Aceptación
+- En cualquier evento/turno, solo aparecen para marcar las personas asignadas/inscritas a ese turno/evento.
+- No se puede marcar asistencia a alguien que no pertenece al turno (error controlado).
+- Si el turno no tiene asignados, se muestra estado vacío con acción para asignar.
+- El fix no rompe la auto-inscripción a ensayos (Sprint 32) — los auto-inscritos sí aparecen porque pertenecen al turno.
+- Tests de regresión pasan.
+
+---
+
 ## Resumen de Ramas y Orden de Ejecución
 
 | Sprint | Rama | Dependencias |
@@ -1444,7 +1621,7 @@ Permitir que **solo el super_admin** dé de alta **perfiles de miembros sin nece
 | **Sprint 13 — Workgroup Stats** | `feature/sprint-13-workgroup-stats` | ✅ Ejecutado |
 | **Sprint 14 — Member List** | `feature/sprint-14-member-list` (histórica) | ✅ Ejecutado |
 | Sprint 15 — Votings | `feature/sprint-15-votings` | ✅ Ejecutado |
-| Sprint 16 — Document Management | `feature/sprint-16-document-management` | Sprint 6 (pendiente) |
+| Sprint 16 — Precios Menús/Comidas/Bebidas (Barra) | `feature/sprint-16-bar-menus-pricing` | Sprint 2, Sprint 3, Sprint 19 (pendiente) |
 | Sprint 17 — Events Enhancement (+ Onboarding Grupo) | `feature/sprint-17-events-enhancement` | ✅ Ejecutado |
 | **Sprint 18 — Event Audience** | `feature/sprint-18-event-audience` | ✅ Ejecutado |
 | Sprint 19 — Profiles & Components | `feature/sprint-19-profiles-components` | ✅ Ejecutado |
@@ -1469,6 +1646,11 @@ Permitir que **solo el super_admin** dé de alta **perfiles de miembros sin nece
 | Sprint 38 — Nuevo Año de Carnaval (Reset + Copia de Seguridad) | `feature/sprint-38-new-carnival-year` | Sprint 5, Sprint 11, Sprint 13/28, Sprint 14/19, Sprint 15, Sprint 17, Sprint 24/33, Sprint 29/31 (pendiente) |
 | Sprint 39 — Manual de Usuario por Roles y Tipos de Miembro | `feature/sprint-39-user-manual` | Todos los sprints 1-38 (pendiente) |
 | Sprint 40 — Alta sin Gmail y Vinculación Posterior | `feature/sprint-40-pre-register-link-gmail` | Sprint 6, Sprint 7, Sprint 19, Sprint 2/21 (pendiente) |
+| Sprint 41 — Gestión Documental | `feature/sprint-41-document-management` | ✅ Ejecutado |
+| Sprint 42 — Gestión de Menores (Infantil) | `feature/sprint-42-minors-management` | Sprint 19, Sprint 30, Sprint 2, Sprint 14 (pendiente) |
+| Sprint 43 — Gestión de Excedencias | `feature/sprint-43-leave-management` | Sprint 19, Sprint 14, Sprint 32, Sprint 31 (pendiente) |
+| Sprint 44 — Conteos en Filtros | `feature/sprint-44-filter-counts` | Sprint 14, Sprint 25, Sprint 26 (pendiente) |
+| Sprint 45 — Fix Asistencia por Turno | `fix/sprint-45-event-attendance-scope` | Sprint 8, Sprint 12, Sprint 27/32, Sprint 5 (pendiente) |
 
 ---
 

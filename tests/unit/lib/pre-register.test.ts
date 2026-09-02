@@ -27,7 +27,7 @@ function makeAdminInsertMock() {
   return { insert, select, single };
 }
 
-function makeLinkMocks({ target = { id: "pid", link_status: "pending_gmail", invite_token: "tok-123" }, collision = null }: { target?: unknown; collision?: unknown } = {}) {
+function _makeLinkMocks({ target = { id: "pid", link_status: "pending_gmail", invite_token: "tok-123" }, collision = null }: { target?: unknown; collision?: unknown } = {}) {
   const collisionSingle = vi.fn(() => Promise.resolve({ data: collision }));
   const collisionEq2 = vi.fn(() => ({ maybeSingle: collisionSingle }));
   const collisionEq1 = vi.fn(() => ({ eq: collisionEq2 }));
@@ -141,7 +141,7 @@ describe("linkGmailToProfile", () => {
     // Alternative direct: just mock to return pending check
     mockAdminFrom.mockReset();
     let seq = 0;
-    mockAdminFrom.mockImplementation(((table: string) => {
+    mockAdminFrom.mockImplementation(((_table: string) => {
       seq++;
       if (seq === 1) return { select: collSelect } as never;
       if (seq === 2) return { select: targetSelect } as never;

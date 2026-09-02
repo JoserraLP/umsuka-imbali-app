@@ -20,6 +20,7 @@ import {
   ClipboardList,
   FileText,
   PartyPopper,
+  Beer,
   type LucideIcon,
 } from "lucide-react";
 import type { AppRole, ComponentType, Workgroup } from "@/types/database.types";
@@ -77,6 +78,13 @@ export const NAV_LINKS: NavLink[] = [
     label: "Pagos",
     icon: CreditCard,
     showFor: (ctx) => isManagementRole(ctx.role),
+  },
+  { href: "/bar", label: "Barra", icon: Beer },
+  {
+    href: "/bar/admin",
+    label: "Gestión Barra",
+    icon: Beer,
+    showFor: (ctx) => (ctx.isWorkgroupLead && ctx.workgroup === "barra") || ctx.role === "super_admin",
   },
   { href: "/documents", label: "Documentos", icon: FileText },
   { href: "/actas", label: "Actas", icon: FileText },
