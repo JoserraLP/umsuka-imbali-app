@@ -2,7 +2,7 @@
   "title": "Sprint 16 — Precios de Menus, Comidas y Bebidas (Responsable de Barra)",
   "description": "Permitir introducir y gestionar los precios de los menus, comidas y bebidas de la barra de la comparsa y, solo para responsable de barra y super_admin, llevar un listado de cosas que comprar (checklist de compra) con numero de unidades en funcion del inventario actual. Solo el responsable de barra (workgroup barra con is_workgroup_lead=true) y el super_admin pueden crear, editar y anadir nuevos objetos/precios, decidir que productos se muestran a los usuarios normales y gestionar la checklist; los usuarios normales solo ven los productos marcados como visibles. Incluye: migraciones bar_items/bar_price_history/bar_shopping_lists/bar_shopping_items, RLS estricto, trigger de historico, capas lib/bar/menus.ts y lib/bar/shopping.ts, server actions, paginas /bar (vista publica) y /bar/admin (gestion + checklist), y tests.",
   "branch": "feature/sprint-16-bar-menus-pricing",
-  "status": "documented",
+  "status": "published",
   "steps": [
     {
       "id": 1,

@@ -550,32 +550,41 @@ Sistema de votación con opciones múltiples, control de voto único por usuario
 
 ---
 
-## Sprint 16 — Gestión Documental (Supabase Storage)
+## Sprint 16 — Precios de Menús, Comidas y Bebidas (Responsable de Barra)
 
-**Rama:** `feature/sprint-16-document-management`
+**Rama:** `feature/sprint-16-bar-menus-pricing`
 
 ### Descripción
-Gestionar documentos usando Supabase Storage con categorías, permisos por rol y control de versiones.
+Permitir introducir y gestionar los **precios de los menús, comidas y bebidas** de la barra de la comparsa y, solo para **responsable de barra y super_admin**, llevar un **listado de cosas que comprar (checklist de compra)** con número de unidades en función del inventario actual. **Solo el responsable de barra** (workgroup `barra` con `is_workgroup_lead = true`) y el super_admin pueden crear, editar, decidir qué productos se muestran a los usuarios normales y gestionar la checklist; los usuarios normales solo ven los productos marcados como visibles.
 
 ### Pasos
 
 | # | Paso | Detalle |
 |---|---|---|
-| 1 | Migración de BD | Crear `umsuka.document_categories` (id, name, description, parent_id opcional para jerarquía). Crear `umsuka.documents` (id, category_id, name, file_path, file_size, mime_type, uploaded_by, created_at, updated_at). |
-| 2 | Configurar Storage | Crear bucket `documentos` en Supabase con políticas RLS. |
-| 3 | Políticas de Storage | Solo management puede subir/eliminar. Todos los auth users pueden leer. |
-| 4 | Capa `lib/documents/` | Schemas Zod, queries, mutations con integración a Supabase Storage (upload, download, delete). |
-| 5 | Server actions | Acciones para subir, listar, descargar, eliminar documentos. |
-| 6 | UI: Gestor de documentos | Página `/documents` con vista de carpetas/categorías, tabla de archivos, indicador de tamaño. |
-| 7 | UI: Subida de documentos | Drag & drop o selector de archivos con barra de progreso. |
-| 8 | Pruebas | Tests de integración con Storage. |
+| 1 | Migración de BD | Crear/extender `umsuka.bar_items` (id, name, description, category ENUM `menu`/`food`/`drink`, price numeric(10,2) CHECK >0, is_available boolean default true, is_visible_to_members boolean default true — controla si se muestra a usuarios normales, stock_quantity INT default 0 CHECK >=0, created_by FK, created_at, updated_at) y `umsuka.bar_price_history` (id, bar_item_id FK, old_price, new_price, changed_by FK, changed_at) si no existen del Sprint 3. Si ya existen, añadir columnas `category`, `stock_quantity`, `is_visible_to_members` y migrar datos. |
+| 2 | Migración de BD — checklist de compra | Crear `umsuka.bar_shopping_lists` (id, title text, status ENUM `open`/`closed`, created_by FK, created_at) y `umsuka.bar_shopping_items` (id, shopping_list_id FK CASCADE, bar_item_id FK nullable — referencia a `bar_items` del inventario, name text — nombre libre si no está en inventario, quantity_needed INT CHECK >0, quantity_purchased INT default 0, is_checked boolean default false, notes text, created_at). |
+| 3 | RLS | `bar_items` SELECT para todos los autenticados pero filtrado por `is_visible_to_members` en la capa de negocio para usuarios normales (vista pública solo muestra visibles); INSERT/UPDATE/DELETE y toggle de visibilidad solo para `is_workgroup_lead` con `workgroup = 'barra'` + super_admin (`is_super_admin()`). `bar_price_history` solo lectura para autenticados, escritura vía trigger. `bar_shopping_lists` y `bar_shopping_items` SELECT/INSERT/UPDATE/DELETE solo responsable de barra y super_admin. |
+| 4 | Trigger de histórico | Trigger `BEFORE UPDATE OF price ON bar_items` que inserte en `bar_price_history` el cambio con `changed_by = auth.uid()`. |
+| 5 | Capa de negocio `lib/bar/menus.ts` | Schemas Zod (`createBarItemSchema` con category, `updateBarPriceSchema`, `updateStockSchema`, `updateVisibilitySchema`), queries (`getBarItems` con filtros por categoría/disponibilidad/stock/visibilidad — `getVisibleBarItems()` solo visibles para usuarios normales, `getAllBarItems()` para gestión, `getBarPriceHistory`), mutations (`createBarItem`, `updateBarItem`, `updateBarPrice`, `updateStock`, `toggleAvailability`, `toggleVisibility`, `deleteBarItem` lógico). |
+| 6 | Capa de negocio `lib/bar/shopping.ts` | Schemas Zod (`createShoppingListSchema`, `addShoppingItemSchema` con `bar_item_id` opcional + `quantity_needed`), queries (`getShoppingLists`, `getShoppingListWithItems`), mutations (`createShoppingList`, `addItem`, `updateQuantity`, `toggleChecked`, `closeList`). Lógica `suggestQuantity(bar_item_id)` que propone `quantity_needed` en función de `stock_quantity` del inventario (ej. stock bajo → sugerir reposición). |
+| 7 | Server actions | `createBarItemAction`, `updateBarPriceAction`, `toggleBarItemAction`, `toggleVisibilityAction`, `updateStockAction`, `createShoppingListAction`, `addShoppingItemAction`, `toggleShoppingItemAction` — validan rol responsable de barra o super_admin, revalidan `/bar` y `/bar/admin`. |
+| 8 | UI — Gestión (responsable barra) | Página `/bar/admin` solo para responsable de barra/super_admin: tabla por categorías (Menus / Foods / Drinks) con columnas de stock y visibilidad, formulario de alta con categoría, edición inline de precio/stock, toggles disponible/no disponible y **visible/oculto a usuarios normales**, botón añadir nuevo objeto y visor de histórico por item. Sección "Lista de la compra" con checklist: crear nueva lista, añadir items desde el inventario (autocompleta con `bar_items` y muestra stock actual) o libres, indicar número de cosas a comprar, marcar check al comprar, contador de progreso y botón cerrar lista. |
+| 9 | UI — Vista pública | Página `/bar` (o `/bar/precios`) para todos los autenticados: listado de precios por categorías **solo con productos donde `is_visible_to_members = true`**, buscador y filtro por categoría/disponibilidad, sin botones de edición ni acceso a la checklist. Estado "No disponible" atenuado; productos ocultos no aparecen. |
+| 10 | Pruebas | Tests unitarios de schemas y de `updateBarPrice` (histórico) y `toggleVisibility`. Tests de integración RLS: solo responsable de barra/super_admin modifica precios/visibilidad y checklist, todos leen solo visibles. Tests de UI de filtros por categoría y de checklist (sugerencia según stock, toggle, cierre) y de visibilidad (oculto no se muestra a normal, sí al responsable). |
+
+### Dependencias
+- Sprint 2 (Workgroup Roles — responsable de barra)
+- Sprint 3 (Bar Pricing — base de `bar_items`, se extiende aquí)
+- Sprint 19 (Perfiles — para identificar responsable)
 
 ### Criterios de Aceptación
-- Los documentos se organizan por categorías.
-- Management puede subir, descargar y eliminar documentos.
-- Todos los miembros autenticados pueden ver y descargar documentos.
-- Los archivos se almacenan en Supabase Storage con control de acceso por RLS.
-- El sistema muestra nombre, tamaño, tipo MIME y fecha de subida.
+- Solo el responsable de barra y el super_admin pueden introducir, modificar y añadir nuevos menús/comidas/bebidas y sus precios, decidir qué productos se muestran y gestionar la checklist de compra.
+- Los usuarios normales solo ven los productos con `is_visible_to_members = true`; el responsable/super_admin ve todos y puede alternar visibilidad por producto.
+- La checklist de compra es privada y solo la ve el responsable de barra/super_admin.
+- Los precios se organizan por categorías en inglés `menu`, `food` y `drink` con filtro por categoría y stock visible para el responsable.
+- Cada cambio de precio queda registrado en el histórico con autor y fecha.
+- Se puede marcar un objeto como no disponible o como oculto sin borrarlo.
+- Existe checklist de compra donde el responsable puede crear listas, añadir cosas desde el inventario (mostrando stock actual) o libres, indicar número de unidades a comprar y marcarlas como compradas; la cantidad sugerida se basa en el inventario.
 
 ---
 
