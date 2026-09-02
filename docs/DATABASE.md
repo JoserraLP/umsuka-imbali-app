@@ -15,6 +15,13 @@ erDiagram
     PROFILES ||--o{ ATTENDANCE : records
     PROFILES ||--o{ ABSENCES : requests
     PROFILES ||--o{ VOTING_VOTES : casts
+    PROFILES ||--o{ BAR_ITEMS : creates
+    PROFILES ||--o{ BAR_PRICE_HISTORY : changes
+    PROFILES ||--o{ BAR_SHOPPING_LISTS : creates
+
+    BAR_ITEMS ||--o{ BAR_PRICE_HISTORY : has
+    BAR_ITEMS ||--o{ BAR_SHOPPING_ITEMS : referenced_in
+    BAR_SHOPPING_LISTS ||--o{ BAR_SHOPPING_ITEMS : contains
 
     EVENTS ||--o{ SHIFTS : has
     EVENTS ||--o{ ATTENDANCE : tracks
@@ -110,6 +117,41 @@ erDiagram
         uuid option_id FK
         uuid user_id FK
     }
+    BAR_ITEMS {
+        uuid id PK
+        text name
+        text description
+        text category
+        numeric price
+        boolean is_available
+        boolean is_visible_to_members
+        int stock_quantity
+        uuid created_by FK
+    }
+    BAR_PRICE_HISTORY {
+        uuid id PK
+        uuid bar_item_id FK
+        numeric old_price
+        numeric new_price
+        uuid changed_by FK
+        timestamptz changed_at
+    }
+    BAR_SHOPPING_LISTS {
+        uuid id PK
+        text title
+        text status
+        uuid created_by FK
+        timestamptz closed_at
+    }
+    BAR_SHOPPING_ITEMS {
+        uuid id PK
+        uuid shopping_list_id FK
+        uuid bar_item_id FK
+        text name
+        int quantity_needed
+        int quantity_purchased
+        boolean is_checked
+    }
 ```
 
 ## Migrations
@@ -147,6 +189,14 @@ erDiagram
 | `20260101006800_formation_type.sql` | ENUM `umsuka.formation_type` (`dance`/`music`) + `dance_formations.formation_type` NOT NULL default dance + índices + helper `current_user_component_type()` + RLS SELECT/WRITE por `is_component_lead(formation_type)` + `is_management()` (desde 068: solo directiva o responsable de ese componente ve/gestiona baile o música) para `dance_formations`, `dance_positions` y `musician_instruments` — sin pasillo, filas dinámicas, separación baile/música — Sprint 33 fix |
 | `20260101006900_allow_multiple_component_leads.sql` | Reemplaza índice único parcial `idx_profiles_component_lead_for` (0043, un solo lead por componente) por índice no-único parcial para permitir **N responsables** simultáneos de baile y de música (mismo `CHECK` music/dance, `is_component_lead()` ya soporta múltiples filas) — Sprint 33 fix |
 | `20260101007000_fix_user_preferences_table.sql` | Re-crea idempotente `umsuka.user_preferences` (PK `user_id`, `list_ordering` jsonb default '{}', `created_at`/`updated_at`, CHECK `is_valid_list_ordering`), trigger `updated_at`, RLS own-row (4 policies), grants y `NOTIFY pgrst reload` — corrige `Could not find table in schema cache` por 0059 fallido/ cache stale (Sprint 25 patch) |
+| `20260101007100_meeting_minutes.sql` | Bucket `meeting-minutes` privado (10 MB, 3 mimes pdf/jpg/png) + tabla `umsuka.meeting_minutes` (`event_id` FK UNIQUE a `events` tipo `reunion`, `file_path`, RLS directiva + owner) — Sprint 34 |
+| `20260101007200_carnival_year.sql` | Enum `carnival_year_status` + tabla `umsuka.carnival_years` + snapshot + promoción — Sprint 38 |
+| `20260101007300_pre_register_link.sql` | Tabla `umsuka.pre_register_links` + token + RLS — Sprint 40 |
+| `20260101007400_legal_guardians_service_role_grants.sql` | Grants `service_role` en `legal_guardians` — Sprint 30 follow-up |
+| `20260101007500_carnival_year_march_february.sql` | Ajuste año carnaval marzo-febrero — Sprint 38 fix |
+| `20260101007600_document_management.sql` | Tablas `document_categories` + `documents` (FK SET NULL, CHECKs 1-100/1-200, file_size 1..20971520, mime 12), bucket `documents` privado 20 MB 12 mimes + 4 storage policies, RLS `SELECT true` / `ALL is_management()`, índices `category_id/mime/gin_trgm` — Sprint 41 |
+| `20260101007700_bar_menus_pricing.sql` | ENUM `bar_category` (`menu`/`food`/`drink`) + tablas `bar_items` (12 cols, price>0, stock>=0, visible/available, gin_trgm) + `bar_price_history` (FK CASCADE, old/new price), triggers `updated_at` + `log_bar_price_change` (BEFORE UPDATE OF price), RLS `SELECT true` / `ALL is_workgroup_lead('barra') OR is_super_admin()`, grants `authenticated`/`service_role` — Sprint 16 |
+| `20260101007800_bar_shopping_lists.sql` | ENUM `bar_shopping_status` (`open`/`closed`) + tablas `bar_shopping_lists` (title 1-200, status, closed_at CHECK) + `bar_shopping_items` (FK CASCADE/SET NULL, quantity_needed>0, is_checked), RLS `FOR ALL is_workgroup_lead('barra') OR is_super_admin()` privada + grants, índices `status/list/bar_item` — Sprint 16 |
 
 Apply locally with `npm run supabase:reset`; apply to a remote project with
 `supabase db push` (also run automatically by `deploy.yml` on merge to `main`).
@@ -184,6 +234,8 @@ role from within `umsuka.profiles` itself:
 - `umsuka.is_workgroup_lead(check_workgroup text)` — `true` when the caller leads the given workgroup.
 - `umsuka.is_component_lead(check_component text)` — `true` when the caller is the responsable of the given component (`music`/`dance`); used by the Sprint 14 additive SELECT policies on `shift_assignments`/`attendance`.
 - `umsuka.get_voting_results(p_voting_id uuid)` — SECURITY DEFINER, `stable`, read-only: per-option vote counts and percentages (one decimal). Returns an empty set while the voting is effectively open AND the caller has not voted AND the caller is not management; granted only to `authenticated` (Sprint 15).
+- `umsuka.log_bar_price_change()` — SECURITY DEFINER trigger `BEFORE UPDATE OF price ON bar_items` que inserta en `bar_price_history` con `auth.uid()` cuando `OLD.price IS DISTINCT FROM NEW.price`; `search_path=umsuka,public` fijo (Sprint 16).
+- `umsuka.is_super_admin()` — `true` solo para `super_admin` (usado en RLS de barra junto a `is_workgroup_lead('barra')`).
 
 Baseline policy shape (tightened per-module as each is implemented, never
 loosened):
@@ -199,6 +251,9 @@ loosened):
 | `questions` | any authenticated user | insert: owner · update: owner or management · delete: management |
 | `voting_votes` | owner or management | insert: owner — opción de la misma votación (`exists` sobre `voting_options`, Sprint 15) · immutable (no update policy) · delete: management |
 | `rehearsal_attendance` | owner or management | insert/update (`upsert` por `event_id,user_id,session`) y delete: management only — Sprint 27 |
+| `bar_items` | any authenticated user (`SELECT true`; filtro `is_visible_to_members` en capa de negocio) | `ALL` solo `is_workgroup_lead('barra')` OR `is_super_admin()` — Sprint 16 |
+| `bar_price_history` | any authenticated user (`SELECT true`) | immutable (no policy ALL); escritura solo vía trigger `log_bar_price_change` + `service_role` — Sprint 16 |
+| `bar_shopping_lists`, `bar_shopping_items` | `is_workgroup_lead('barra')` OR `is_super_admin()` only (privada) | `ALL` solo `is_workgroup_lead('barra')` OR `is_super_admin()` — Sprint 16 |
 
 ## Extensibility
 
