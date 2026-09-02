@@ -53,35 +53,8 @@ export interface MutationResult {
   id?: string;
 }
 
-// ── Pure logic: suggestQuantity ───────────────────────────
-
-/**
- * Sugiere quantity_needed basándose en stock_quantity actual.
- * Umbrales provisionales (ajustables por responsable):
- *   stock <= 0  -> 20
- *   stock <= 5  -> 15
- *   stock <=10  -> 10
- *   stock <=20  -> 5
- *   stock >20   -> 0
- * Si stock es null/undefined -> 10 (default).
- */
-export function suggestQuantity(stockQuantity: number | null | undefined): number {
-  if (stockQuantity === null || stockQuantity === undefined) return 10;
-  if (stockQuantity <= 0) return 20;
-  if (stockQuantity <= 5) return 15;
-  if (stockQuantity <= 10) return 10;
-  if (stockQuantity <= 20) return 5;
-  return 0;
-}
-
-export function suggestQuantityByCategory(
-  stock: number | null | undefined,
-  category: BarCategory | null | undefined,
-): number {
-  const base = suggestQuantity(stock);
-  if (category === "drink" && base > 0) return Math.min(base + 5, 25);
-  return base;
-}
+// ── Pure logic: re-exported from client-safe module ──
+export { suggestQuantity, suggestQuantityByCategory } from "@/lib/bar/suggestions";
 
 // ── Schemas Zod ───────────────────────────────────────────
 

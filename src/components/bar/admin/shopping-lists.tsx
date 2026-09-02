@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import type { ShoppingListSummary, ShoppingList } from "@/lib/bar/shopping";
 import { createShoppingListAction, addShoppingItemAction, toggleShoppingItemAction, closeShoppingListAction } from "@/app/bar/actions";
-import { suggestQuantity } from "@/lib/bar/shopping";
+import { suggestQuantity } from "@/lib/bar/suggestions";
 
 export function ShoppingLists({ lists, detail, barItems }: { lists: ShoppingListSummary[]; detail?: ShoppingList | null; barItems?: { id: string; name: string; stock_quantity: number }[] }) {
   const router = useRouter();
